@@ -1,0 +1,105 @@
+// ==============================================================
+// ARTAPOS.ID • PRISMA ORM SCHEMA (TIDB CLOUD SERVERLESS MYSQL)
+// Strict Schema Definition, Multi-Tenant Isolation & 1-Email-1-Device Lock
+// ==============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique @db.VarChar(100)
+  password     String    @db.VarChar(255)
+  store_name   String    @default("Toko AI Assistant") @db.VarChar(100)
+  plan         String    @default("Paket Gratis (300 Token)") @db.VarChar(100)
+  quota_total  Int       @default(300)
+  quota_used   Int       @default(0)
+  role         String    @default("user") @db.VarChar(50)
+  device_id    String?   @db.VarChar(128)
+  active_until DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  @@index([device_id], name: "idx_user_device")
+  @@map("users")
+}
+
+model Session {
+  token      String   @id @db.VarChar(128)
+  user_id    Int
+  email      String   @db.VarChar(100)
+  created_at DateTime @default(now())
+  expires_at DateTime
+
+  @@index([user_id], name: "idx_user_id")
+  @@map("sessions")
+}
+
+model Knowledge {
+  id         Int      @id @default(autoincrement())
+  user_id    Int      @default(1)
+  questions  Json
+  keywords   Json
+  answer     String   @db.Text
+  category   String   @default("umum") @db.VarChar(100)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([user_id], name: "idx_user_knowledge")
+  @@map("knowledge")
+}
+
+model Config {
+  user_id      Int    @default(1)
+  config_key   String @db.VarChar(100)
+  config_value String @db.Text
+
+  @@id([user_id, config_key])
+  @@map("config")
+}
+
+model Order {
+  order_id   String   @id @db.VarChar(100)
+  email      String   @db.VarChar(100)
+  plan       String   @db.VarChar(100)
+  amount     Int
+  quota      Int
+  status     String   @default("pending") @db.VarChar(50)
+  snap_token String?  @db.VarChar(255)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([email], name: "idx_order_email")
+  @@map("orders")
+}
+
+model NotificationLog {
+  id         Int      @id @default(autoincrement())
+  category   String   @default("EMAIL") @db.VarChar(60)
+  recipient  String   @db.VarChar(255)
+  title      String   @db.VarChar(255)
+  message    String   @db.Text
+  status     String   @default("success") @db.VarChar(40)
+  created_at DateTime @default(now())
+
+  @@index([created_at], name: "idx_notif_created")
+  @@map("notifications_log")
+}
+
+model VisitLog {
+  id            Int      @id @default(autoincrement())
+  ip_address    String   @default("127.0.0.1") @db.VarChar(100)
+  page_view     String   @default("landing") @db.VarChar(100)
+  visitor_email String   @default("Pengunjung") @db.VarChar(255)
+  user_agent    String   @default("") @db.VarChar(255)
+  created_at    DateTime @default(now())
+
+  @@index([created_at], name: "idx_visits_created")
+  @@map("visits_log")
+}

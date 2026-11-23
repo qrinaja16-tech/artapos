@@ -1,0 +1,7 @@
+node_modules/
+.env
+*.php
+auth_info_baileys/
+data/chat_history.json
+data/*.tmp
+npm-debug.log*

@@ -1,0 +1,2285 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>artapos.id • WhatsApp AI Auto-Reply & Sales Assistant Terdepan</title>
+  <link rel="stylesheet" href="style.css?v=22.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap"
+    rel="stylesheet">
+  <!-- SweetAlert2 Modern Notification System -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <!-- Midtrans Production Snap JS -->
+  <script src="https://app.midtrans.com/snap/snap.js" data-client-key="Mid-client-SlO9wJiIFw09_PFt"></script>
+</head>
+
+<body>
+
+  <!-- ============================================================== -->
+  <!-- 1. LANDING PAGE VIEW                                           -->
+  <!-- ============================================================== -->
+  <div id="viewLanding" class="view-screen">
+    <!-- Navbar -->
+    <header class="landing-header">
+      <div class="landing-nav-container">
+        <a href="#hero" class="brand-link" onclick="switchView('landing')">
+          <div class="brand-badge-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+              <path
+                d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z">
+              </path>
+            </svg>
+          </div>
+          <span class="brand-title">artapos<span class="brand-tld">.id</span></span>
+        </a>
+
+        <nav class="landing-nav-links">
+          <a href="#fitur">Fitur Unggulan</a>
+          <a href="#cara-kerja">Cara Kerja</a>
+          <a href="#harga">Harga Paket</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+
+        <div class="landing-nav-actions">
+          <button class="btn-nav-login" id="btnNavAuth" onclick="switchView('login')">Masuk</button>
+          <button class="btn-nav-primary" onclick="openFreeRegisterModal()">🎁 Daftar Gratis (300 Token)</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="hero" class="hero-section">
+      <div class="hero-container">
+        <div class="hero-content">
+          <div class="hero-pill-tag">
+            <span class="pill-dot"></span>
+            <span>Platform WhatsApp AI No. 1 di Indonesia • 🎁 Free 300 Token Awal</span>
+          </div>
+          <h1 class="hero-title">
+            Balas Chat WhatsApp Pelanggan <span class="text-highlight">24 Jam Otomatis</span> dengan AI
+          </h1>
+          <p class="hero-subtitle">
+            Tingkatkan penjualan toko tanpa lelah balas chat manual berulang kali. Cukup scan QR <strong>WhatsApp
+              Perangkat Tertaut</strong> (Linked Devices), tanpa pusing verifikasi Meta Business API. <strong>Daftar gratis sekarang langsung dapat 300 Token AI!</strong>
+          </p>
+
+          <div class="hero-cta-group">
+            <button class="btn-cta-main" onclick="openFreeRegisterModal()">
+              <span>Daftar Gratis (Dapat 300 Token)</span>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+            <a href="#harga" class="btn-cta-secondary">
+              <span>Lihat Pilihan Paket</span>
+            </a>
+          </div>
+
+          <div class="hero-trust-badges">
+            <div class="trust-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>🎁 Gratis 300 Token Awal</span>
+            </div>
+            <div class="trust-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Support WA Regular & Bisnis</span>
+            </div>
+            <div class="trust-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>Proteksi 1 Akun 1 Perangkat</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Hero WhatsApp Preview Mockup -->
+        <div class="hero-preview-wrapper">
+          <div class="hero-phone-card">
+            <div class="preview-phone-header">
+              <div class="preview-avatar">T</div>
+              <div class="preview-header-info">
+                <div class="preview-store-name">Toko Online Berkah</div>
+                <div class="preview-status"><span class="live-dot"></span> online • bot aktif</div>
+              </div>
+              <span class="preview-badge-ai">artapos AI</span>
+            </div>
+
+            <div class="preview-phone-body">
+              <div class="chat-date-chip">HARI INI</div>
+
+              <div class="preview-bubble incoming">
+                <p>Halo kak, apakah produk sepatu sneakers hitam size 42 ready? Dan apakah bisa COD ke Bandung?</p>
+                <span class="preview-bubble-time">14:20</span>
+              </div>
+
+              <div class="preview-bubble outgoing">
+                <p>Halo kak! Selamat datang di Toko Berkah. 😊<br><br>Sepatu sneakers hitam size 42 <strong>ready
+                    stock</strong> ya kak! Kami juga melayani <strong>COD (Bayar di Tempat)</strong> ke seluruh Bandung
+                  via J&T Express.<br><br>Mau langsung dibantu amankan stoknya kak?<br><br>&gt; sent via artapos.id</p>
+                <span class="preview-bubble-time">14:20 <span class="double-check">✓✓</span></span>
+              </div>
+
+              <div class="preview-ai-status">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>Dibalas otomatis oleh artapos AI dalam 0.4 detik (Kuota -1)</span>
+              </div>
+            </div>
+
+            <div class="preview-phone-footer">
+              <div class="preview-fake-input">Ketik pesan pertanyaan...</div>
+              <div class="preview-send-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3-Step "Cara Kerja" Section -->
+    <section id="cara-kerja" class="section-workflow">
+      <div class="section-container">
+        <div class="section-header-center">
+          <span class="section-tag">MUDAH & CEPAT</span>
+          <h2 class="section-title">3 Langkah Mudah Memulai Otomasi WhatsApp</h2>
+          <p class="section-subtitle">Siap digunakan dalam hitungan menit tanpa keahlian coding atau integrasi rumit.
+          </p>
+        </div>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-number-badge">1</div>
+            <div class="step-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+            </div>
+            <h3>Pilih Paket & Masukkan Email Google</h3>
+            <p>Tentukan kuota balasan bulanan sesuai kebutuhan toko Anda dan masukkan alamat email Google (@gmail.com)
+              aktif Anda.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number-badge">2</div>
+            <div class="step-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                <line x1="1" y1="10" x2="23" y2="10"></line>
+              </svg>
+            </div>
+            <h3>Bayar Tagihan & Terima Akun di Gmail</h3>
+            <p>Bayar instan via Midtrans (QRIS, VA Bank, E-Wallet). Akun login langsung dikirim otomatis ke kotak masuk
+              Gmail Anda dengan password awal.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number-badge">3</div>
+            <div class="step-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+            </div>
+            <h3>Login, Scan QR & Bot Langsung Aktif</h3>
+            <p>Masuk ke dashboard, scan QR Perangkat Tertaut dari aplikasi WhatsApp HP toko Anda. Bot AI seketika
+              standby membalas pesan pembeli 24 jam!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="harga" class="section-pricing">
+      <div class="section-container">
+        <div class="section-header-center">
+          <span class="section-tag">PILIHAN HARGA LANGGANAN</span>
+          <h2 class="section-title">Investasi Terjangkau, Penjualan Melejit</h2>
+          <p class="section-subtitle">Pilih paket bulanan berdasarkan kuota balasan chat AI yang dibutuhkan toko Anda.
+            Tanpa komitmen jangka panjang, perpanjang setiap 30 hari.</p>
+        </div>
+
+        <div class="pricing-cards-grid">
+          <!-- 1. Starter -->
+          <div class="pricing-card" data-plan="starter">
+            <div class="pricing-badge-wrapper"></div>
+            <div class="pricing-tier-name">Paket Starter</div>
+            <div class="pricing-tier-desc">Cocok untuk toko pemula atau volume chat santai.</div>
+            <div class="pricing-price-box">
+              <span class="price-currency">Rp</span>
+              <span class="price-value">50.000</span>
+              <span class="price-period">/bulan</span>
+            </div>
+            <div class="pricing-quota-highlight">
+              <strong>1.000</strong> Balasan Chat AI / Bulan
+            </div>
+            <ul class="pricing-features-list">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Koneksi WhatsApp Perangkat Tertaut</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Knowledge Base CRUD Tanpa Batas</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Simulator Web Chat Interaktif</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Riwayat Chat & Pemotongan Kuota</li>
+              <li style="color: #64748b;"><svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>Masih Ada Watermark <code>&gt; sent via artapos.id</code></li>
+            </ul>
+            <button class="btn-select-plan" onclick="openCheckout('starter')">Pilih Starter</button>
+          </div>
+
+          <!-- 2. Bisnis (Paling Laris) -->
+          <div class="pricing-card featured" data-plan="bisnis">
+            <div class="pricing-badge-wrapper">
+              <span class="popular-ribbon">🔥 PALING LARIS</span>
+            </div>
+            <div class="pricing-tier-name">Paket Bisnis</div>
+            <div class="pricing-tier-desc">Paling diminati penjual online aktif harian.</div>
+            <div class="pricing-price-box">
+              <span class="price-currency">Rp</span>
+              <span class="price-value">100.000</span>
+              <span class="price-period">/bulan</span>
+            </div>
+            <div class="pricing-quota-highlight green">
+              <strong>2.500</strong> Balasan Chat AI / Bulan
+            </div>
+            <ul class="pricing-features-list">
+              <li style="color: #15803d; font-weight: 700;"><svg viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>✨ Bebas Watermark (Tanpa <code>sent via artapos.id</code>)</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Koneksi WhatsApp Perangkat Tertaut</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Knowledge Base CRUD Tanpa Batas</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Smart Keyword & Fuzzy Matching</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Pencatatan Pertanyaan Tak Terjawab</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Simulator & Log Real-Time Cloud</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Prioritas Respon CS</li>
+            </ul>
+            <button class="btn-select-plan primary" onclick="openCheckout('bisnis')">Pilih Paket Bisnis</button>
+          </div>
+
+          <!-- 3. Pro -->
+          <div class="pricing-card" data-plan="pro">
+            <div class="pricing-badge-wrapper"></div>
+            <div class="pricing-tier-name">Paket Pro</div>
+            <div class="pricing-tier-desc">Dirancang untuk toko ramai dengan chat masuk padat.</div>
+            <div class="pricing-price-box">
+              <span class="price-currency">Rp</span>
+              <span class="price-value">150.000</span>
+              <span class="price-period">/bulan</span>
+            </div>
+            <div class="pricing-quota-highlight">
+              <strong>5.000</strong> Balasan Chat AI / Bulan
+            </div>
+            <ul class="pricing-features-list">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Koneksi WhatsApp Perangkat Tertaut</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Semua Fitur Paket Bisnis</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Kapasitas Kuota 5.000 Chat</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Export Database Pengetahuan JSON</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Prioritas Jalur Antrian AI</li>
+            </ul>
+            <button class="btn-select-plan" onclick="openCheckout('pro')">Pilih Paket Pro</button>
+          </div>
+
+          <!-- 4. Enterprise -->
+          <div class="pricing-card" data-plan="enterprise">
+            <div class="pricing-badge-wrapper"></div>
+            <div class="pricing-tier-name">Paket Enterprise</div>
+            <div class="pricing-tier-desc">Kapasitas maksimal untuk toko besar & distributor.</div>
+            <div class="pricing-price-box">
+              <span class="price-currency">Rp</span>
+              <span class="price-value">200.000</span>
+              <span class="price-period">/bulan</span>
+            </div>
+            <div class="pricing-quota-highlight">
+              <strong>10.000</strong> Balasan Chat AI / Bulan
+            </div>
+            <ul class="pricing-features-list">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Koneksi WhatsApp Perangkat Tertaut</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Kapasitas Maksimal 10.000 Chat</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Multi-Keyword Smart Matcher</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Dedicated High-Speed Channel</li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>Dukungan VIP 24/7</li>
+            </ul>
+            <button class="btn-select-plan" onclick="openCheckout('enterprise')">Pilih Enterprise</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Fitur Section -->
+    <section id="fitur" class="section-features">
+      <div class="section-container">
+        <div class="section-header-center">
+          <span class="section-tag">MENGAPA ARTAPOS.ID?</span>
+          <h2 class="section-title">Fitur Dirancang Khusus untuk Pebisnis Indonesia</h2>
+          <p class="section-subtitle">Solusi cerdas yang menjawab tantangan pelayanan pelanggan WhatsApp sehari-hari.
+          </p>
+        </div>
+
+        <div class="features-grid">
+          <div class="feature-item-card">
+            <div class="feature-icon green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </div>
+            <h4>Tanpa Meta API Resmi</h4>
+            <p>Tidak perlu kartu kredit, dokumen legalitas perusahaan, atau menunggu verifikasi Meta berhari-hari. Cukup
+              sambungkan via scan QR.</p>
+          </div>
+
+          <div class="feature-item-card">
+            <div class="feature-icon green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <h4>Respon Cepat & Natural</h4>
+            <p>Jawaban fleksibel dan sopan berbahasa Indonesia yang dirancang menyerupai interaksi admin CS toko
+              profesional.</p>
+          </div>
+
+          <div class="feature-item-card">
+            <div class="feature-icon green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline>
+                <path
+                  d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z">
+                </path>
+              </svg>
+            </div>
+            <h4>Pusat Data Pengetahuan Real-Time</h4>
+            <p>Tambah, edit, dan hapus pertanyaan serta jawaban produk langsung dari dashboard web kapan saja dengan
+              sinkronisasi instan.</p>
+          </div>
+
+          <div class="feature-item-card">
+            <div class="feature-icon green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+            </div>
+            <h4>Transparan & Terjangkau</h4>
+            <p>Sistem kuota balasan yang jelas dan termonitor setiap saat di dashboard tanpa ada biaya tersembunyi per
+              pesan.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section id="faq" class="section-faq">
+      <div class="section-container">
+        <div class="section-header-center">
+          <span class="section-tag">PERTANYAAN UMUM</span>
+          <h2 class="section-title">Pertanyaan yang Sering Diajukan (FAQ)</h2>
+          <p class="section-subtitle">Pelajari selengkapnya mengenai cara kerja platform artapos.id.</p>
+        </div>
+
+        <div class="faq-list">
+          <div class="faq-item">
+            <div class="faq-question">Apakah saya harus memiliki akun WhatsApp Business API resmi dari Meta?</div>
+            <div class="faq-answer">Tidak perlu. artapos.id bekerja menggunakan fitur resmi WhatsApp Perangkat Tertaut
+              (Linked Devices), sama seperti saat Anda membuka WhatsApp Web di laptop.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-question">Bisa menggunakan nomor WhatsApp pribadi biasa?</div>
+            <div class="faq-answer">Bisa! artapos.id mendukung baik nomor WhatsApp reguler maupun WhatsApp Business di
+              perangkat Android dan iPhone.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-question">Bagaimana jika kuota balasan bulanan saya habis sebelum 30 hari?</div>
+            <div class="faq-answer">Jika kuota habis, bot akan berhenti membalas otomatis sementara hingga Anda
+              melakukan perpanjangan paket atau upgrade kuota melalui dashboard.</div>
+          </div>
+          <div class="faq-item">
+            <div class="faq-question">Bagaimana akun saya dikirimkan setelah pembayaran berhasil?</div>
+            <div class="faq-answer">Sistem kami secara otomatis mengirimkan rincian akun (email Google dan password
+              awal) ke alamat Gmail yang Anda masukkan saat checkout begitu pembayaran terverifikasi.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Landing Footer -->
+    <footer class="landing-footer">
+      <div class="footer-container">
+        <div class="footer-left">
+          <div class="brand-link">
+            <div class="brand-badge-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+                <path
+                  d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z">
+                </path>
+              </svg>
+            </div>
+            <span class="brand-title">artapos<span class="brand-tld">.id</span></span>
+          </div>
+          <p class="footer-tagline">Solusi otomatisasi AI WhatsApp Customer Service & Penjualan No. 1 di Indonesia.</p>
+        </div>
+
+        <div class="footer-right">
+          <div class="footer-links-group">
+            <a href="#fitur">Fitur</a>
+            <a href="#cara-kerja">Cara Kerja</a>
+            <a href="#harga">Harga</a>
+            <a href="#faq">FAQ</a>
+            <a href="javascript:void(0)" onclick="switchView('login')">Masuk Dashboard</a>
+          </div>
+          <div class="footer-copy">© 2026 artapos.id • Hak Cipta Dilindungi Undang-Undang.</div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+
+  <!-- ============================================================== -->
+  <!-- 2. CHECKOUT & MIDTRANS BILLING VIEW                            -->
+  <!-- ============================================================== -->
+  <div id="viewCheckout" class="view-screen hidden">
+    <div class="checkout-page-container">
+      <!-- Checkout Header -->
+      <div class="checkout-navbar">
+        <button class="btn-back-landing" id="btnCheckoutBack" onclick="handleCheckoutBackClick()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span id="btnCheckoutBackText">Kembali ke Beranda</span>
+        </button>
+        <div class="brand-title">artapos<span class="brand-tld">.id</span></div>
+        <div class="checkout-lock-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <span>Pembayaran Aman Midtrans</span>
+        </div>
+      </div>
+
+      <!-- Stepper Indicator -->
+      <div class="checkout-stepper">
+        <div class="step-item active" id="step1Indicator">
+          <div class="step-circle">1</div>
+          <div class="step-label">Pilih Paket & Data</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-item" id="step2Indicator">
+          <div class="step-circle">2</div>
+          <div class="step-label">Pembayaran</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-item" id="step3Indicator">
+          <div class="step-circle">3</div>
+          <div class="step-label">Akun Aktif di Gmail</div>
+        </div>
+      </div>
+
+      <div class="checkout-grid">
+        <!-- Left: Form Input & Package Selection -->
+        <div class="checkout-card form-card">
+          <h3>1. Pilih Paket Langganan</h3>
+          <p class="form-subtext">Semua paket berlaku selama 30 hari kalender dengan batas kuota balasan AI bulanan.</p>
+
+          <!-- Plan Selector Radio Buttons -->
+          <div class="checkout-plan-selector" id="checkoutPlanSelector">
+            <label class="plan-option" onclick="selectCheckoutPlan('starter')">
+              <input type="radio" name="checkoutPlanRadio" value="starter">
+              <div class="plan-option-content">
+                <div class="plan-option-header">
+                  <strong>Paket Starter</strong>
+                  <span class="plan-option-price">Rp 50.000 / bln</span>
+                </div>
+                <div class="plan-option-quota">1.000 balasan chat/bulan • 30 hari • <em>Masih ada watermark &gt; sent via artapos.id</em></div>
+              </div>
+            </label>
+
+            <label class="plan-option selected" onclick="selectCheckoutPlan('bisnis')">
+              <input type="radio" name="checkoutPlanRadio" value="bisnis" checked>
+              <div class="plan-option-content">
+                <div class="plan-option-header">
+                  <div>
+                    <strong>Paket Bisnis</strong>
+                    <span class="badge-best-seller">Paling Laris • Tanpa Watermark</span>
+                  </div>
+                  <span class="plan-option-price">Rp 100.000 / bln</span>
+                </div>
+                <div class="plan-option-quota">2.500 balasan chat/bulan • 30 hari • <strong style="color:#16a34a;">✨ Menghilangkan &gt; sent via artapos.id</strong></div>
+              </div>
+            </label>
+
+            <label class="plan-option" onclick="selectCheckoutPlan('pro')">
+              <input type="radio" name="checkoutPlanRadio" value="pro">
+              <div class="plan-option-content">
+                <div class="plan-option-header">
+                  <strong>Paket Pro</strong>
+                  <span class="plan-option-price">Rp 150.000 / bln</span>
+                </div>
+                <div class="plan-option-quota">5.000 balasan chat/bulan • 30 hari • <strong style="color:#16a34a;">✨ Tanpa watermark</strong></div>
+              </div>
+            </label>
+
+            <label class="plan-option" onclick="selectCheckoutPlan('enterprise')">
+              <input type="radio" name="checkoutPlanRadio" value="enterprise">
+              <div class="plan-option-content">
+                <div class="plan-option-header">
+                  <strong>Paket Enterprise</strong>
+                  <span class="plan-option-price">Rp 200.000 / bln</span>
+                </div>
+                <div class="plan-option-quota">10.000 balasan chat/bulan • 30 hari • <strong style="color:#16a34a;">✨ Tanpa watermark</strong></div>
+              </div>
+            </label>
+          </div>
+
+          <form id="checkoutForm" onsubmit="handleCheckoutSubmit(event)">
+            <!-- Tampil HANYA jika belum login (Tamu dari Beranda) -->
+            <div id="checkoutGuestInputSection">
+              <div class="divider-line"></div>
+              <h3>2. Masukkan Informasi Akun</h3>
+              <p class="form-subtext">Akun login dan password default akan otomatis diaktifkan untuk email Google ini.</p>
+
+              <div class="field-group">
+                <label for="orderEmail">Email Google (@gmail.com) <span class="required-star">*</span></label>
+                <div class="input-with-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                  </svg>
+                  <input type="email" id="orderEmail" placeholder="contoh: tokosaya@gmail.com" required
+                    autocomplete="email" maxlength="100">
+                </div>
+                <div class="input-note">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                  <span>Wajib email Google (@gmail.com). Akses akun & password dikirim ke email ini setelah lunas.</span>
+                </div>
+              </div>
+
+              <div class="field-group">
+                <label for="orderStoreName">Nama Toko / Bisnis (Opsional)</label>
+                <div class="input-with-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                  <input type="text" id="orderStoreName" placeholder="Contoh: Toko Fashion Berkah" maxlength="100">
+                </div>
+              </div>
+            </div>
+
+            <!-- Tampil Otomatis jika Pengguna SUDAH LOGIN (Tanpa Isi Email Lagi!) -->
+            <div id="checkoutLoggedInBanner" class="checkout-logged-in-banner hidden">
+              <div class="cli-avatar" id="checkoutActiveAvatar">A</div>
+              <div class="cli-meta">
+                <div class="cli-label">Upgrade / Tambah Kuota Langsung ke Akun Anda:</div>
+                <div class="cli-email" id="checkoutActiveUserEmail">user@gmail.com</div>
+              </div>
+              <span class="cli-status">✓ Akun Aktif</span>
+            </div>
+
+            <!-- Action buttons inside form for submit trigger -->
+            <button type="submit" class="btn-pay-now" id="btnPayMidtrans">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                <line x1="1" y1="10" x2="23" y2="10"></line>
+              </svg>
+              <span>Bayar & Aktifkan Paket Sekarang (Midtrans)</span>
+            </button>
+          </form>
+
+          <!-- Status Pembayaran & Verifikasi Resmi Midtrans -->
+          <div id="checkoutPendingBox" class="checkout-pending-box hidden">
+            <div class="pending-status-header">
+              <span class="badge-status-pending">⏳ Menunggu Pembayaran</span>
+              <span class="pending-order-id" id="pendingOrderId">ARTA-...</span>
+            </div>
+            <p class="pending-desc">
+              Kode QRIS / Tagihan Midtrans telah dibuat. Silakan selesaikan pembayaran di aplikasi e-wallet atau
+              m-banking Anda.
+            </p>
+            <div class="pending-actions-row">
+              <button type="button" class="btn-reopen-snap" id="btnReopenSnap" onclick="reopenMidtransSnap()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                  <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+                <span>Buka QRIS / Tagihan</span>
+              </button>
+              <button type="button" class="btn-check-verify" id="btnCheckVerify" onclick="checkActiveOrderPayment()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <polyline points="1 20 1 14 7 14"></polyline>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+                <span>Cek Status Pembayaran</span>
+              </button>
+            </div>
+            <div class="strict-security-warning">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+              <span><strong>Proteksi Keamanan:</strong> Akun dan password HANYA akan dibuat setelah dana benar-benar
+                terverifikasi lunas (Settlement) oleh server Midtrans.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Order Invoice Summary Card -->
+        <div class="checkout-card summary-card">
+          <h3>Ringkasan Tagihan</h3>
+          <div class="summary-invoice-header">
+            <span class="badge-status-unpaid">Menunggu Pembayaran</span>
+            <span class="invoice-number" id="sumInvoiceId">ARTA-INV-2026</span>
+          </div>
+
+          <div class="summary-details">
+            <div class="summary-row">
+              <span class="summary-label">Paket Dipilih:</span>
+              <strong id="sumPlanName">Paket Bisnis</strong>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Kuota Balasan:</span>
+              <span id="sumPlanQuota">2.500 balasan / bulan</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Masa Aktif:</span>
+              <span>30 Hari Kalender</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Gateway:</span>
+              <span>Midtrans (QRIS, VA Bank, E-Wallet)</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Email Tujuan:</span>
+              <span id="sumEmailTarget" class="text-truncate">Belum diisi</span>
+            </div>
+          </div>
+
+          <div class="divider-line"></div>
+
+          <div class="summary-total-box">
+            <span class="total-label">Total Pembayaran:</span>
+            <div class="total-amount-val" id="sumTotalAmount">Rp 100.000</div>
+          </div>
+
+          <div class="payment-guarantee-note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <div>
+              <strong>Garansi Aktivasi Instan</strong>
+              <p>Setelah pembayaran terkonfirmasi, akun dan password otomatis terdaftar di database Cloud artapos.id.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================== -->
+  <!-- 3. PEMBAYARAN BERHASIL & SIMULASI NOTIFIKASI EMAIL GMAIL      -->
+  <!-- ============================================================== -->
+  <div id="viewSuccessEmail" class="view-screen hidden">
+    <div class="success-page-container">
+      <!-- Success Banner -->
+      <div class="success-top-card">
+        <div class="success-icon-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <h2>Pembayaran Berhasil & Akun Aktif!</h2>
+        <p class="success-subtitle">Terima kasih atas pembayaran Anda. Akun langganan artapos.id Anda telah berhasil
+          dibuat dan aktif selama 30 hari.</p>
+
+        <div class="success-status-pill">
+          <span class="pill-dot green"></span>
+          <span>Status Transaksi: <strong>SETTLEMENT / LUNAS</strong></span>
+        </div>
+      </div>
+
+      <!-- Gmail Notification Preview Card -->
+      <div class="gmail-mockup-card">
+        <div class="gmail-mockup-header">
+          <div class="gmail-branding">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="#EA4335">
+              <path
+                d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+            </svg>
+            <span>Simulasi Notifikasi Email Google (@gmail.com)</span>
+          </div>
+          <span class="gmail-time-stamp" id="emailSentTime">Baru Saja</span>
+        </div>
+
+        <div class="gmail-mockup-body">
+          <div class="email-meta-row">
+            <span class="meta-label">Dari:</span>
+            <strong>artapos.id Official</strong> &lt;billing@artapos.id&gt;
+          </div>
+          <div class="email-meta-row">
+            <span class="meta-label">Kepada:</span>
+            <span id="emailPreviewRecipient">user@gmail.com</span>
+          </div>
+          <div class="email-meta-row">
+            <span class="meta-label">Subjek:</span>
+            <strong>🎉 Selamat! Akun artapos.id Anda Telah Aktif — Akses Login</strong>
+          </div>
+
+          <div class="email-content-box">
+            <p>Halo Pemilik Toko,</p>
+            <p>Pembayaran langganan <strong>artapos.id</strong> Anda telah berhasil kami terima. Berikut adalah detail
+              akun Anda untuk mulai mengaktifkan bot WhatsApp:</p>
+
+            <div class="credential-box">
+              <div class="cred-row">
+                <span class="cred-label">Paket Langganan:</span>
+                <strong id="emailPreviewPlan">Paket Bisnis (2.500 Balasan / Bln)</strong>
+              </div>
+              <div class="cred-row">
+                <span class="cred-label">URL Login:</span>
+                <code>artapos.id/login</code>
+              </div>
+              <div class="cred-row">
+                <span class="cred-label">Email Google:</span>
+                <strong id="emailPreviewUser">user@gmail.com</strong>
+              </div>
+              <div class="cred-row">
+                <span class="cred-label">Password Default:</span>
+                <div class="password-highlight">
+                  <span id="emailPreviewPassword">Admin123!</span>
+                  <button type="button" class="btn-copy-cred" onclick="copyPasswordDefault()"
+                    title="Salin Password">Salin</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="security-warning-note">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+              <span><strong>Catatan Keamanan:</strong> Demi keamanan akun, Anda dapat mengganti password dan email
+                Google kapan saja di menu Pengaturan Akun di dalam dashboard.</span>
+            </div>
+
+            <div class="email-cta-center">
+              <button class="btn-email-action" onclick="goToLoginWithEmail()">
+                <span>Lanjut ke Halaman Login</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================== -->
+  <!-- 4. LOGIN VIEW                                                  -->
+  <!-- ============================================================== -->
+  <div id="viewLogin" class="view-screen hidden">
+    <div class="login-page-container">
+      <div class="login-card-pro">
+        <div class="login-brand-header">
+          <div class="brand-badge-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+              <path
+                d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z">
+              </path>
+            </svg>
+          </div>
+          <h2>Masuk ke artapos.id</h2>
+          <p>Kelola Bot WhatsApp AI & Penjualan Toko Anda</p>
+        </div>
+
+        <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+          <div class="field-group">
+            <label for="loginEmail">Email Google (@gmail.com)</label>
+            <div class="input-with-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+              <input type="email" id="loginEmail" placeholder="namaanda@gmail.com" required autocomplete="email" maxlength="100">
+            </div>
+          </div>
+
+          <div class="field-group">
+            <div class="label-with-hint">
+              <label for="loginPassword">Password</label>
+              <span class="pwd-hint-text">Maks. 20 Karakter</span>
+            </div>
+            <div class="input-with-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <input type="password" id="loginPassword" placeholder="Masukkan password akun" required
+                autocomplete="current-password" maxlength="20">
+              <button type="button" class="btn-toggle-pwd" onclick="togglePasswordVisibility('loginPassword')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-login-submit" id="btnLoginSubmit">
+            <span>Masuk ke Dashboard</span>
+          </button>
+        </form>
+
+        <div class="login-footer-modern">
+          <div class="login-divider-chip">
+            <span>Belum Memiliki Akun?</span>
+          </div>
+
+          <button type="button" class="btn-login-register-cta" onclick="openFreeRegisterModal()">
+            <span>🎁 Daftar Akun Gratis (Dapat 300 Token)</span>
+          </button>
+
+          <button type="button" class="btn-login-back-home" onclick="switchView('landing')">
+            <span>Kembali ke Halaman Beranda</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================================== -->
+  <!-- 5. MAIN DASHBOARD WORKSPACE (POST-LOGIN)                       -->
+  <!-- ============================================================== -->
+  <div id="viewDashboard" class="view-screen hidden">
+    <div class="saas-app">
+
+      <!-- ============================================================ -->
+      <!-- SIDEBAR NAVIGATION (DARK CHARCOAL #0B1220 SAAS)              -->
+      <!-- ============================================================ -->
+      <aside class="saas-sidebar">
+        <!-- App Brand / Header -->
+        <div class="brand-box">
+          <div class="brand-logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+              <path
+                d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z">
+              </path>
+            </svg>
+          </div>
+          <div class="brand-details">
+            <h2>artapos<span class="brand-tld">.id</span></h2>
+            <span class="badge-edition" id="sidebarPlanBadge">Paket Bisnis</span>
+          </div>
+          <button type="button" class="btn-close-sidebar-mobile" onclick="toggleMobileSidebar(false)" title="Tutup Menu">✕</button>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="sidebar-nav">
+          <div class="nav-label">Gateway & Koneksi</div>
+
+          <button class="nav-btn active" id="navWaBtn" onclick="switchTab('whatsapp')">
+            <div class="nav-icon-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18"></line>
+              </svg>
+              <span>Koneksi WhatsApp</span>
+            </div>
+            <span class="badge-nav badge-nav-warning" id="navWaBadge">Scan QR</span>
+          </button>
+
+          <div class="nav-label" style="margin-top: 14px;">Manajemen Data</div>
+
+          <button class="nav-btn" id="navAdminBtn" onclick="switchTab('admin')">
+            <div class="nav-icon-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+              <span>Knowledge Base (CRUD)</span>
+            </div>
+            <span class="badge-nav badge-nav-emerald" id="navKnowledgeBadge">13</span>
+          </button>
+
+          <button class="nav-btn" id="navChatBtn" onclick="switchTab('chat')">
+            <div class="nav-icon-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span>Simulator Web Chat</span>
+            </div>
+          </button>
+
+          <div class="nav-label" style="margin-top: 14px;">Konfigurasi & Akun</div>
+
+          <button class="nav-btn" id="navSettingsBtn" onclick="switchTab('settings')">
+            <div class="nav-icon-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path
+                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                </path>
+              </svg>
+              <span>Pengaturan Toko</span>
+            </div>
+          </button>
+
+          <button class="nav-btn" id="navAccountBtn" onclick="switchTab('account')">
+            <div class="nav-icon-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <span>Token & Pengaturan Akun</span>
+            </div>
+          </button>
+
+          <!-- Super Admin Navigation Group (Dipisah-pisah di Sidebar Kiri) -->
+          <div id="sidebarSuperAdminGroup" class="hidden">
+            <div class="nav-label" style="margin-top: 16px; color: #fbbf24; display: flex; align-items: center; justify-content: space-between;">
+              <span>👑 Super Admin Panel</span>
+              <span class="badge-nav badge-nav-admin">ADMIN</span>
+            </div>
+
+            <button class="nav-btn" id="navSaTrafficBtn" onclick="openSuperAdminPage('traffic')">
+              <div class="nav-icon-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+                <span>Grafik Kunjungan</span>
+              </div>
+              <span class="badge-nav badge-nav-emerald" id="sideVisitsBadge">0</span>
+            </button>
+
+            <button class="nav-btn" id="navSaUsersBtn" onclick="openSuperAdminPage('users')">
+              <div class="nav-icon-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                <span>CRUD Akun & Token</span>
+              </div>
+              <span class="badge-nav badge-nav-neutral" id="sideUsersBadge">0</span>
+            </button>
+
+            <button class="nav-btn" id="navSaNotifBtn" onclick="openSuperAdminPage('notifications')">
+              <div class="nav-icon-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span>Log Aktivitas & Notif</span>
+              </div>
+              <span class="badge-nav badge-nav-warning" id="sideNotifBadge">0</span>
+            </button>
+
+            <button class="nav-btn" id="navSaKnowledgeBtn" onclick="openSuperAdminPage('knowledge')">
+              <div class="nav-icon-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                <span>Bank Soal Seluruh Akun</span>
+              </div>
+              <span class="badge-nav badge-nav-neutral" id="sideQaBadge">0</span>
+            </button>
+
+            <button class="nav-btn" id="navSaOrdersBtn" onclick="openSuperAdminPage('orders')">
+              <div class="nav-icon-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                  <line x1="1" y1="10" x2="23" y2="10"></line>
+                </svg>
+                <span>Transaksi Midtrans</span>
+              </div>
+            </button>
+
+            <button class="nav-btn" id="navSaPwdBtn" onclick="openSuperAdminPage('pwd')">
+              <div class="nav-icon-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <span>Sandi Super Admin</span>
+              </div>
+            </button>
+          </div>
+        </nav>
+
+        <!-- Sidebar Footer: Session Info & Logout -->
+        <div class="sidebar-footer">
+          <div class="user-session-widget">
+            <div class="user-avatar-circle" id="sidebarAvatar">G</div>
+            <div class="user-meta-info">
+              <div class="user-email-text text-truncate" id="sidebarUserEmail">user@gmail.com</div>
+              <div class="user-role-text">Pelanggan Aktif</div>
+            </div>
+            <button class="btn-logout-icon" onclick="handleLogout()" title="Keluar Akun">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Overlay backdrop for mobile sidebar -->
+      <div id="dashboardOverlay" class="dashboard-mobile-overlay hidden" onclick="toggleMobileSidebar(false)"></div>
+
+      <!-- ============================================================ -->
+      <!-- MAIN WORKSPACE                                               -->
+      <!-- ============================================================ -->
+      <main class="saas-main">
+
+        <!-- Top Navigation Bar -->
+        <header class="saas-topbar">
+          <button type="button" class="btn-mobile-sidebar-toggle" id="btnToggleSidebar" onclick="toggleMobileSidebar(true)" title="Buka Menu Navigasi">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div class="topbar-title-group">
+            <div class="breadcrumbs">Dashboard / <span id="topbarCategory">WhatsApp Gateway</span></div>
+            <h1 id="topbarTitle">Koneksi WhatsApp & Kode QR</h1>
+          </div>
+
+          <div class="topbar-actions">
+            <!-- Token Status Pill -->
+            <div class="quota-pill-badge" id="topbarQuotaBadge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              <span>Sisa Token: <strong id="topbarQuotaCount">300</strong> / <span
+                  id="topbarQuotaTotal">300</span></span>
+            </div>
+
+            <!-- WhatsApp Status Pill -->
+            <div class="status-pill-badge scan_qr" id="topbarStatusPill">
+              <span class="dot-indicator yellow" id="topbarDotStatus"></span>
+              <span id="topbarStatusText">Menunggu Scan QR</span>
+            </div>
+
+            <!-- Sync Button -->
+            <button class="btn-action-refresh" onclick="loadData(true)" title="Sinkronkan Data Cloud">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+              <span>Sync</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- Content Container -->
+        <div class="workspace-body">
+
+          <!-- ============================================================ -->
+          <!-- TAB 1: KONEKSI WHATSAPP & QR CODE LIVE                        -->
+          <!-- ============================================================ -->
+          <section id="tabWa" class="page-tab">
+            <!-- KONDISI A: WHATSAPP SUDAH TERHUBUNG -->
+            <div id="viewWaConnected" class="hidden">
+              <div class="hero-connected-banner">
+                <div class="hero-status-left">
+                  <div class="pulse-ring-emerald">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </div>
+                  <div>
+                    <h2>WhatsApp Berhasil Terhubung!</h2>
+                    <p>Bot AI standby dan otomatis membalas setiap pesan pembeli yang masuk ke nomor toko Anda.</p>
+                  </div>
+                </div>
+                <div class="hero-actions-right">
+                  <button class="btn-danger-outline" onclick="logoutWhatsApp()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                      <line x1="12" y1="2" x2="12" y2="12"></line>
+                    </svg>
+                    <span>Putuskan Sesi WhatsApp</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Info Metric Grid -->
+              <div class="metrics-grid">
+                <div class="metric-card">
+                  <span class="metric-label">Nomor WhatsApp Aktif:</span>
+                  <div class="metric-value" id="heroPhoneDisplay">+62...</div>
+                  <span class="metric-foot">Tersambung via Baileys Multi-Device</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">Penyimpanan Pengetahuan:</span>
+                  <div class="metric-value color-emerald">Cloud Storage</div>
+                  <span class="metric-foot">Real-Time Data Sync</span>
+                </div>
+                <div class="metric-card">
+                  <span class="metric-label">Status Bot Auto-Reply:</span>
+                  <div class="metric-value color-emerald">Aktif 24 Jam Nonstop</div>
+                  <span class="metric-foot">Otomatis memotong kuota (-1/chat)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- KONDISI B: MENUNGGU SCAN KODE QR -->
+            <div id="viewWaScan">
+              <div class="qr-connection-grid">
+                <!-- QR Box Card -->
+                <div class="card-pro qr-box-card">
+                  <div class="qr-card-header">
+                    <span class="badge-tag-qr">KODE QR RESMI WHATSAPP</span>
+                    <h3>Pindai QR dengan HP Toko</h3>
+                    <p>Arahkan kamera WhatsApp toko Anda ke kode QR untuk menghubungkan sistem bot.</p>
+                  </div>
+
+                  <div class="qr-code-viewport">
+                    <img id="waQrImage" src="" alt="Kode QR WhatsApp" class="qr-code-img hidden">
+                    <div id="qrLoadingState" class="qr-loading-wrapper">
+                      <div class="spinner-pro"></div>
+                      <p>Menghubungkan ke WhatsApp...</p>
+                      <small>Membuat socket koneksi Baileys</small>
+                    </div>
+                  </div>
+
+                  <div class="qr-footer-actions">
+                    <span class="qr-live-indicator" id="qrStatusText">⚪ Menunggu socket...</span>
+                    <button class="btn-reset-session" onclick="logoutWhatsApp()">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="1 4 1 10 7 10"></polyline>
+                        <polyline points="23 20 23 14 17 14"></polyline>
+                        <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                      </svg>
+                      <span>Generate QR Baru / Reset Sesi</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 4 Steps Instruction Card -->
+                <div class="card-pro instruction-card">
+                  <span class="badge-tag-qr">CARA MENGHUBUNGKAN</span>
+                  <h3>4 Langkah Mudah Menghubungkan Toko Anda:</h3>
+                  <p class="instruction-lead">Hanya butuh 15 detik, tidak perlu pengaturan teknis apapun.</p>
+
+                  <div class="instruction-steps">
+                    <div class="inst-step-row">
+                      <div class="step-num">1</div>
+                      <div class="step-desc">
+                        <strong>Buka WhatsApp di HP Toko Anda</strong>
+                        <p>Mendukung WhatsApp Regular maupun WhatsApp Business di Android & iPhone.</p>
+                      </div>
+                    </div>
+
+                    <div class="inst-step-row">
+                      <div class="step-num">2</div>
+                      <div class="step-desc">
+                        <strong>Pilih Menu "Perangkat Tertaut"</strong>
+                        <p>Ketuk ikon <strong>titik tiga (⋮)</strong> di kanan atas (Android) atau menu
+                          <strong>Pengaturan</strong> (iPhone).
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="inst-step-row">
+                      <div class="step-num">3</div>
+                      <div class="step-desc">
+                        <strong>Ketuk Tombol "Tautkan Perangkat"</strong>
+                        <p>Kamera pemindai WhatsApp akan langsung terbuka di layar HP Anda.</p>
+                      </div>
+                    </div>
+
+                    <div class="inst-step-row">
+                      <div class="step-num">4</div>
+                      <div class="step-desc">
+                        <strong>Arahkan Kamera ke Kode QR di Samping</strong>
+                        <p>Setelah terdeteksi, layar ini akan <strong>otomatis berubah menjadi "Terhubung"</strong>
+                          dalam 1 detik!</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="safe-note-box">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    <div>
+                      <strong>100% Aman & Data Tersimpan di Cloud</strong>
+                      <p>Pesan dan database Anda terenkripsi aman. Nomor toko dapat diputus atau diganti kapan saja dari
+                        dashboard ini.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================================================ -->
+          <!-- TAB 2: KNOWLEDGE BASE (CRUD)                                  -->
+          <!-- ============================================================ -->
+          <section id="tabAdmin" class="page-tab hidden">
+            <!-- Alert Pertanyaan Tak Terjawab (Unanswered) -->
+            <div id="unansweredBox" class="alert-box-pro hidden">
+              <div class="alert-head">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="12"></line>
+                  <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <h4>Pertanyaan Pembeli Baru Belum Terjawab:</h4>
+              </div>
+              <div id="unansweredList" class="alert-chips-wrapper"></div>
+            </div>
+
+            <!-- Form Tambah / Edit Pengetahuan -->
+            <div class="card-pro form-knowledge-card">
+              <div class="card-head-bar">
+                <div>
+                  <h3 id="formKnowledgeTitle">➕ Tambah Pengetahuan Baru Toko</h3>
+                  <p>Database ini langsung tersinkronisasi ke Cloud secara otomatis.</p>
+                </div>
+                <div class="card-actions-right">
+                  <button type="button" class="btn-ghost-sm" onclick="exportDataJSON()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Export JSON</span>
+                  </button>
+                  <button type="button" id="btnCancelEdit" class="btn-ghost-sm hidden" onclick="cancelEditMode()">Batal
+                    Edit</button>
+                </div>
+              </div>
+
+              <form id="teachForm" onsubmit="handleTeachSubmit(event)">
+                <input type="hidden" id="editItemId" value="">
+
+                <div class="form-row-2">
+                  <div class="field-group">
+                    <label for="teachCategory">Kategori Jawaban:</label>
+                    <select id="teachCategory">
+                      <option value="produk">🛍️ Produk & Varian</option>
+                      <option value="pembayaran">💳 Pembayaran & COD</option>
+                      <option value="pengiriman">🚚 Pengiriman & Ongkir</option>
+                      <option value="informasi_toko">🏪 Informasi Toko & Jadwal</option>
+                      <option value="pemesanan">📝 Format Pemesanan</option>
+                      <option value="garansi">🛡️ Garansi & Retur</option>
+                      <option value="salam">👋 Salam & Sapaan</option>
+                      <option value="lainnya">💡 Lainnya</option>
+                    </select>
+                  </div>
+
+                  <div class="field-group">
+                    <label for="teachKeywords">Kata Kunci Penting (Pisahkan Koma, Maks 100 Karakter):</label>
+                    <input type="text" id="teachKeywords" placeholder="Contoh: harga, sepatu, sneakers, size" required maxlength="100">
+                    <span class="field-hint">Membantu AI mengenali pertanyaan pembeli walaupun kalimatnya
+                      berbeda.</span>
+                  </div>
+                </div>
+
+                <div class="field-group">
+                  <label for="teachQuestions">Contoh Pertanyaan Pembeli (Pisahkan Baris Baru, Maks 100 Karakter):</label>
+                  <textarea id="teachQuestions" rows="2" maxlength="100"
+                    placeholder="Berapa harga sneakers hitam?&#10;Ada size 42 ready?" required></textarea>
+                </div>
+
+                <div class="field-group">
+                  <label for="teachAnswer">Jawaban Bot WhatsApp:</label>
+                  <textarea id="teachAnswer" rows="3"
+                    placeholder="Halo kak! Sneakers hitam size 42 ready stock ya kak seharga Rp 249.000. Mau dibantu keep sekarang? 😊"
+                    required></textarea>
+                  <div class="format-chips">
+                    <span>Format WhatsApp:</span>
+                    <code>*tebal*</code>
+                    <code>_miring_</code>
+                    <code>~coret~</code>
+                    <span class="hint-right">Mendukung emoji lengkap 🎉</span>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn-submit-db" id="btnSubmitKnowledge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                  </svg>
+                  <span id="btnSubmitText">Simpan Pengetahuan ke Cloud</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- List Data Pengetahuan Terdaftar -->
+            <div class="card-pro list-knowledge-card">
+              <div class="card-head-bar">
+                <div>
+                  <h3>📚 Database Pengetahuan Aktif (<span id="totalKnowledgeCount">0</span>)</h3>
+                  <p>Semua item tersimpan aman dan siap dijawab otomatis oleh bot.</p>
+                </div>
+                <div class="search-box-knowledge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input type="text" id="searchKnowledgeInput"
+                    placeholder="Cari pertanyaan, jawaban, atau kata kunci..." oninput="filterKnowledgeList()" maxlength="100">
+                </div>
+              </div>
+
+              <div id="knowledgeListContainer" class="knowledge-cards-list">
+                <div class="loading-state-box">Memuat data dari Cloud...</div>
+              </div>
+            </div>
+          </section>
+
+
+
+          <!-- ============================================================ -->
+          <!-- TAB 4: SIMULATOR WEB CHAT (TESTING)                          -->
+          <!-- ============================================================ -->
+          <section id="tabChat" class="page-tab hidden">
+            <div class="simulator-wrapper">
+              <div class="phone-mockup">
+                <div class="phone-topbar">
+                  <div class="phone-avatar" id="simAvatarLetter">T</div>
+                  <div class="phone-header-info">
+                    <div class="phone-store-name" id="simStoreName">Toko AI Online</div>
+                    <div class="phone-status-text">online • siap membalas</div>
+                  </div>
+                </div>
+
+                <div class="phone-messages" id="chatMessages">
+                  <div class="msg-bubble incoming">
+                    <p>👋 Halo kak! Selamat datang di toko kami. Silakan uji coba chat bot di bawah ini untuk melihat
+                      respon jawaban dari Cloud:</p>
+                    <span class="msg-timestamp" id="welcomeTime">12:00</span>
+                  </div>
+                </div>
+
+                <div class="mockup-chips">
+                  <button type="button" class="chip-item" onclick="askQuick('Berapa harga produk?')">Berapa
+                    harga?</button>
+                  <button type="button" class="chip-item" onclick="askQuick('Bisa COD bayar di tempat?')">Bisa
+                    COD?</button>
+                  <button type="button" class="chip-item" onclick="askQuick('Lokasi toko dimana?')">Lokasi
+                    toko?</button>
+                </div>
+
+                <form class="phone-input-bar" id="chatForm" onsubmit="handleUserSubmit(event)">
+                  <input type="text" id="chatInput" placeholder="Ketik pesan untuk uji coba bot..." autocomplete="off"
+                    required maxlength="100">
+                  <button type="submit" class="btn-send-sim">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================================================ -->
+          <!-- TAB 5: PENGATURAN TOKO                                       -->
+          <!-- ============================================================ -->
+          <section id="tabSettings" class="page-tab hidden">
+            <div class="card-pro settings-card">
+              <div class="card-head-bar">
+                <div>
+                  <h3>⚙️ Pengaturan Profil Toko & WhatsApp</h3>
+                  <p>Konfigurasi ini tersimpan aman di Cloud.</p>
+                </div>
+              </div>
+
+              <div class="settings-form">
+                <div class="field-group">
+                  <label for="inputStoreName">Nama Toko / Nama Bot (Maks 100 Karakter):</label>
+                  <input type="text" id="inputStoreName" placeholder="Contoh: Toko Fashion Berkah" maxlength="100">
+                  <span class="field-hint">Nama ini digunakan sebagai identitas toko pada balasan salam.</span>
+                </div>
+
+                <div class="field-group">
+                  <label for="inputOwnerNumber">Nomor WhatsApp Admin (Maks 100 Karakter):</label>
+                  <input type="text" id="inputOwnerNumber" placeholder="Contoh: 628123456789" maxlength="100">
+                  <span class="field-hint">Nomor pemilik toko untuk notifikasi atau eskalasi pertanyaan pembeli.</span>
+                </div>
+
+                <button class="btn-submit-db" style="width: 100%; margin-top: 10px;" onclick="saveStoreSettings()">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                  </svg>
+                  <span>Simpan Pengaturan</span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- ============================================================ -->
+          <!-- TAB 6: KUOTA & PENGATURAN AKUN (GANTI GMAIL & PASSWORD)      -->
+          <!-- ============================================================ -->
+          <section id="tabAccount" class="page-tab hidden">
+            <div class="account-settings-container">
+
+              <!-- Plan & Token Summary Card -->
+              <div class="card-pro quota-status-card">
+                <div class="card-head-bar">
+                  <div>
+                    <h3>📊 Status Token & Paket Langganan</h3>
+                    <p>Pantau sisa token balasan AI otomatis untuk nomor WhatsApp toko Anda.</p>
+                  </div>
+                  <span class="badge-edition-active" id="dashPlanBadgeActive">Paket Gratis (300 Token)</span>
+                </div>
+
+                <div class="quota-kpi-grid">
+                  <div class="quota-kpi-box">
+                    <span class="qkpi-label">Total Token Paket</span>
+                    <div class="qkpi-value" id="dashQuotaMax">300</div>
+                    <span class="qkpi-sub">Token Balasan AI</span>
+                  </div>
+                  <div class="quota-kpi-box">
+                    <span class="qkpi-label">Token Terpakai</span>
+                    <div class="qkpi-value used" id="dashQuotaUsed">0</div>
+                    <span class="qkpi-sub">Chat WhatsApp</span>
+                  </div>
+                  <div class="quota-kpi-box highlight">
+                    <span class="qkpi-label">Sisa Token Aktif</span>
+                    <div class="qkpi-value emerald" id="dashQuotaRemaining">300</div>
+                    <span class="qkpi-sub">Siap Digunakan</span>
+                  </div>
+                </div>
+
+                <div class="quota-progress-container">
+                  <div class="quota-progress-bar-bg">
+                    <div class="quota-progress-fill" id="dashQuotaProgressFill" style="width: 0%;"></div>
+                  </div>
+
+                  <div class="quota-meta-footer">
+                    <span>📅 Masa Aktif Berlaku Sampai: <strong id="dashActiveUntil">30 Hari Kedepan</strong></span>
+                    <button type="button" class="btn-upgrade-quota" onclick="openCheckout('bisnis')">
+                      ⚡ Tambah Token / Upgrade Paket →
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Ganti Email Google & Password -->
+              <div class="card-pro form-account-card">
+                <div class="card-head-bar">
+                  <div>
+                    <h3>🔐 Pengaturan Kredensial Akun (Email Google & Password)</h3>
+                    <p>Perbarui alamat email Google (@gmail.com) atau kata sandi login dashboard Anda.</p>
+                  </div>
+                  <span class="badge-security-cloud">🛡️ Terenkripsi di Cloud</span>
+                </div>
+
+                <form id="profileForm" onsubmit="handleUpdateProfile(event)">
+                  <div class="form-row-2">
+                    <div class="field-group">
+                      <label for="profCurrentEmail">Email Google Saat Ini (Aktif):</label>
+                      <div class="input-with-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                          <polyline points="22,6 12,13 2,6"></polyline>
+                        </svg>
+                        <input type="email" id="profCurrentEmail" readonly class="input-readonly" maxlength="100">
+                      </div>
+                      <span class="field-hint">Email Google utama yang terdaftar pada akun ini.</span>
+                    </div>
+
+                    <div class="field-group">
+                      <label for="profNewEmail">Ganti Email Google Baru (Opsional):</label>
+                      <div class="input-with-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        <input type="email" id="profNewEmail" placeholder="Ketik email @gmail.com baru..." maxlength="100">
+                      </div>
+                      <span class="field-hint">Kosongkan jika tidak ingin mengubah alamat email login.</span>
+                    </div>
+                  </div>
+
+                  <div class="divider-line" style="margin: 18px 0;"></div>
+
+                  <div class="field-group">
+                    <div class="label-with-hint">
+                      <label for="profNewPassword">Ganti Password Baru (Opsional, Maks 20 Karakter):</label>
+                      <span class="pwd-hint-text">Min. 6 • Maks. 20 Karakter</span>
+                    </div>
+                    <div class="input-with-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                      </svg>
+                      <input type="password" id="profNewPassword"
+                        placeholder="Masukkan password baru jika ingin mengganti sandi..." maxlength="20">
+                      <button type="button" class="btn-toggle-pwd"
+                        onclick="togglePasswordVisibility('profNewPassword')" title="Lihat / Sembunyikan Password">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                      </button>
+                    </div>
+                    <span class="field-hint">Biarkan kosong apabila Anda tidak ingin mengubah password saat ini.</span>
+                  </div>
+
+                  <div class="account-save-footer">
+                    <button type="submit" class="btn-submit-db" id="btnUpdateProfile">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                      <span>Simpan Perubahan Akun</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+            </div>
+          </section>
+
+          <!-- ============================================================ -->
+          <!-- TAB 7: SUPER ADMIN MONITORING (PANTAU SEMUANYA)              -->
+          <!-- ============================================================ -->
+          <section id="tabSuperAdmin" class="page-tab hidden">
+            <!-- Header Super Admin -->
+            <div class="admin-header-card">
+              <div class="admin-header-main">
+                <div class="admin-badge-pill">
+                  <span class="pill-dot"></span>
+                  <span>Super Admin Workspace • Cloud Serverless</span>
+                </div>
+                <h2>👑 Monitoring Seluruh Akun Toko & Transaksi</h2>
+                <p>Pantau seluruh database toko terdaftar, omset Midtrans, pemotongan kuota AI, serta ubah kata sandi super admin secara aman.</p>
+              </div>
+              <button class="btn-admin-refresh" onclick="loadAdminData()" title="Segarkan Data Admin">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <polyline points="1 20 1 14 7 14"></polyline>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+                <span>Segarkan Data</span>
+              </button>
+            </div>
+
+            <!-- 4 Metric Cards -->
+            <div class="admin-stats-grid">
+              <div class="admin-stat-card">
+                <div class="admin-stat-icon green">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
+                </div>
+                <div class="admin-stat-info">
+                  <div class="admin-stat-val" id="adminTotalUsers">0</div>
+                  <div class="admin-stat-lbl">Toko Terdaftar</div>
+                </div>
+              </div>
+
+              <div class="admin-stat-card">
+                <div class="admin-stat-icon blue">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                </div>
+                <div class="admin-stat-info">
+                  <div class="admin-stat-val" id="adminPaidOrders">0</div>
+                  <div class="admin-stat-lbl">Transaksi Lunas</div>
+                </div>
+              </div>
+
+              <div class="admin-stat-card">
+                <div class="admin-stat-icon amber">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                  </svg>
+                </div>
+                <div class="admin-stat-info">
+                  <div class="admin-stat-val" id="adminTotalRevenue">Rp 0</div>
+                  <div class="admin-stat-lbl">Total Omset Penjualan</div>
+                </div>
+              </div>
+
+              <div class="admin-stat-card">
+                <div class="admin-stat-icon purple">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                </div>
+                <div class="admin-stat-info">
+                  <div class="admin-stat-val" id="adminTotalQuotaUsed">0</div>
+                  <div class="admin-stat-lbl">Total Chat AI Dibalas</div>
+                </div>
+              </div>
+
+              <div class="admin-stat-card">
+                <div class="admin-stat-icon teal">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                </div>
+                <div class="admin-stat-info">
+                  <div class="admin-stat-val" id="adminTotalKnowledge">0</div>
+                  <div class="admin-stat-lbl">Soal & Jawaban AI</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Subnav Tab Filter untuk Super Admin -->
+            <div class="admin-subnav-bar">
+              <button type="button" class="admin-subnav-btn active" id="subnavBtnUsers" onclick="switchAdminSection('users')">
+                👥 CRUD Akun Email & Token (<span id="subnavUsersCount">0</span>)
+              </button>
+              <button type="button" class="admin-subnav-btn" id="subnavBtnTraffic" onclick="switchAdminSection('traffic')">
+                📈 Grafik Kunjungan Live (<span id="subnavVisitsCount">0</span>)
+              </button>
+              <button type="button" class="admin-subnav-btn" id="subnavBtnNotif" onclick="switchAdminSection('notifications')">
+                📋 Log Aktivitas & Notifikasi (<span id="subnavNotifCount">0</span>)
+              </button>
+              <button type="button" class="admin-subnav-btn" id="subnavBtnKnowledge" onclick="switchAdminSection('knowledge')">
+                💡 Bank Soal & Jawaban (<span id="subnavKnowledgeCount">0</span>)
+              </button>
+              <button type="button" class="admin-subnav-btn" id="subnavBtnOrders" onclick="switchAdminSection('orders')">
+                💳 Transaksi Midtrans (<span id="subnavOrdersCount">0</span>)
+              </button>
+              <button type="button" class="admin-subnav-btn" id="subnavBtnPwd" onclick="switchAdminSection('pwd')">
+                🔐 Sandi Super Admin
+              </button>
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- GRAFIK GARIS KUNJUNGAN WEBSITE REAL-TIME (MINGGUAN/BULAN/TAHUN)-->
+            <!-- ============================================================== -->
+            <div class="card-pro admin-traffic-card" id="adminTrafficSection" style="margin-bottom: 24px;">
+              <div class="card-head-bar">
+                <div>
+                  <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px; flex-wrap:wrap;">
+                    <h3 style="margin:0;">📈 Grafik Garis Kunjungan Website Real-Time</h3>
+                    <span class="live-traffic-pill"><span class="live-pulse-dot"></span> LIVE REAL-TIME (+1 OTOMATIS)</span>
+                  </div>
+                  <p>Pantau tren grafik garis kunjungan <strong>Mingguan (Senin - Minggu)</strong>, <strong>Bulanan (Minggu 1 - 5)</strong>, dan <strong>Tahunan (Januari - Desember)</strong> secara real-time.</p>
+                </div>
+                <div class="traffic-kpi-mini-group">
+                  <div class="traffic-kpi-mini">
+                    <span>Hari Ini:</span>
+                    <strong id="adminTodayVisitsVal">+0</strong>
+                  </div>
+                  <div class="traffic-kpi-mini emerald">
+                    <span>Total Kunjungan:</span>
+                    <strong id="adminTotalVisitsVal">0</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Filter Mode Grafik: Mingguan, Bulanan, Tahunan + Pemilih Tahun -->
+              <div class="chart-mode-toolbar">
+                <div class="chart-mode-tabs">
+                  <button type="button" class="chart-mode-btn active" id="btnChartModeWeekly" onclick="setVisitorChartMode('weekly')">
+                    📅 Mingguan (Senin - Minggu)
+                  </button>
+                  <button type="button" class="chart-mode-btn" id="btnChartModeMonthly" onclick="setVisitorChartMode('monthly')">
+                    🗓️ Bulanan (Minggu di Bulan Ini)
+                  </button>
+                  <button type="button" class="chart-mode-btn" id="btnChartModeYearly" onclick="setVisitorChartMode('yearly')">
+                    📆 Tahunan (Januari - Desember)
+                  </button>
+                </div>
+
+                <div class="chart-year-picker-wrap">
+                  <label for="visitorChartYearSelect">Tahun:</label>
+                  <select id="visitorChartYearSelect" onchange="handleVisitorYearChange(this.value)">
+                    <option value="2026">2026</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Line Chart Box (Grafik Garis Keren dengan Grid, Titik & Legend) -->
+              <div class="line-chart-frame">
+                <div class="line-chart-title-box">
+                  <span id="lineChartDynamicTitle">Jumlah Kunjungan Website artapos.id — Mingguan (Senin - Minggu)</span>
+                </div>
+
+                <div id="adminVisitorChartBars" class="line-chart-svg-container">
+                  <!-- SVG Grafik Garis dirender secara real-time oleh app.js -->
+                </div>
+
+                <div class="line-chart-legend-box">
+                  <span class="legend-line-icon"></span>
+                  <span id="lineChartLegendLabel">Jumlah Kunjungan Website artapos.id (Real-Time)</span>
+                </div>
+              </div>
+
+              <!-- Recent Live Visitor Stream -->
+              <div class="recent-visits-footer">
+                <span class="rv-title">⚡ Kunjungan Terbaru Masuk:</span>
+                <div id="adminRecentVisitsStrip" class="recent-visits-strip">
+                  <span>Menunggu data kunjungan...</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ganti Password Super Admin Card -->
+            <div class="card-pro admin-pwd-card" id="adminPwdSection">
+              <div class="card-head-bar">
+                <div>
+                  <h3>🔐 Ganti Sandi Akun Super Admin</h3>
+                  <p>Email: <strong>achmadfurqon33@gmail.com</strong> • Tersimpan terenkripsi kuat di Cloud</p>
+                </div>
+                <span class="badge-role-admin">Maksimal 20 Karakter</span>
+              </div>
+
+              <form id="adminChangePwdForm" onsubmit="handleAdminChangePassword(event)" class="admin-pwd-form">
+                <div class="form-row-2">
+                  <div class="field-group">
+                    <label for="adminNewPassword">Password Baru (Maks 20 Karakter):</label>
+                    <input type="password" id="adminNewPassword" maxlength="20" placeholder="Masukkan password baru" required>
+                  </div>
+                  <div class="field-group">
+                    <label for="adminConfirmPassword">Konfirmasi Password Baru:</label>
+                    <input type="password" id="adminConfirmPassword" maxlength="20" placeholder="Ketik ulang password baru" required>
+                  </div>
+                </div>
+                <button type="submit" class="btn-submit-db" id="btnAdminSavePwd" style="margin-top: 10px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  <span>Perbarui Password Super Admin</span>
+                </button>
+              </form>
+            </div>
+
+            <!-- Tabel Seluruh Pengguna & Kuota Toko (FULL CRUD EMAIL) -->
+            <div class="card-pro admin-table-card" id="adminUsersSection">
+              <div class="card-head-bar">
+                <div>
+                  <h3>👥 Manajemen CRUD Seluruh Akun Email & Kuota Toko</h3>
+                  <p>Tambah akun email baru, ubah alamat email/paket/kuota, atau hapus akun pengguna secara penuh.</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                  <span class="badge-edition-active" id="adminUserCountBadge">0 Toko</span>
+                  <button type="button" class="btn-submit-db" style="margin-top: 0; padding: 9px 16px; font-size: 0.84rem;" onclick="openAdminCreateUserModal()">
+                    ➕ Tambah Akun Email Baru
+                  </button>
+                </div>
+              </div>
+
+              <!-- Filter & Pencarian Pengguna -->
+              <div class="admin-filter-bar">
+                <div class="admin-search-wrap">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input type="text" id="adminUserSearchInput" placeholder="Cari email Google atau nama toko..." oninput="filterAdminUsersTable()" maxlength="100">
+                </div>
+                <div class="admin-select-wrap">
+                  <select id="adminPlanFilter" onchange="filterAdminUsersTable()">
+                    <option value="all">Semua Paket</option>
+                    <option value="starter">Paket Starter</option>
+                    <option value="bisnis">Paket Bisnis</option>
+                    <option value="pro">Paket Pro</option>
+                    <option value="enterprise">Paket Enterprise</option>
+                  </select>
+                </div>
+                <div class="admin-select-wrap">
+                  <select id="adminRoleFilter" onchange="filterAdminUsersTable()">
+                    <option value="all">Semua Role</option>
+                    <option value="user">Pelanggan Saja</option>
+                    <option value="superadmin">Super Admin Saja</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table-admin">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Email Google</th>
+                      <th>Nama Toko</th>
+                      <th>Paket Langganan</th>
+                      <th>Sisa Token</th>
+                      <th>Terpakai / Total</th>
+                      <th>Masa Aktif</th>
+                      <th>Status Akun</th>
+                      <th>Aksi Detail</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminUsersTableBody">
+                    <tr><td colspan="9" style="text-align: center; padding: 24px; color: #64748b;">Memuat data pengguna...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- LOG AKTIVITAS (DAFTAR, LOGIN, LOGOUT) & NOTIFIKASI REAL-TIME   -->
+            <!-- ============================================================== -->
+            <div class="card-pro admin-table-card" id="adminNotificationsSection">
+              <div class="card-head-bar">
+                <div>
+                  <h3>📋 Log Aktivitas Pengguna (Daftar, Login, Logout) & Semua Notifikasi</h3>
+                  <p>Pantau secara real-time siapa saja yang baru <strong>Daftar Akun</strong>, <strong>Login Masuk</strong>, <strong>Logout Keluar</strong>, pengiriman email <code>artapos26@gmail.com</code>, hingga balasan WhatsApp.</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                  <span class="badge-edition-active" id="adminNotifCountBadge">0 Aktivitas</span>
+                  <button type="button" class="btn-delete-qa" style="padding: 7px 14px; font-size: 0.8rem;" onclick="handleAdminClearNotifications()">
+                    🗑️ Bersihkan Semua Log
+                  </button>
+                </div>
+              </div>
+
+              <div class="admin-filter-bar">
+                <div class="admin-search-wrap" style="flex: 2;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input type="text" id="adminNotifSearchInput" placeholder="Cari email akun, daftar, login, logout, nomor WA, atau isi aktivitas..." oninput="filterAdminNotifications()" maxlength="100">
+                </div>
+                <div class="admin-select-wrap">
+                  <select id="adminNotifCategoryFilter" onchange="filterAdminNotifications()">
+                    <option value="all">Semua Log Aktivitas & Notifikasi</option>
+                    <option value="REGISTER">📝 Daftar Akun Baru (REGISTER)</option>
+                    <option value="LOGIN">🔑 Masuk Dashboard (LOGIN)</option>
+                    <option value="LOGOUT">🚪 Keluar Dashboard (LOGOUT)</option>
+                    <option value="EMAIL">📩 Email Terkirim (artapos26@gmail.com)</option>
+                    <option value="WHATSAPP">📱 Koneksi & Auto-Reply WhatsApp</option>
+                    <option value="ADMIN">👑 Aktivitas CRUD Super Admin</option>
+                    <option value="SECURITY">🛡️ Blokir Firewall Keamanan</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table-admin">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Waktu</th>
+                      <th>Kategori</th>
+                      <th>Tujuan (Email / WA / IP)</th>
+                      <th>Judul & Rincian Notifikasi</th>
+                      <th>Status</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminNotificationsTableBody">
+                    <tr><td colspan="7" style="text-align: center; padding: 24px; color: #64748b;">Memuat riwayat notifikasi...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- BANK SOAL & JAWABAN (KNOWLEDGE BASE) SELURUH AKUN PENGGUNA     -->
+            <!-- ============================================================== -->
+            <div class="card-pro admin-table-card" id="adminKnowledgeSection">
+              <div class="card-head-bar">
+                <div>
+                  <h3>💡 Bank Soal & Jawaban (Knowledge Base) Seluruh Toko</h3>
+                  <p>Pantau detail setiap pertanyaan yang dibuat oleh akun pengguna beserta format jawaban/balasan bot AI.</p>
+                </div>
+                <span class="badge-edition-active" id="adminKnowledgeCountBadge">0 Soal & Jawaban</span>
+              </div>
+
+              <!-- Filter & Pencarian Soal & Jawaban -->
+              <div class="admin-filter-bar">
+                <div class="admin-search-wrap" style="flex: 2;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input type="text" id="adminKnowledgeSearchInput" placeholder="Cari soal, jawaban, kata kunci, email akun, atau nama toko..." oninput="filterAdminKnowledge()" maxlength="100">
+                </div>
+                <div class="admin-select-wrap">
+                  <select id="adminKnowledgeUserFilter" onchange="filterAdminKnowledge()">
+                    <option value="all">Semua Akun / Toko</option>
+                  </select>
+                </div>
+                <div class="admin-select-wrap">
+                  <select id="adminKnowledgeCategoryFilter" onchange="filterAdminKnowledge()">
+                    <option value="all">Semua Kategori</option>
+                    <option value="umum">Umum</option>
+                    <option value="produk">Produk / Layanan</option>
+                    <option value="harga">Harga & Paket</option>
+                    <option value="pembayaran">Pembayaran</option>
+                    <option value="pengiriman">Pengiriman / COD</option>
+                    <option value="garansi">Garansi / Retur</option>
+                    <option value="komplain">Komplain / Kendala</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- List Kartu Soal & Jawaban Seluruh Akun -->
+              <div id="adminAllKnowledgeList" class="admin-knowledge-cards-container">
+                <div style="text-align: center; padding: 24px; color: #64748b;">Memuat data soal & jawaban seluruh akun...</div>
+              </div>
+            </div>
+
+            <!-- Tabel Riwayat Transaksi Midtrans -->
+            <div class="card-pro admin-table-card" id="adminOrdersSection">
+              <div class="card-head-bar">
+                <div>
+                  <h3>💳 Riwayat Seluruh Transaksi & Tagihan Midtrans</h3>
+                  <p>Semua order masuk beserta status pembayaran resmi.</p>
+                </div>
+                <span class="badge-edition-active" id="adminOrderCountBadge">0 Transaksi</span>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table-admin">
+                  <thead>
+                    <tr>
+                      <th>Order ID</th>
+                      <th>Email Pembeli</th>
+                      <th>Paket</th>
+                      <th>Nominal</th>
+                      <th>Status Midtrans</th>
+                      <th>Waktu Dibuat</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminOrdersTableBody">
+                    <tr><td colspan="6" style="text-align: center; padding: 24px; color: #64748b;">Memuat data transaksi...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </section>
+
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL DETAIL & KELOLA PENGGUNA (SUPER ADMIN)                   -->
+  <!-- ============================================================== -->
+  <div id="adminUserDetailModal" class="admin-modal-backdrop hidden">
+    <div class="admin-modal-card">
+      <div class="admin-modal-header">
+        <div class="admin-modal-title">
+          <span class="modal-badge-id" id="modalUserDetailId">#0</span>
+          <h3 id="modalUserDetailEmail">user@gmail.com</h3>
+        </div>
+        <button type="button" class="btn-close-modal" onclick="closeAdminUserModal()">✕</button>
+      </div>
+
+      <div class="admin-modal-tabs">
+        <button class="modal-tab-btn active" id="modalTabBtnInfo" onclick="switchModalTab('info')">📋 Info & Kelola Akun</button>
+        <button class="modal-tab-btn" id="modalTabBtnKnowledge" onclick="switchModalTab('knowledge')">💡 Database Knowledge (<span id="modalKnowledgeCount">0</span>)</button>
+        <button class="modal-tab-btn" id="modalTabBtnOrders" onclick="switchModalTab('orders')">💳 Riwayat Midtrans (<span id="modalOrdersCount">0</span>)</button>
+      </div>
+
+      <div class="admin-modal-body">
+        <!-- PANE 1: INFO & EDIT FORM (FULL CRUD EMAIL) -->
+        <div id="modalPaneInfo" class="modal-pane">
+          <form id="adminEditUserForm" onsubmit="handleAdminSaveUserChanges(event)">
+            <input type="hidden" id="editUserId" value="">
+
+            <div class="form-row-2">
+              <div class="field-group">
+                <label for="editUserEmail">Alamat Email Google (@gmail.com, Maks 100 Karakter):</label>
+                <input type="email" id="editUserEmail" maxlength="100" placeholder="nama@gmail.com" required>
+              </div>
+              <div class="field-group">
+                <label for="editUserStoreName">Nama Toko / Bisnis (Maks 100 Karakter):</label>
+                <input type="text" id="editUserStoreName" maxlength="100">
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="field-group">
+                <label for="editUserPlan">Paket Langganan:</label>
+                <select id="editUserPlan">
+                  <option value="Paket Gratis (300 Token)">Paket Gratis (300 Token)</option>
+                  <option value="Paket Starter">Paket Starter (1.000 Token)</option>
+                  <option value="Paket Bisnis">Paket Bisnis (2.500 Token)</option>
+                  <option value="Paket Pro">Paket Pro (5.000 Token)</option>
+                  <option value="Paket Enterprise">Paket Enterprise (10.000 Token)</option>
+                  <option value="Super Admin Unlimited">Super Admin Unlimited</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <label for="editUserNewPassword">Reset Password Baru (Opsional, Maks 20 Karakter):</label>
+                <input type="password" id="editUserNewPassword" maxlength="20" placeholder="Kosongkan jika tidak diubah">
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="field-group">
+                <label for="editUserQuotaTotal">Total Token Balasan:</label>
+                <input type="number" id="editUserQuotaTotal" min="0">
+              </div>
+              <div class="field-group">
+                <label for="editUserQuotaUsed">Token Terpakai:</label>
+                <input type="number" id="editUserQuotaUsed" min="0">
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label for="editUserDaysAdd">Tambah Masa Aktif (Hari):</label>
+              <input type="number" id="editUserDaysAdd" placeholder="Contoh: 30" min="0">
+              <span class="field-hint">Masa aktif saat ini: <strong id="editUserCurrentActive">-</strong></span>
+            </div>
+
+            <div class="modal-actions-footer" style="justify-content: space-between;">
+              <button type="button" class="btn-delete-qa" style="padding: 9px 16px; font-size: 0.84rem;" onclick="handleAdminDeleteUserFromModal()">
+                🗑️ Hapus Akun Email Ini
+              </button>
+              <div style="display: flex; gap: 10px;">
+                <button type="button" class="btn-cancel-modal" onclick="closeAdminUserModal()">Tutup</button>
+                <button type="submit" class="btn-save-modal" id="btnAdminSaveUser">Simpan Perubahan Akun</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- PANE 2: KNOWLEDGE BASE MILIK TOKO INI -->
+        <div id="modalPaneKnowledge" class="modal-pane hidden">
+          <div id="modalKnowledgeList" class="modal-knowledge-list">
+            <!-- Item knowledge toko ini dirender di sini -->
+          </div>
+        </div>
+
+        <!-- PANE 3: ORDERS MILIK TOKO INI -->
+        <div id="modalPaneOrders" class="modal-pane hidden">
+          <div class="table-responsive">
+            <table class="table-admin">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Paket</th>
+                  <th>Nominal</th>
+                  <th>Status</th>
+                  <th>Waktu</th>
+                </tr>
+              </thead>
+              <tbody id="modalOrdersTableBody">
+                <!-- Orders toko ini dirender di sini -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- MODAL DAFTAR GRATIS INTERAKTIF (AUTO-PICK GOOGLE & 300 TOKEN)  -->
+  <!-- ============================================================== -->
+  <div id="modalFreeRegister" class="admin-modal-backdrop hidden">
+    <div class="free-reg-modal-card">
+      <div class="free-reg-modal-head">
+        <div class="free-reg-head-top">
+          <span class="free-reg-badge">✨ DAFTAR GRATIS • FREE 300 TOKEN AI</span>
+          <button type="button" class="btn-close-free-modal" onclick="closeFreeRegisterModal()" title="Tutup">✕</button>
+        </div>
+        <h2>Daftar Akun artapos.id</h2>
+        <p>Aktifkan asisten WhatsApp AI dengan <strong>300 Token Gratis</strong> & 7 template soal-jawaban siap pakai.</p>
+      </div>
+
+      <div class="free-reg-modal-body">
+        <!-- Interactive Detected Google Accounts on Device/Browser -->
+        <div class="google-detected-section">
+          <div class="detected-header-row">
+            <span class="detected-label">
+              <svg viewBox="0 0 24 24" width="16" height="16">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.34 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.99 0 12s.45 3.85 1.24 5.42l4.04-3.15z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+              </svg>
+              Daftar Instan 1-Klik Akun Google di Perangkat
+            </span>
+            <span class="detected-status-chip">Auto-Detect</span>
+          </div>
+
+          <!-- Dynamic list of detected Google accounts on this phone/browser -->
+          <div id="detectedGoogleAccountsList" class="detected-accounts-list"></div>
+
+          <button type="button" class="btn-google-instant" onclick="handleGoogleInstantRegister()">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.34 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.99 0 12s.45 3.85 1.24 5.42l4.04-3.15z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+            </svg>
+            <span>Pilih Akun Google dari HP / Browser</span>
+          </button>
+        </div>
+
+        <div class="modal-divider-text">
+          <span>atau konfirmasi detail akun</span>
+        </div>
+
+        <form id="freeRegisterForm" onsubmit="handleFreeRegisterSubmit(event)" autocomplete="on">
+          <div class="field-group">
+            <label for="freeEmail">Email Google (@gmail.com) <span class="required-star">*</span></label>
+            <div class="input-with-icon">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+              <input type="email" id="freeEmail" name="email" autocomplete="username email" inputmode="email" maxlength="100" placeholder="Sentuh untuk pilih Gmail otomatis..." required>
+            </div>
+          </div>
+
+          <div class="field-group" style="margin-top: 14px;">
+            <label for="freeStoreName">Nama Toko / Bisnis (Maks 100 Karakter)</label>
+            <div class="input-with-icon">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+              <input type="text" id="freeStoreName" name="organization" autocomplete="organization" maxlength="100" placeholder="Contoh: Toko Berkah Jaya" value="Toko AI Assistant">
+            </div>
+          </div>
+
+          <div class="free-spam-alert-box" style="margin-top: 16px;">
+            <p>🔐 <strong>Sandi Dikirim Otomatis ke Gmail:</strong> Setelah klik daftar, sistem akan mengirimkan <strong>Password Login</strong> ke email Google Anda (cek <em>Kotak Masuk</em> atau folder <em>Spam</em>).</p>
+          </div>
+
+          <button type="submit" class="btn-submit-free-reg" id="btnSubmitFreeReg" style="margin-top: 18px;">
+            <span>Daftar Gratis & Kirim Sandi ke Email</span>
+          </button>
+        </form>
+
+        <div class="free-reg-foot">
+          Sudah dapat password di email? <a href="javascript:void(0)" onclick="closeFreeRegisterModal(); switchView('login');">Masuk di sini →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- LAYAR PENUTUP PENUH SAAT OFFLINE (FULL-SCREEN CLEAN WHITE OVERLAY)    -->
+  <!-- ===================================================================== -->
+  <div id="offlineNetworkBanner" class="offline-fullscreen-overlay hidden">
+    <div class="offline-center-box">
+      <div class="offline-logo-mark">
+        <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+        </svg>
+      </div>
+      <div class="offline-status-row">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-7.05-6M5 5a8 8 0 0 0 4 15h9a5 5 0 0 0 1.7-.3"></path>
+          <line x1="1" y1="1" x2="23" y2="23"></line>
+        </svg>
+        <span>You're offline</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- VIEW ERROR & PENOLAKAN (403 FORBIDDEN, 404 NOT FOUND, OFFLINE MODE)   -->
+  <!-- ===================================================================== -->
+  <div id="viewErrorState" class="error-state-view hidden">
+    <div class="error-state-card">
+      <div id="errorStateIconWrap" class="error-state-icon-wrap">
+        <span id="errorStateEmoji" style="font-size: 2.3rem;">🛡️</span>
+      </div>
+      <div id="errorStateBadge" class="error-state-badge">🛡️ SISTEM KEAMANAN • 403 FORBIDDEN</div>
+      <div id="errorStateCode" class="error-state-code">403</div>
+      <h1 id="errorStateTitle" class="error-state-title">Akses Ditolak oleh Sistem Keamanan</h1>
+      <p id="errorStateDesc" class="error-state-desc">
+        Maaf, permintaan Anda ditolak oleh sistem keamanan berlapis artapos.id atau Anda tidak memiliki izin untuk mengakses halaman ini.
+      </p>
+      <div id="errorStatePathBox" class="error-state-path-box">Status: 403 Forbidden • artapos.id Security Shield</div>
+      <div class="error-state-actions">
+        <button type="button" class="btn-err-primary" onclick="handleErrorStateBackHome()">🏠 Kembali ke Halaman Utama</button>
+        <button type="button" class="btn-err-secondary" onclick="retryNetworkConnection()">🔄 Coba Muat Ulang</button>
+      </div>
+      <div class="error-state-footer">
+        🛡️ Dilindungi oleh <strong>artapos.id Multi-Layer Security Engine</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main JavaScript Controller -->
+  <script src="app.js?v=24.0"></script>
+</body>
+
+</html>

@@ -1,0 +1,30 @@
+{
+  "name": "ai-store-chatbot",
+  "version": "1.0.0",
+  "description": "Web Chatbot Penjualan Toko Online dengan Auto-Reply & WhatsApp Direct Order untuk Vercel",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js",
+    "bot:wa": "node src/index.js"
+  },
+  "keywords": [
+    "whatsapp",
+    "chatbot",
+    "toko-online",
+    "vercel",
+    "sales-bot"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^7.0.0-rc14",
+    "dotenv": "^18.0.10",
+    "mysql2": "^3.24.6",
+    "nodemailer": "^10.6.1",
+    "pino": "^10.4.0",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

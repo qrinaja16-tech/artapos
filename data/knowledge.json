@@ -1,0 +1,233 @@
+[
+  {
+    "id": 1,
+    "questions": [
+      "halo",
+      "hai",
+      "p",
+      "permisi",
+      "assalamualaikum",
+      "selamat siang",
+      "selamat pagi",
+      "selamat malam"
+    ],
+    "keywords": [
+      "halo",
+      "hai",
+      "permisi",
+      "assalamualaikum",
+      "selamat"
+    ],
+    "answer": "Halo kak! Selamat datang di toko kami. 😊 Ada yang bisa kami bantu seputar produk atau pesanan hari ini?",
+    "category": "salam"
+  },
+  {
+    "id": 2,
+    "questions": [
+      "tokonya buka jam berapa",
+      "jam operasional",
+      "buka hari apa saja",
+      "jadwal buka toko"
+    ],
+    "keywords": [
+      "jam",
+      "buka",
+      "operasional",
+      "jadwal",
+      "tutup"
+    ],
+    "answer": "Toko kami buka setiap hari Senin - Sabtu pukul 08.00 - 20.00 WIB kak. Hari Minggu dan libur nasional toko libur ya. 🕒",
+    "category": "informasi_toko"
+  },
+  {
+    "id": 3,
+    "questions": [
+      "lokasi toko dimana",
+      "alamat toko dimana",
+      "bisa datang langsung ke toko",
+      "alamat lengkap"
+    ],
+    "keywords": [
+      "lokasi",
+      "alamat",
+      "dimana",
+      "toko",
+      "offline"
+    ],
+    "answer": "Alamat toko kami ada di Jl. Contoh Penjualan No. 123 (bisa cek di Google Maps 'Toko Kami'). Silakan mampir kak! 📍",
+    "category": "lokasi"
+  },
+  {
+    "id": 4,
+    "questions": [
+      "cara order bagaimana",
+      "cara pesan",
+      "gimana cara belinya",
+      "format order"
+    ],
+    "keywords": [
+      "cara",
+      "order",
+      "pesan",
+      "beli",
+      "format"
+    ],
+    "answer": "Untuk pemesanan mudah banget kak, silakan kirim format ini ya:\n\nNama:\nNo HP:\nAlamat Lengkap:\nNama Produk & Jumlah:\n\nNanti kami buatkan totalan dan nomor rekeningnya ya kak. 🙏",
+    "category": "pemesanan"
+  },
+  {
+    "id": 5,
+    "questions": [
+      "bisa cod tidak",
+      "apakah ada bayar di tempat",
+      "bisa bayar di tempat",
+      "support cod"
+    ],
+    "keywords": [
+      "cod",
+      "bayar",
+      "tempat"
+    ],
+    "answer": "Bisa banget kak! Kami melayani sistem COD (Bayar di Tempat) ke seluruh wilayah Indonesia melalui kurir J&T dan SiCepat. 📦",
+    "category": "pembayaran"
+  },
+  {
+    "id": 6,
+    "questions": [
+      "pembayaran lewat apa saja",
+      "metode pembayaran",
+      "transfer ke bank apa",
+      "bisa transfer bca dana qris"
+    ],
+    "keywords": [
+      "pembayaran",
+      "transfer",
+      "bank",
+      "bca",
+      "bri",
+      "mandiri",
+      "dana",
+      "qris"
+    ],
+    "answer": "Kami menerima pembayaran melalui Transfer Bank (BCA, BRI, Mandiri), E-Wallet (DANA, OVO, GoPay, ShopeePay), dan QRIS kak. 💳",
+    "category": "pembayaran"
+  },
+  {
+    "id": 7,
+    "questions": [
+      "ongkir berapa",
+      "ongkos kirim berapa",
+      "ekspedisi pakai apa",
+      "kurir apa saja"
+    ],
+    "keywords": [
+      "ongkir",
+      "ongkos",
+      "kirim",
+      "ekspedisi",
+      "kurir",
+      "jnt",
+      "jne",
+      "sicepat"
+    ],
+    "answer": "Ekspedisi kami menggunakan J&T, JNE, dan SiCepat kak. Untuk cek estimasi ongkir, silakan infokan Kecamatan dan Kota tujuan pengiriman ya kak. 🚚",
+    "category": "pengiriman"
+  },
+  {
+    "id": 8,
+    "questions": [
+      "kapan barang dikirim",
+      "pengiriman hari apa",
+      "pesanan saya kapan dikirim",
+      "resi pengiriman"
+    ],
+    "keywords": [
+      "kapan",
+      "dikirim",
+      "kirim",
+      "resi",
+      "pesanan"
+    ],
+    "answer": "Pesanan yang terkonfirmasi sebelum jam 15.00 WIB akan dikirim di hari yang sama kak. Resi otomatis diupdate malam hari ya. 📦",
+    "category": "pengiriman"
+  },
+  {
+    "id": 9,
+    "questions": [
+      "ada garansi tidak",
+      "kalau barang rusak bagaimana",
+      "bisa retur tidak"
+    ],
+    "keywords": [
+      "garansi",
+      "rusak",
+      "retur",
+      "komplain",
+      "tukar"
+    ],
+    "answer": "Ada garansi 100% kak! Jika barang sampai dalam keadaan rusak/salah kirim, wajib sertakan video unboxing dan kami ganti barang baru tanpa biaya tambahan kak. 👍",
+    "category": "garansi"
+  },
+  {
+    "id": 10,
+    "questions": [
+      "terima kasih",
+      "makasih ya",
+      "ok makasih",
+      "siap terima kasih"
+    ],
+    "keywords": [
+      "terima",
+      "kasih",
+      "makasih",
+      "tq",
+      "thx"
+    ],
+    "answer": "Sama-sama kak! Senang bisa membantu. Jika ada pertanyaan lain, jangan ragu untuk tanyakan ya kak. Semoga sehat dan sukses selalu! ✨",
+    "category": "salam"
+  },
+  {
+    "id": 11,
+    "questions": [
+      "patek"
+    ],
+    "keywords": [
+      "patek"
+    ],
+    "answer": "gofar patek anjeng",
+    "category": "umum"
+  },
+  {
+    "id": 12,
+    "questions": [
+      "kontol"
+    ],
+    "keywords": [
+      "kontol"
+    ],
+    "answer": "dosa setan,jangan gitu anjenk",
+    "category": "produk"
+  },
+  {
+    "id": 13,
+    "questions": [
+      "chika"
+    ],
+    "keywords": [
+      "chika"
+    ],
+    "answer": "anjay",
+    "category": "umum"
+  },
+  {
+    "id": 30002,
+    "questions": [
+      "tes"
+    ],
+    "keywords": [
+      "tes"
+    ],
+    "answer": "bagus yaa",
+    "category": "umum"
+  }
+]
