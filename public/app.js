@@ -162,14 +162,10 @@ function setNetworkOfflineState(offline) {
     banner.classList.remove('hidden');
     if (!offlineReconnectTimer) {
       offlineReconnectTimer = setInterval(async () => {
-        if (!navigator.onLine) return;
-        try {
-          const r = await fetch('/api/plans', { method: 'GET', cache: 'no-store' });
-          if (r.ok) {
-            setNetworkOfflineState(false);
-          }
-        } catch (e) {}
-      }, 3000);
+        if (navigator.onLine) {
+          setNetworkOfflineState(false);
+        }
+      }, 2500);
     }
   } else {
     banner.classList.add('hidden');
@@ -242,7 +238,8 @@ async function apiCall(endpoint, method = 'GET', data = null) {
   }
 
   const urlsToTry = [endpoint];
-  if (window.location.port !== '3000') {
+  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  if (isLocalHost && window.location.port !== '3000') {
     urlsToTry.push(`http://localhost:3000${endpoint}`);
     urlsToTry.push(`http://127.0.0.1:3000${endpoint}`);
   }
@@ -250,7 +247,7 @@ async function apiCall(endpoint, method = 'GET', data = null) {
   for (const url of urlsToTry) {
     try {
       const res = await fetch(url, options);
-      setNetworkOfflineState(false);
+      if (navigator.onLine) setNetworkOfflineState(false);
       if (res.status === 401 && endpoint !== '/api/auth/login' && endpoint !== '/api/user/me') {
         // Token tidak sah / sesi habis
         localStorage.removeItem('artapos_token');
@@ -266,8 +263,10 @@ async function apiCall(endpoint, method = 'GET', data = null) {
     } catch (err) {}
   }
 
-  // Jika semua percobaan fetch gagal (Server mati atau Internet Offline)
-  setNetworkOfflineState(true, 'Tidak dapat terhubung ke server artapos.id. Menampilkan tampilan cadangan (Offline Mode)...');
+  // Hanya tampilkan layar offline jika perangkat benar-benar tidak punya koneksi internet
+  if (!navigator.onLine) {
+    setNetworkOfflineState(true);
+  }
   return null;
 }
 
@@ -2941,21 +2940,26 @@ function handleErrorStateBackHome() {
 
 async function retryNetworkConnection() {
   showToast('🔄 Memeriksa sambungan ke server artapos.id...', 'info');
-  const res = await apiCall('/api/plans', 'GET');
-  if (res && res.plans) {
-    setNetworkOfflineState(false);
-    showToast('🟢 Terhubung kembali ke server artapos.id!', 'success');
-    if (currentActiveView === 'error') {
-      handleErrorStateBackHome();
-    } else if (currentActiveView === 'dashboard') {
-      loadUserData();
-      loadData();
-      if (currentActiveTab === 'superadmin') loadAdminData();
-    }
-  } else {
+  if (!navigator.onLine) {
     setNetworkOfflineState(true);
-    showAlert('📡 Masih belum dapat terhubung ke server. Pastikan koneksi internet atau server lokal Anda aktif.', 'warning', 'Koneksi Terputus');
+    return;
   }
+  try {
+    const res = await fetch('/', { method: 'HEAD', cache: 'no-store' });
+    if (res.ok) {
+      setNetworkOfflineState(false);
+      showToast('🟢 Terhubung kembali ke server artapos.id!', 'success');
+      if (currentActiveView === 'error') {
+        handleErrorStateBackHome();
+      } else if (currentActiveView === 'dashboard') {
+        loadUserData();
+        loadData();
+        if (currentActiveTab === 'superadmin') loadAdminData();
+      }
+      return;
+    }
+  } catch (e) {}
+  if (!navigator.onLine) setNetworkOfflineState(true);
 }
 
 window.showErrorStateView = showErrorStateView;
