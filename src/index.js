@@ -10,6 +10,7 @@ import {
   dbDeductQuota,
   dbGetUserQuota,
   dbSetUserWaStatus,
+  dbGetPendingWaCommands,
   dbAddNotificationLog
 } from './db.js';
 
@@ -215,7 +216,8 @@ async function startTenantSocket(userId) {
         tenant.status = 'scan_qr';
         try {
           tenant.qr = await QRCode.toDataURL(qr, { margin: 2, scale: 8 });
-          console.log(`📱 [WA USER #${uid}] Kode QR Resmi WhatsApp Web siap dipindai!`);
+          await dbSetUserWaStatus(uid, 'scan_qr', '', tenant.qr);
+          console.log(`📱 [WA USER #${uid}] Kode QR Resmi WhatsApp Web siap dipindai & disinkronkan ke TiDB Cloud!`);
         } catch (err) {
           tenant.qr = null;
         }
@@ -396,6 +398,30 @@ async function bootArtaposServer() {
       }
     }
   } catch (e) {}
+
+  // Dengarkan permintaan Generate QR / Reset Sesi dari Vercel (www.artapos.id) via TiDB Cloud setiap 2 detik
+  setInterval(async () => {
+    try {
+      const cmds = await dbGetPendingWaCommands();
+      for (const cmd of cmds) {
+        if (!cmd.userId) continue;
+        if (cmd.command === 'reset') {
+          console.log(`🔄 [CLOUD SYNC] Menerima perintah Reset QR untuk User #${cmd.userId} dari www.artapos.id`);
+          resetTenantWhatsApp(cmd.userId).catch(() => {});
+        } else if (cmd.command === 'ensure') {
+          const existing = tenantSessions.get(cmd.userId);
+          if (!existing || (existing.status !== 'connected' && !existing.qr && !existing.isConnecting)) {
+            console.log(`📲 [CLOUD SYNC] Menerima permintaan QR baru untuk User #${cmd.userId} dari www.artapos.id`);
+            ensureTenantWhatsApp(cmd.userId).catch(() => {});
+          } else if (existing.qr) {
+            await dbSetUserWaStatus(cmd.userId, 'scan_qr', '', existing.qr);
+          } else if (existing.status === 'connected') {
+            await dbSetUserWaStatus(cmd.userId, 'connected', existing.phone || '', '');
+          }
+        }
+      }
+    } catch (e) {}
+  }, 2000);
 }
 
 if (process.env.VERCEL !== '1') {

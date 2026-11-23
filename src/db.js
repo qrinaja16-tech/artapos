@@ -619,15 +619,43 @@ export async function dbGetUserWaStatus(userId) {
   }
 }
 
-export async function dbSetUserWaStatus(userId, status, phone = '') {
+export async function dbSetUserWaStatus(userId, status, phone = '', qrDataUrl = '') {
   try {
     await dbSaveConfig(userId, {
       wa_status: status,
-      wa_phone: phone
+      wa_phone: phone,
+      wa_qr: qrDataUrl || '',
+      wa_updated_at: String(Date.now())
     });
     return true;
   } catch (err) {
     return false;
+  }
+}
+
+export async function dbRequestUserWaCommand(userId, command = 'ensure') {
+  try {
+    await dbSaveConfig(userId, {
+      wa_command: String(command || ''),
+      wa_command_at: String(Date.now())
+    });
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+export async function dbGetPendingWaCommands() {
+  try {
+    const [rows] = await pool.query(
+      "SELECT user_id, config_value FROM config WHERE config_key = 'wa_command' AND config_value != ''"
+    );
+    if (rows.length > 0) {
+      await pool.query("UPDATE config SET config_value = '' WHERE config_key = 'wa_command' AND config_value != ''");
+    }
+    return rows.map(r => ({ userId: Number(r.user_id), command: String(r.config_value) }));
+  } catch (err) {
+    return [];
   }
 }
 

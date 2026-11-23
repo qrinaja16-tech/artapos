@@ -49,6 +49,7 @@ import {
   dbRegisterFreeUser,
   dbGetUserWaStatus,
   dbSetUserWaStatus,
+  dbRequestUserWaCommand,
   dbAdminCreateUser,
   dbAdminDeleteUser,
   dbAddNotificationLog,
@@ -450,14 +451,22 @@ export function createHttpHandler(waHooks = {}) {
         if (cfg.store_name) userBotName = cfg.store_name;
 
         if (process.env.VERCEL === '1') {
+          const isConnected = cfg.wa_status === 'connected';
+          const qrAgeMs = Date.now() - Number(cfg.wa_updated_at || 0);
+          const hasFreshQr = !isConnected && Boolean(cfg.wa_qr) && qrAgeMs < 65000;
+
+          if (!isConnected && !hasFreshQr) {
+            await dbRequestUserWaCommand(userId, 'ensure');
+          }
+
           res.writeHead(200, {
             'Content-Type': 'application/json; charset=utf-8',
             'Cache-Control': 'no-cache, no-store'
           });
           res.end(JSON.stringify({
-            status: cfg.wa_status === 'connected' ? 'connected' : 'connecting',
-            qr: null,
-            phone: cfg.wa_phone || null,
+            status: isConnected ? 'connected' : (hasFreshQr ? 'scan_qr' : 'connecting'),
+            qr: hasFreshQr ? cfg.wa_qr : null,
+            phone: isConnected ? (cfg.wa_phone || null) : null,
             user: session.email,
             botName: userBotName
           }));
@@ -507,7 +516,12 @@ export function createHttpHandler(waHooks = {}) {
         }
         const userId = session.user_id;
 
-        if (resetTenantWhatsApp) await resetTenantWhatsApp(userId);
+        if (process.env.VERCEL === '1') {
+          await dbSetUserWaStatus(userId, 'scan_qr', '', '');
+          await dbRequestUserWaCommand(userId, 'reset');
+        } else if (resetTenantWhatsApp) {
+          await resetTenantWhatsApp(userId);
+        }
 
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({
