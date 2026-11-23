@@ -1,4 +1,6 @@
-import { handleHttpRequest } from '../src/index.js';
+import { createHttpHandler } from '../src/httpHandler.js';
+
+const handleHttpRequest = createHttpHandler({});
 
 export default async function handler(req, res) {
   try {

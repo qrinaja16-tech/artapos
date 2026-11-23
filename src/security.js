@@ -145,8 +145,9 @@ class InMemoryRateLimiter {
 
 export const rateLimiter = new InMemoryRateLimiter();
 
-// Bersihkan memori setiap 2 menit
-setInterval(() => rateLimiter.clean(), 120000);
+// Bersihkan memori setiap 2 menit (unref agar tidak menahan event loop serverless)
+const rateCleanTimer = setInterval(() => rateLimiter.clean(), 120000);
+if (typeof rateCleanTimer.unref === 'function') rateCleanTimer.unref();
 
 /**
  * ==============================================================
