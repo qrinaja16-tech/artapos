@@ -1,11 +1,3 @@
-import makeWASocket, {
-  DisconnectReason,
-  useMultiFileAuthState,
-  fetchLatestBaileysVersion
-} from '@whiskeysockets/baileys';
-import pino from 'pino';
-import qrcodeTerminal from 'qrcode-terminal';
-import QRCode from 'qrcode';
 import dotenv from 'dotenv';
 import http from 'http';
 import fs from 'fs';
@@ -70,13 +62,15 @@ import { sendFreeRegistrationEmail } from './mailer.js';
 
 dotenv.config();
 
-// Crash Protection: Auto-recover from unexpected network or Baileys errors
-process.on('uncaughtException', (err) => {
-  console.error('🚨 [AUTO-RECOVER] Uncaught Exception:', err?.message || err);
-});
-process.on('unhandledRejection', (reason) => {
-  console.error('🚨 [AUTO-RECOVER] Unhandled Rejection:', reason?.message || reason);
-});
+// Crash Protection: Auto-recover from unexpected network or Baileys errors (hanya di server lokal/VPS)
+if (process.env.VERCEL !== '1') {
+  process.on('uncaughtException', (err) => {
+    console.error('🚨 [AUTO-RECOVER] Uncaught Exception:', err?.message || err);
+  });
+  process.on('unhandledRejection', (reason) => {
+    console.error('🚨 [AUTO-RECOVER] Unhandled Rejection:', reason?.message || reason);
+  });
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1804,6 +1798,7 @@ let cachedBaileysVersion = null;
 async function getBaileysVersion() {
   if (cachedBaileysVersion) return cachedBaileysVersion;
   try {
+    const { fetchLatestBaileysVersion } = await import('@whiskeysockets/baileys');
     const { version } = await fetchLatestBaileysVersion();
     cachedBaileysVersion = version;
     return version;
@@ -1904,6 +1899,10 @@ async function startTenantSocket(userId) {
     if (!fs.existsSync(userDir)) {
       fs.mkdirSync(userDir, { recursive: true });
     }
+
+    const { default: makeWASocket, DisconnectReason, useMultiFileAuthState } = await import('@whiskeysockets/baileys');
+    const { default: pino } = await import('pino');
+    const { default: QRCode } = await import('qrcode');
 
     const { state, saveCreds } = await useMultiFileAuthState(userDir);
     const version = await getBaileysVersion();
