@@ -273,6 +273,12 @@ function renderBrandedErrorHtml({ code = 404, badge = 'HALAMAN TIDAK DITEMUKAN',
 }
 
 function readJsonBody(req) {
+  if (req.body !== undefined && req.body !== null && typeof req.body === 'object') {
+    if (containsMaliciousPayload(req.body)) {
+      return Promise.reject(new Error('🛡️ Sistem Keamanan: Input mengandung skrip terlarang (.php / XSS / SQL Injection) dan telah diblokir!'));
+    }
+    return Promise.resolve(req.body);
+  }
   return new Promise((resolve, reject) => {
     let body = '';
     req.on('data', chunk => {
@@ -357,11 +363,18 @@ const ARTAPOS_PLANS = {
   enterprise: { id: 'enterprise', name: 'Paket Enterprise', price: 200000, quota: 10000, desc: 'Kapasitas maksimal untuk toko skala besar' }
 };
 
-function startWebServer() {
-  if (webServerStarted) return;
-  webServerStarted = true;
+let tidbInitPromise = null;
+function ensureTiDBReady() {
+  if (!tidbInitPromise) {
+    tidbInitPromise = initTiDB().catch(err => {
+      tidbInitPromise = null;
+      throw err;
+    });
+  }
+  return tidbInitPromise;
+}
 
-  const server = http.createServer(async (req, res) => {
+export async function handleHttpRequest(req, res) {
     applyLayeredSecurityHeaders(res);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -371,6 +384,10 @@ function startWebServer() {
       res.writeHead(204);
       res.end();
       return;
+    }
+
+    if (req.url && req.url.startsWith('/api/')) {
+      await ensureTiDBReady();
     }
 
     // ====================================================
@@ -454,6 +471,21 @@ function startWebServer() {
 
         const cfg = await dbGetConfig(userId);
         if (cfg.store_name) userBotName = cfg.store_name;
+
+        if (process.env.VERCEL === '1') {
+          res.writeHead(200, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Cache-Control': 'no-cache, no-store'
+          });
+          res.end(JSON.stringify({
+            status: cfg.wa_status === 'connected' ? 'connected' : 'connecting',
+            qr: null,
+            phone: cfg.wa_phone || null,
+            user: session.email,
+            botName: userBotName
+          }));
+          return;
+        }
 
         // Pastikan socket Baileys resmi untuk akun ini aktif
         const tenant = await ensureTenantWhatsApp(userId);
@@ -1735,7 +1767,13 @@ function startWebServer() {
         res.end(content);
       }
     });
-  });
+}
+
+function startWebServer() {
+  if (webServerStarted) return;
+  webServerStarted = true;
+
+  const server = http.createServer(handleHttpRequest);
 
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
@@ -2072,4 +2110,6 @@ async function bootArtaposServer() {
   } catch (e) {}
 }
 
-bootArtaposServer();
+if (process.env.VERCEL !== '1') {
+  bootArtaposServer();
+}

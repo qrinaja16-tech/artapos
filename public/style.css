@@ -3689,7 +3689,9 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   animation: fadeInModal 0.2s ease;
 }
 
@@ -4552,8 +4554,13 @@ body {
   background: #ffffff;
   width: 100%;
   max-width: 480px;
+  max-height: 92vh;
+  max-height: 92dvh;
   border-radius: 18px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: auto;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
   animation: slideUpModal 0.25s ease forwards;
   position: relative;
