@@ -2,7 +2,7 @@
   "name": "ai-store-chatbot",
   "version": "1.0.0",
   "description": "Web Chatbot Penjualan Toko Online dengan Auto-Reply & WhatsApp Direct Order untuk Vercel",
-  "main": "src/index.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
     "start": "node src/index.js",

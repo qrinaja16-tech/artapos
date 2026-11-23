@@ -401,3 +401,5 @@ async function bootArtaposServer() {
 if (process.env.VERCEL !== '1') {
   bootArtaposServer();
 }
+
+export default handleHttpRequest;
