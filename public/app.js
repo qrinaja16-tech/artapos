@@ -86,6 +86,10 @@ function showAlert(msg, icon = 'info', title = null) {
     icon: effectiveIcon,
     confirmButtonColor: '#16a34a',
     confirmButtonText: 'OK',
+    didOpen: () => {
+      const c = Swal.getContainer();
+      if (c) c.style.zIndex = '9999999';
+    },
     customClass: {
       popup: 'swal-custom-popup',
       confirmButton: 'swal-custom-confirm'
@@ -111,6 +115,10 @@ async function showConfirm(title, text, confirmButtonText = 'Ya, Lanjutkan') {
     cancelButtonColor: '#94a3b8',
     confirmButtonText: confirmButtonText,
     cancelButtonText: 'Batal',
+    didOpen: () => {
+      const c = Swal.getContainer();
+      if (c) c.style.zIndex = '9999999';
+    },
     customClass: {
       popup: 'swal-custom-popup',
       confirmButton: 'swal-custom-confirm'
@@ -126,7 +134,11 @@ function showToast(title, icon = 'success') {
     position: 'top-end',
     showConfirmButton: false,
     timer: 2500,
-    timerProgressBar: true
+    timerProgressBar: true,
+    didOpen: (toast) => {
+      const c = Swal.getContainer();
+      if (c) c.style.zIndex = '9999999';
+    }
   });
   Toast.fire({
     icon: icon,
@@ -1544,7 +1556,9 @@ async function loadAdminData(isSilent = false) {
   const { stats, users, orders, knowledge, notifications, visitStats } = res;
   allAdminUsers = Array.isArray(users) ? users : [];
   allAdminKnowledge = Array.isArray(knowledge) ? knowledge : [];
-  allAdminNotifications = Array.isArray(notifications) ? notifications : [];
+  allAdminNotifications = Array.isArray(notifications)
+    ? [...notifications].sort((a, b) => Number(b.id || 0) - Number(a.id || 0))
+    : [];
 
   // Render Real-Time Visitor Traffic Chart
   renderAdminVisitorChart(visitStats || { totalVisits: 0, todayVisits: 0, chartPoints: [], recentVisits: [] });

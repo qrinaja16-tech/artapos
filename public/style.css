@@ -6076,4 +6076,24 @@ body {
   transform: translateY(-1px);
 }
 
+/* ===================================================================== */
+/* Z-INDEX LOCK: NOTIFIKASI SWEETALERT2 SELALU PALING DEPAN / ATAS       */
+/* ===================================================================== */
+.swal2-container,
+div.swal2-container,
+.swal2-container.swal2-center,
+.swal2-container.swal2-top-end,
+.swal2-container.swal2-backdrop-show {
+  z-index: 9999999 !important;
+}
+
+.swal2-container.swal2-top-end {
+  top: 14px !important;
+  bottom: auto !important;
+}
+
+.swal2-popup {
+  z-index: 9999999 !important;
+}
+
 
