@@ -61,12 +61,12 @@ export async function sendFreeRegistrationEmail(toEmail, rawPassword, storeName 
       <div class="card">
         <div class="header">
           <div class="logo">arta<span>pos</span>.id</div>
-          <div class="badge">Paket Uji Coba Gratis (300 Token)</div>
+          <div class="badge">Paket Uji Coba Gratis (75 Token)</div>
         </div>
         <div class="body">
           <h2 class="h2">Selamat Datang di artapos.id! 🎉</h2>
           <p>Halo pemilik <strong>${storeName}</strong>,</p>
-          <p>Akun gratis Anda telah berhasil diaktifkan. Anda mendapatkan <strong>300 Token Balasan Chat AI WhatsApp</strong> beserta 7 template soal & jawaban otomatis siap pakai.</p>
+          <p>Akun gratis Anda telah berhasil diaktifkan. Anda mendapatkan <strong>75 Token Balasan Chat AI WhatsApp</strong> beserta 7 template soal & jawaban otomatis siap pakai.</p>
           
           <div class="info-box">
             <div style="font-size: 13px; font-weight: 700; color: #166534; margin-bottom: 8px; text-transform: uppercase;">Kredensial Masuk Dashboard:</div>
@@ -107,7 +107,7 @@ export async function sendFreeRegistrationEmail(toEmail, rawPassword, storeName 
     const info = await mailTransporter.sendMail({
       from: `"artapos.id AI" <${gmailUser}>`,
       to: toEmail,
-      subject: `[artapos.id] Akun Gratis 300 Token Anda Berhasil Diaktifkan! 🎉`,
+      subject: `[artapos.id] Akun Gratis 75 Token Anda Berhasil Diaktifkan! 🎉`,
       html: htmlContent
     });
 

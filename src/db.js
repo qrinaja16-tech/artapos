@@ -163,7 +163,7 @@ export async function initTiDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // 7. Tabel Visits Log (Grafik Kunjungan Website Real-Time +1 Otomatis)
+    // 7. Tabel Visits Log (Grafik Kunjungan Website Real-Time +1 Otomatis & Analitik CTA)
     await conn.query(`
       CREATE TABLE IF NOT EXISTS visits_log (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -171,16 +171,29 @@ export async function initTiDB() {
         page_view VARCHAR(100) DEFAULT 'landing',
         visitor_email VARCHAR(255) DEFAULT 'Pengunjung',
         user_agent VARCHAR(255) DEFAULT '',
+        event_type VARCHAR(50) DEFAULT 'visit',
+        traffic_source VARCHAR(80) DEFAULT 'Direct',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_visits_created (created_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // Pastikan akun Paket Gratis lama (100) otomatis disesuaikan ke 300 Token
+    try {
+      const [colsEvt] = await conn.query("SHOW COLUMNS FROM visits_log LIKE 'event_type'");
+      if (!colsEvt || colsEvt.length === 0) {
+        await conn.query("ALTER TABLE visits_log ADD COLUMN event_type VARCHAR(50) DEFAULT 'visit'");
+      }
+      const [colsSrc] = await conn.query("SHOW COLUMNS FROM visits_log LIKE 'traffic_source'");
+      if (!colsSrc || colsSrc.length === 0) {
+        await conn.query("ALTER TABLE visits_log ADD COLUMN traffic_source VARCHAR(80) DEFAULT 'Direct'");
+      }
+    } catch (e) {}
+
+    // Pastikan akun Paket Gratis lama disesuaikan ke 75 Token jika masih bawaan trial
     try {
       await conn.query(
-        `UPDATE users SET plan = 'Paket Gratis (300 Token)', quota_total = 300 
-         WHERE quota_total = 100 AND (plan LIKE '%Gratis%' OR plan LIKE '%Free%')`
+        `UPDATE users SET plan = 'Paket Gratis (75 Token)', quota_total = 75 
+         WHERE quota_total IN (100, 300) AND (plan LIKE '%Gratis%' OR plan LIKE '%Free%')`
       );
     } catch (e) {}
 
@@ -485,37 +498,45 @@ export async function dbVerifyAndBindUserDevice(user, deviceId) {
   if (!user || user.role === 'superadmin') {
     return { allowed: true };
   }
+
+  // Akun paket berbayar bebas dipakai di banyak akun pada 1 perangkat
+  const planLower = String(user.plan || '').toLowerCase();
+  const isFreeUser = planLower.includes('gratis') || planLower.includes('free');
+  if (!isFreeUser) {
+    return { allowed: true };
+  }
+
   const cleanDevice = deviceId ? String(deviceId).trim().slice(0, 120) : '';
   if (!cleanDevice) {
     return { allowed: true };
   }
   const hwPrefix = extractHardwareDevicePrefix(cleanDevice);
 
-  // 1. Cek apakah perangkat (device_id / hardware signature) ini sudah dipakai oleh akun email LAIN
+  // 1. Daftar/Login Gratis: 1 HP 2 Akun DITOLAK
   const [otherUsersOnDevice] = await pool.query(
-    "SELECT id, email FROM users WHERE (device_id = ? OR device_id LIKE ?) AND id != ? AND role != 'superadmin' LIMIT 1",
+    "SELECT id, email FROM users WHERE (device_id = ? OR device_id LIKE ?) AND id != ? AND role != 'superadmin' AND (plan LIKE '%Gratis%' OR plan LIKE '%Free%') LIMIT 1",
     [cleanDevice, `${hwPrefix}_%`, Number(user.id)]
   );
   if (otherUsersOnDevice.length > 0) {
     const boundEmail = otherUsersOnDevice[0].email;
     return {
       allowed: false,
-      reason: `⛔ Kebijakan 1 Perangkat 1 Email: Perangkat ini sudah terkunci untuk akun ${boundEmail}. Satu perangkat tidak boleh login berganti-ganti dengan banyak akun email!`
+      reason: `⛔ Akun gratis hanya berlaku 1 HP 1 akun. Perangkat ini sudah terdaftar dengan ${boundEmail}.`
     };
   }
 
-  // 2. Cek apakah email ini sudah terkunci pada perangkat LAIN
+  // 2. Daftar/Login Gratis: 2 HP 1 Akun DITOLAK
   if (user.device_id) {
     const existingPrefix = extractHardwareDevicePrefix(user.device_id);
     if (user.device_id !== cleanDevice && existingPrefix !== hwPrefix) {
       return {
         allowed: false,
-        reason: `⛔ Kebijakan 1 Email 1 Perangkat: Akun ${user.email} sudah tertaut pada perangkat lain. Demi keamanan & pencegahan penyalahgunaan token gratis, 1 email hanya berlaku untuk 1 perangkat.`
+        reason: `⛔ Akun gratis ${user.email} sudah terkunci di perangkat lain (1 HP 1 akun).`
       };
     }
   }
 
-  // 3. Jika belum terikat (atau update ke deterministic ID pada perangkat yang sama), kunci akun ini
+  // 3. Kunci device_id akun gratis ke perangkat ini
   if (!user.device_id || user.device_id !== cleanDevice) {
     await pool.query('UPDATE users SET device_id = ? WHERE id = ?', [cleanDevice, Number(user.id)]);
   }
@@ -676,12 +697,12 @@ export async function dbRegisterFreeUser({ email, password = null, storeName = '
     if (cleanDevice) {
       const hwPrefix = extractHardwareDevicePrefix(cleanDevice);
       const [deviceBound] = await pool.query(
-        "SELECT id, email FROM users WHERE (device_id = ? OR device_id LIKE ?) AND LOWER(email) != ? AND role != 'superadmin' LIMIT 1",
+        "SELECT id, email FROM users WHERE (device_id = ? OR device_id LIKE ?) AND LOWER(email) != ? AND role != 'superadmin' AND (plan LIKE '%Gratis%' OR plan LIKE '%Free%') LIMIT 1",
         [cleanDevice, `${hwPrefix}_%`, cleanEmail]
       );
       if (deviceBound.length > 0) {
         const boundEmail = deviceBound[0].email;
-        throw new Error(`⛔ Proteksi 1 Perangkat 1 Akun: Perangkat Anda sudah terdaftar dengan email ${boundEmail}. Tidak diperbolehkan mendaftar banyak akun gratis di 1 perangkat yang sama!`);
+        throw new Error(`⛔ Akun gratis hanya berlaku 1 HP 1 akun. Perangkat ini sudah terdaftar dengan ${boundEmail}.`);
       }
     }
 
@@ -721,8 +742,8 @@ export async function dbRegisterFreeUser({ email, password = null, storeName = '
         email: cleanEmail,
         rawPassword,
         storeName: finalStore,
-        plan: existingUser.plan || 'Paket Gratis (300 Token)',
-        quota_total: existingUser.quota_total || 300,
+        plan: existingUser.plan || 'Paket Gratis (75 Token)',
+        quota_total: existingUser.quota_total || 75,
         active_until: existingUser.active_until
       };
     }
@@ -731,7 +752,7 @@ export async function dbRegisterFreeUser({ email, password = null, storeName = '
 
     const [res] = await pool.query(
       `INSERT INTO users (email, password, store_name, plan, quota_total, quota_used, role, active_until, device_id) 
-       VALUES (?, ?, ?, 'Paket Gratis (300 Token)', 300, 0, 'user', ?, ?)`,
+       VALUES (?, ?, ?, 'Paket Gratis (75 Token)', 75, 0, 'user', ?, ?)`,
       [cleanEmail, hashedPassword, storeName || 'Toko AI Assistant', activeUntil, cleanDevice]
     );
 
@@ -743,8 +764,8 @@ export async function dbRegisterFreeUser({ email, password = null, storeName = '
       email: cleanEmail,
       rawPassword,
       storeName: storeName || 'Toko AI Assistant',
-      plan: 'Paket Gratis (300 Token)',
-      quota_total: 300,
+      plan: 'Paket Gratis (75 Token)',
+      quota_total: 75,
       active_until: activeUntil
     };
   } catch (err) {
@@ -760,13 +781,16 @@ export async function dbRegisterOrUpdatePaidUser({ email, password, storeName = 
     // Hash password kuat dengan scrypt
     const hashedPassword = hashPassword(password);
 
-    const [existing] = await pool.query('SELECT id, quota_total, quota_used FROM users WHERE LOWER(email) = ? LIMIT 1', [cleanEmail]);
+    const [existing] = await pool.query('SELECT id, quota_total, quota_used, active_until FROM users WHERE LOWER(email) = ? LIMIT 1', [cleanEmail]);
 
     if (existing.length > 0) {
-      const newTotal = (existing[0].quota_total || 0) + quota;
+      const wasExpired = existing[0].active_until && new Date(existing[0].active_until) < new Date();
+      // Jika sudah kedaluwarsa, sisa token lama HANGUS (tidak ditumpuk), mulai fresh dari paket baru
+      const newTotal = wasExpired ? quota : ((existing[0].quota_total || 0) + quota);
+      const newUsed = wasExpired ? 0 : (existing[0].quota_used || 0);
       await pool.query(
-        'UPDATE users SET plan = ?, quota_total = ?, active_until = ?, store_name = COALESCE(?, store_name) WHERE id = ?',
-        [plan, newTotal, activeUntil, storeName || null, existing[0].id]
+        'UPDATE users SET plan = ?, quota_total = ?, quota_used = ?, active_until = ?, store_name = COALESCE(?, store_name) WHERE id = ?',
+        [plan, newTotal, newUsed, activeUntil, storeName || null, existing[0].id]
       );
       return { id: existing[0].id, email: cleanEmail, plan, quota_total: newTotal, active_until: activeUntil, isNew: false };
     } else {
@@ -809,9 +833,14 @@ export async function dbUpdateUserAccount(userId, newEmail, newPassword = null) 
 export async function dbDeductQuota(userId = null) {
   try {
     if (userId) {
-      await pool.query('UPDATE users SET quota_used = quota_used + 1 WHERE id = ? AND quota_used < quota_total', [Number(userId)]);
+      await pool.query(
+        "UPDATE users SET quota_used = quota_used + 1 WHERE id = ? AND quota_used < quota_total AND (role = 'superadmin' OR active_until IS NULL OR active_until > NOW())",
+        [Number(userId)]
+      );
     } else {
-      await pool.query('UPDATE users SET quota_used = quota_used + 1 WHERE quota_used < quota_total ORDER BY id DESC LIMIT 1');
+      await pool.query(
+        "UPDATE users SET quota_used = quota_used + 1 WHERE quota_used < quota_total AND (role = 'superadmin' OR active_until IS NULL OR active_until > NOW()) ORDER BY id DESC LIMIT 1"
+      );
     }
     return true;
   } catch (err) {
@@ -823,10 +852,23 @@ export async function dbDeductQuota(userId = null) {
 export async function dbGetUserQuota(userId) {
   try {
     const [rows] = await pool.query(
-      'SELECT quota_total, quota_used, (quota_total - quota_used) AS remaining, plan, active_until FROM users WHERE id = ? LIMIT 1',
+      'SELECT quota_total, quota_used, plan, active_until, role FROM users WHERE id = ? LIMIT 1',
       [Number(userId)]
     );
-    return rows[0] || null;
+    const row = rows[0];
+    if (!row) return null;
+
+    const isExpired = row.role !== 'superadmin' && row.active_until && new Date(row.active_until) < new Date();
+    const remaining = isExpired ? 0 : Math.max(0, Number(row.quota_total || 0) - Number(row.quota_used || 0));
+
+    return {
+      quota_total: Number(row.quota_total || 0),
+      quota_used: isExpired ? Number(row.quota_total || 0) : Number(row.quota_used || 0),
+      remaining,
+      isExpired,
+      plan: row.plan,
+      active_until: row.active_until
+    };
   } catch (err) {
     return null;
   }
@@ -872,10 +914,15 @@ export async function dbUpdateOrderStatus(orderId, status) {
 export async function dbGetAllUsers() {
   try {
     const [rows] = await pool.query(
-      `SELECT id, email, store_name, plan, quota_total, quota_used, 
-              (quota_total - quota_used) AS quota_remaining, 
-              role, active_until, created_at, updated_at 
-       FROM users ORDER BY id DESC`
+      `SELECT u.id, u.email, u.store_name, u.plan, u.quota_total, u.quota_used, 
+              (u.quota_total - u.quota_used) AS quota_remaining, 
+              u.role, u.active_until, u.created_at, u.updated_at,
+              MAX(CASE WHEN c.config_key = 'wa_status' THEN c.config_value END) AS wa_status,
+              MAX(CASE WHEN c.config_key = 'wa_phone' THEN c.config_value END) AS wa_phone
+       FROM users u
+       LEFT JOIN config c ON u.id = c.user_id AND c.config_key IN ('wa_status', 'wa_phone')
+       GROUP BY u.id
+       ORDER BY u.id DESC`
     );
     return rows;
   } catch (err) {
@@ -1198,15 +1245,17 @@ export async function dbClearAllNotifications() {
   }
 }
 
-export async function dbRecordVisit({ ip = '127.0.0.1', pageView = 'landing', visitorEmail = 'Pengunjung', userAgent = '' }) {
+export async function dbRecordVisit({ ip = '127.0.0.1', pageView = 'landing', visitorEmail = 'Pengunjung', userAgent = '', eventType = 'visit', trafficSource = 'Direct' }) {
   try {
     await pool.query(
-      `INSERT INTO visits_log (ip_address, page_view, visitor_email, user_agent) VALUES (?, ?, ?, ?)`,
+      `INSERT INTO visits_log (ip_address, page_view, visitor_email, user_agent, event_type, traffic_source) VALUES (?, ?, ?, ?, ?, ?)`,
       [
         String(ip || '127.0.0.1').slice(0, 90),
         String(pageView || 'landing').slice(0, 90),
         String(visitorEmail || 'Pengunjung').slice(0, 200),
-        String(userAgent || '').slice(0, 250)
+        String(userAgent || '').slice(0, 250),
+        String(eventType || 'visit').slice(0, 45),
+        String(trafficSource || 'Direct').slice(0, 75)
       ]
     );
     return true;
@@ -1218,12 +1267,29 @@ export async function dbRecordVisit({ ip = '127.0.0.1', pageView = 'landing', vi
 
 export async function dbGetVisitStats() {
   try {
-    const [totalRows] = await pool.query('SELECT COUNT(*) AS total FROM visits_log');
-    const [todayRows] = await pool.query('SELECT COUNT(*) AS today FROM visits_log WHERE DATE(created_at) = CURDATE()');
+    const [totalRows] = await pool.query("SELECT COUNT(*) AS total FROM visits_log WHERE (event_type IS NULL OR event_type = 'visit')");
+    const [todayRows] = await pool.query("SELECT COUNT(*) AS today FROM visits_log WHERE (event_type IS NULL OR event_type = 'visit') AND DATE(created_at) = CURDATE()");
+    const [ctaRows] = await pool.query("SELECT event_type, COUNT(*) AS cnt FROM visits_log WHERE event_type IN ('cta_register', 'cta_login') GROUP BY event_type");
+    const [userRows] = await pool.query("SELECT id, plan, role, created_at FROM users WHERE role != 'superadmin'");
+    const [paidOrderRows] = await pool.query("SELECT COUNT(*) AS cnt FROM orders WHERE status = 'settlement'");
 
-    // Ambil seluruh data kunjungan untuk agregasi Mingguan (Senin-Minggu), Bulanan (Minggu 1-5), dan Tahunan (Jan-Des per Tahun)
+    let registerClicks = 0;
+    let loginClicks = 0;
+    for (const cr of ctaRows) {
+      if (cr.event_type === 'cta_register') registerClicks = Number(cr.cnt || 0);
+      if (cr.event_type === 'cta_login') loginClicks = Number(cr.cnt || 0);
+    }
+
+    const totalUsers = userRows.length;
+    const paidUsers = userRows.filter(u => {
+      const p = String(u.plan || '').toLowerCase();
+      return p && !p.includes('gratis') && !p.includes('free');
+    }).length;
+    const paidOrders = Number(paidOrderRows[0]?.cnt || 0);
+
+    // Ambil seluruh data kunjungan untuk agregasi Mingguan (Senin-Minggu), Bulanan (Minggu 1-5), Tahunan, Perangkat & Sumber Trafik
     const [allRows] = await pool.query(
-      `SELECT id, ip_address, page_view, visitor_email, created_at
+      `SELECT id, ip_address, page_view, visitor_email, user_agent, event_type, traffic_source, created_at
        FROM visits_log
        ORDER BY id DESC
        LIMIT 5000`
@@ -1244,24 +1310,69 @@ export async function dbGetVisitStats() {
 
     const weeklyLabels = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
     const weeklyCounts = [0, 0, 0, 0, 0, 0, 0];
+    const weeklyRegisterCounts = [0, 0, 0, 0, 0, 0, 0];
+    const weeklyNewUserCounts = [0, 0, 0, 0, 0, 0, 0];
+
+    let weeklyNewUsers = 0;
+    for (const u of userRows) {
+      if (!u.created_at) continue;
+      const ud = new Date(u.created_at);
+      if (ud >= mondayStart && ud < sundayEnd) {
+        weeklyNewUsers++;
+        const dow = ud.getDay();
+        const monIdx = dow === 0 ? 6 : (dow - 1);
+        weeklyNewUserCounts[monIdx]++;
+      }
+    }
 
     // 2. BULANAN: Minggu 1 s/d Minggu 5 pada bulan berjalan
     const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     const monthlyLabels = ['Minggu 1 (Tgl 1-7)', 'Minggu 2 (Tgl 8-14)', 'Minggu 3 (Tgl 15-21)', 'Minggu 4 (Tgl 22-28)', 'Minggu 5 (Tgl 29+)'];
     const monthlyCounts = [0, 0, 0, 0, 0];
 
-    // 3. TAHUNAN: Jan s/d Des untuk setiap tahun (otomatis bertambah seiring bergantinya tahun)
+    // 3. TAHUNAN: Jan s/d Des untuk setiap tahun
     const yearlyByYear = {};
     const yearSet = new Set([curYear, curYear + 1]);
+
+    // 4. PERANGKAT & SUMBER TRAFIK
+    let mobileCount = 0;
+    let desktopCount = 0;
+    const sourceMap = { 'TikTok': 0, 'Google Search': 0, 'Instagram': 0, 'Direct': 0 };
 
     for (const r of allRows) {
       if (!r.created_at) continue;
       const d = new Date(r.created_at);
       if (isNaN(d.getTime())) continue;
+      const evt = r.event_type || 'visit';
+
+      if (evt === 'cta_register') {
+        if (d >= mondayStart && d < sundayEnd) {
+          const dow = d.getDay();
+          const monIdx = dow === 0 ? 6 : (dow - 1);
+          weeklyRegisterCounts[monIdx]++;
+        }
+        continue;
+      }
+      if (evt !== 'visit') continue;
+
+      // Device detection
+      const ua = String(r.user_agent || '').toLowerCase();
+      if (/mobile|android|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(ua)) {
+        mobileCount++;
+      } else {
+        desktopCount++;
+      }
+
+      // Source detection
+      const src = String(r.traffic_source || 'Direct');
+      if (src.toLowerCase().includes('tiktok')) sourceMap['TikTok']++;
+      else if (src.toLowerCase().includes('google')) sourceMap['Google Search']++;
+      else if (src.toLowerCase().includes('instagram')) sourceMap['Instagram']++;
+      else sourceMap['Direct']++;
 
       const y = d.getFullYear();
-      const m = d.getMonth(); // 0-11
-      const dateNum = d.getDate(); // 1-31
+      const m = d.getMonth();
+      const dateNum = d.getDate();
 
       yearSet.add(y);
       if (!yearlyByYear[y]) {
@@ -1269,19 +1380,28 @@ export async function dbGetVisitStats() {
       }
       yearlyByYear[y][m]++;
 
-      // Cek apakah masuk di bulan berjalan
       if (y === curYear && m === curMonth) {
         const weekIdx = Math.min(4, Math.floor((dateNum - 1) / 7));
         monthlyCounts[weekIdx]++;
       }
 
-      // Cek apakah masuk di minggu berjalan (Senin - Minggu)
       if (d >= mondayStart && d < sundayEnd) {
-        const dow = d.getDay(); // 0=Minggu .. 6=Sabtu
+        const dow = d.getDay();
         const monIdx = dow === 0 ? 6 : (dow - 1);
         weeklyCounts[monIdx]++;
       }
     }
+
+    const totalDevices = Math.max(1, mobileCount + desktopCount);
+    const mobilePct = Math.round((mobileCount / totalDevices) * 100);
+    const desktopPct = (mobileCount + desktopCount) === 0 ? 0 : (100 - mobilePct);
+
+    const totalSrc = Math.max(1, Object.values(sourceMap).reduce((a, b) => a + b, 0));
+    const trafficSources = Object.entries(sourceMap).map(([name, count]) => ({
+      name,
+      count,
+      pct: Math.round((count / totalSrc) * 100)
+    }));
 
     const availableYears = Array.from(yearSet).sort((a, b) => a - b).map(String);
     for (const yStr of availableYears) {
@@ -1293,19 +1413,29 @@ export async function dbGetVisitStats() {
     return {
       totalVisits,
       todayVisits,
+      registerClicks,
+      loginClicks,
+      totalUsers,
+      paidUsers,
+      weeklyNewUsers,
+      paidOrders,
+      deviceSplit: { mobilePct, desktopPct, mobileCount, desktopCount },
+      trafficSources,
       currentYear: String(curYear),
       currentMonthName: `${monthNames[curMonth]} ${curYear}`,
       availableYears,
       weekly: {
         labels: weeklyLabels,
-        counts: weeklyCounts
+        counts: weeklyCounts,
+        registerCounts: weeklyRegisterCounts,
+        newUserCounts: weeklyNewUserCounts
       },
       monthly: {
         labels: monthlyLabels,
         counts: monthlyCounts
       },
       yearlyByYear,
-      recentVisits: allRows.slice(0, 12)
+      recentVisits: allRows.filter(r => !r.event_type || r.event_type === 'visit').slice(0, 12)
     };
   } catch (err) {
     console.error('dbGetVisitStats Error:', err.message);

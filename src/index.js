@@ -298,10 +298,10 @@ async function startTenantSocket(userId) {
         if (now - lastMsgTime < 2500) continue;
         userCooldownMap.set(cooldownKey, now);
 
-        // Cek sisa kuota akun ini sebelum membalas
+        // Cek sisa token & masa aktif akun ini sebelum membalas (Kedaluwarsa = sisa token hangus)
         const userQuota = await dbGetUserQuota(uid);
-        if (userQuota && userQuota.remaining <= 0) {
-          console.log(`⚠️ [WA USER #${uid}] Kuota habis (0 tersisa). Pesan dari ${senderName} tidak dibalas otomatis.`);
+        if (userQuota && (userQuota.isExpired || userQuota.remaining <= 0)) {
+          console.log(`⚠️ [WA USER #${uid}] ${userQuota.isExpired ? 'Masa aktif habis (kedaluwarsa)' : 'Token habis'} (0 tersisa). Pesan dari ${senderName} tidak dibalas otomatis.`);
           continue;
         }
 
@@ -332,7 +332,14 @@ async function startTenantSocket(userId) {
         if (match.found) {
           const rawAns = String(match.answer || '').trim();
           const planLower = String(userQuota?.plan || '').toLowerCase();
+          // Free (75 Token) & 25K (300 Token) masih ada watermark; 35K, 50K, 70K, 100K+ BEBAS watermark
           const isWatermarkFree =
+            planLower.includes('35k') ||
+            planLower.includes('plus') ||
+            planLower.includes('50k') ||
+            planLower.includes('starter') ||
+            planLower.includes('70k') ||
+            planLower.includes('100k') ||
             planLower.includes('bisnis') ||
             planLower.includes('pro') ||
             planLower.includes('enterprise') ||

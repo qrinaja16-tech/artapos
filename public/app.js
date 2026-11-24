@@ -5,34 +5,41 @@
 
 // Daftar Paket Resmi artapos.id
 const ARTAPOS_PLANS = {
-  starter: {
-    id: 'starter',
-    name: 'Paket Starter',
+  hemat25: {
+    id: 'hemat25',
+    name: 'Paket Hemat 25K',
+    price: 25000,
+    quota: 300,
+    desc: '300 token/bulan • 30 hari (Masih ada watermark)'
+  },
+  plus35: {
+    id: 'plus35',
+    name: 'Paket Plus 35K',
+    price: 35000,
+    quota: 500,
+    desc: '500 token/bulan • 30 hari (Tanpa Watermark)'
+  },
+  starter50: {
+    id: 'starter50',
+    name: 'Paket Starter 50K',
     price: 50000,
     quota: 1000,
-    desc: '1.000 balasan chat/bulan • 30 hari'
+    desc: '1.000 token/bulan • 30 hari (Tanpa Watermark)'
   },
-  bisnis: {
-    id: 'bisnis',
-    name: 'Paket Bisnis',
+  pro70: {
+    id: 'pro70',
+    name: 'Paket Pro 70K',
+    price: 70000,
+    quota: 1500,
+    desc: '1.500 token/bulan • 30 hari (Tanpa Watermark)'
+  },
+  bisnis100: {
+    id: 'bisnis100',
+    name: 'Paket Bisnis 100K',
     price: 100000,
     quota: 2500,
     popular: true,
-    desc: '2.500 balasan chat/bulan • 30 hari (Paling Laris)'
-  },
-  pro: {
-    id: 'pro',
-    name: 'Paket Pro',
-    price: 150000,
-    quota: 5000,
-    desc: '5.000 balasan chat/bulan • 30 hari'
-  },
-  enterprise: {
-    id: 'enterprise',
-    name: 'Paket Enterprise',
-    price: 200000,
-    quota: 10000,
-    desc: '10.000 balasan chat/bulan • 30 hari'
+    desc: '2.500 token/bulan • 30 hari (Paling Laris • Tanpa Watermark)'
   }
 };
 
@@ -150,7 +157,7 @@ function showToast(title, icon = 'success') {
 // STATE GLOBAL APLIKASI
 // ==============================================================
 let currentUser = null;           // User yang sedang login
-let currentSelectedPlan = 'bisnis';// Default selected plan: Paket Bisnis (Paling Laris)
+let currentSelectedPlan = 'plus35'; // Default Paling Laris: Paket Plus 35K
 let currentActiveView = 'landing'; // 'landing' | 'checkout' | 'email-success' | 'login' | 'dashboard'
 let currentActiveTab = 'whatsapp'; // 'whatsapp' | 'admin' | 'chat' | 'settings' | 'account'
 let activeOrder = null;           // Order aktif yang sedang menunggu verifikasi pembayaran Midtrans
@@ -301,6 +308,10 @@ function switchView(viewName) {
     'error': document.getElementById('viewErrorState')
   };
 
+  if (viewName === 'login') {
+    trackCtaEvent('cta_login');
+  }
+
   Object.values(views).forEach(v => {
     if (v) v.classList.add('hidden');
   });
@@ -359,7 +370,53 @@ function handleCheckoutBackClick() {
   }
 }
 
-function openCheckout(planId = 'bisnis') {
+function goToCheckoutStep(stepNum) {
+  const s1 = document.getElementById('checkoutStep1Pane');
+  const s2 = document.getElementById('checkoutStep2Pane');
+  const s3 = document.getElementById('checkoutStep3Pane');
+  const ind1 = document.getElementById('step1Indicator');
+  const ind2 = document.getElementById('step2Indicator');
+  const ind3 = document.getElementById('step3Indicator');
+
+  // Jika sudah login (Perpanjang), lewati Langkah 2 (Isi Email)
+  if (stepNum === 2 && isLoggedInSession()) {
+    stepNum = 3;
+  }
+
+  if (s1) s1.classList.toggle('hidden', stepNum !== 1);
+  if (s2) s2.classList.toggle('hidden', stepNum !== 2);
+  if (s3) s3.classList.toggle('hidden', stepNum !== 3);
+
+  if (ind1) ind1.classList.toggle('active', stepNum >= 1);
+  if (ind2) ind2.classList.toggle('active', stepNum >= 2);
+  if (ind3) ind3.classList.toggle('active', stepNum >= 3);
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function handleStep1Next() {
+  if (isLoggedInSession()) {
+    goToCheckoutStep(3);
+  } else {
+    goToCheckoutStep(2);
+  }
+}
+
+function handleStep2Next() {
+  const emailInput = document.getElementById('orderEmail');
+  const email = (emailInput?.value || '').trim().toLowerCase();
+  if (!email || !email.endsWith('@gmail.com') || email.length < 11) {
+    showAlert('Mohon masukkan email Google (@gmail.com) yang valid.', 'warning');
+    if (emailInput) emailInput.focus();
+    return;
+  }
+  const sumEmailTarget = document.getElementById('sumEmailTarget');
+  if (sumEmailTarget) sumEmailTarget.textContent = email;
+  goToCheckoutStep(3);
+}
+
+function openCheckout(planId = 'plus35') {
+  trackCtaEvent('cta_register');
   selectCheckoutPlan(planId);
   switchView('checkout');
 
@@ -371,6 +428,8 @@ function openCheckout(planId = 'bisnis') {
   const orderEmailInput = document.getElementById('orderEmail');
   const orderStoreInput = document.getElementById('orderStoreName');
   const sumEmailTarget = document.getElementById('sumEmailTarget');
+  const step2El = document.getElementById('step2Indicator');
+  const step1NextBtn = document.getElementById('btnStep1NextText');
 
   if (isLoggedInSession() && currentUser) {
     const userEm = currentUser.email;
@@ -378,9 +437,11 @@ function openCheckout(planId = 'bisnis') {
 
     if (guestSection) guestSection.classList.add('hidden');
     if (loggedInBanner) loggedInBanner.classList.remove('hidden');
+    if (step2El) step2El.classList.add('hidden');
+    if (step1NextBtn) step1NextBtn.textContent = 'Lanjut Bayar';
     if (activeEmailEl) activeEmailEl.textContent = `${userEm} (${userSt})`;
     if (activeAvatarEl) activeAvatarEl.textContent = (userEm[0] || 'A').toUpperCase();
-    if (backTextEl) backTextEl.textContent = 'Kembali ke Dashboard Saya';
+    if (backTextEl) backTextEl.textContent = 'Kembali';
 
     if (orderEmailInput) orderEmailInput.value = userEm;
     if (orderStoreInput) orderStoreInput.value = userSt;
@@ -388,12 +449,16 @@ function openCheckout(planId = 'bisnis') {
   } else {
     if (guestSection) guestSection.classList.remove('hidden');
     if (loggedInBanner) loggedInBanner.classList.add('hidden');
-    if (backTextEl) backTextEl.textContent = 'Kembali ke Beranda';
+    if (step2El) step2El.classList.remove('hidden');
+    if (step1NextBtn) step1NextBtn.textContent = 'Lanjut Isi Email';
+    if (backTextEl) backTextEl.textContent = 'Kembali';
   }
+
+  goToCheckoutStep(1);
 }
 
 function selectCheckoutPlan(planId) {
-  if (!ARTAPOS_PLANS[planId]) planId = 'bisnis';
+  if (!ARTAPOS_PLANS[planId]) planId = 'plus35';
   currentSelectedPlan = planId;
   const plan = ARTAPOS_PLANS[planId];
 
@@ -556,7 +621,7 @@ async function checkActiveOrderPayment() {
 
     if (res && res.verified && res.account) {
       // Pembayaran Sah Terverifikasi!
-      const plan = ARTAPOS_PLANS[activeOrder.planId] || ARTAPOS_PLANS.bisnis;
+      const plan = ARTAPOS_PLANS[activeOrder.planId] || ARTAPOS_PLANS.plus35;
       const initialPassword = res.account.password;
 
       // Simpan session token yang diberikan server
@@ -571,7 +636,7 @@ async function checkActiveOrderPayment() {
       const emailSentTime = document.getElementById('emailSentTime');
 
       if (emailPreviewRecipient) emailPreviewRecipient.textContent = activeOrder.email;
-      if (emailPreviewPlan) emailPreviewPlan.textContent = `${plan.name} (${plan.quota.toLocaleString('id-ID')} Balasan / Bulan)`;
+      if (emailPreviewPlan) emailPreviewPlan.textContent = `${plan.name} (${plan.quota.toLocaleString('id-ID')} Token / Bulan)`;
       if (emailPreviewUser) emailPreviewUser.textContent = activeOrder.email;
       if (emailPreviewPassword) emailPreviewPassword.textContent = initialPassword;
       if (emailSentTime) emailSentTime.textContent = getCurrentTime();
@@ -583,15 +648,22 @@ async function checkActiveOrderPayment() {
         await loadUserData();
         switchView('dashboard');
         switchTab('account');
-        showAlert(`🎉 Paket ${plan.name} (+${plan.quota.toLocaleString('id-ID')} Kuota) berhasil diaktifkan pada akun Anda!`, 'success', 'Upgrade Paket Berhasil!');
+        showAlert(`🎉 Paket ${plan.name} (+${plan.quota.toLocaleString('id-ID')} Token) berhasil diaktifkan pada akun Anda!`, 'success', 'Pembayaran Berhasil!');
       } else {
-        alert(`🎉 PEMBAYARAN TERVERIFIKASI SAH OLEH MIDTRANS!\n\nAkun Anda telah diaktifkan dengan password unik:\n${initialPassword}\n\nSilakan simpan password Anda.`);
+        await Swal.fire({
+          icon: 'success',
+          title: 'Pembayaran Berhasil!',
+          html: `Akun <b>${escapeHtml(activeOrder.email)}</b> sudah aktif!<br>Password login: <b>${escapeHtml(initialPassword)}</b>`,
+          confirmButtonColor: '#16a34a',
+          confirmButtonText: 'Lanjut Masuk',
+          didOpen: () => { const c = Swal.getContainer(); if (c) c.style.zIndex = '9999999'; }
+        });
         switchView('email-success');
       }
     } else {
       const statusMid = res?.status || 'pending';
-      const pesan = res?.message || 'Uang belum masuk ke sistem Midtrans. Selesaikan transfer QRIS/Bank terlebih dahulu.';
-      alert(`⛔ PEMBAYARAN BELUM LUNAS!\n\nStatus Midtrans: [${statusMid.toUpperCase()}]\n\n${pesan}\n\nAkun tidak dapat diaktifkan tanpa pembayaran yang sah.`);
+      const pesan = res?.message || 'Pembayaran belum selesai. Silakan selesaikan QRIS/Transfer terlebih dahulu.';
+      showAlert(`Status: [${statusMid.toUpperCase()}] — ${pesan}`, 'warning', 'Pembayaran Belum Lunas');
     }
   } catch (err) {
     if (btnCheck) {
@@ -747,10 +819,11 @@ function updateUserDashboardUI(user) {
 
   const profCurrentEmail = document.getElementById('profCurrentEmail');
 
-  const quotaTotal = Number(user.quota_total) || 2500;
-  const quotaUsed = Number(user.quota_used) || 0;
-  const quotaRemaining = user.remaining !== undefined ? Number(user.remaining) : Math.max(0, quotaTotal - quotaUsed);
-  const percentage = Math.min(100, Math.round((quotaUsed / quotaTotal) * 100));
+  const quotaTotal = Number(user.quota_total) ?? 75;
+  const isExpired = Boolean(user.isExpired) || (user.role !== 'superadmin' && user.active_until && new Date(user.active_until) < new Date());
+  const quotaUsed = isExpired ? quotaTotal : (Number(user.quota_used) || 0);
+  const quotaRemaining = isExpired ? 0 : (user.remaining !== undefined ? Number(user.remaining) : Math.max(0, quotaTotal - quotaUsed));
+  const percentage = quotaTotal > 0 ? Math.min(100, Math.round((quotaUsed / quotaTotal) * 100)) : 100;
 
   if (sidebarPlanBadge) sidebarPlanBadge.textContent = user.plan || 'Paket Bisnis';
   if (sidebarUserEmail) sidebarUserEmail.textContent = user.email || 'user@gmail.com';
@@ -780,7 +853,9 @@ function updateUserDashboardUI(user) {
   if (dashQuotaProgressFill) dashQuotaProgressFill.style.width = `${percentage}%`;
 
   if (dashActiveUntil) {
-    if (user.active_until) {
+    if (isExpired) {
+      dashActiveUntil.innerHTML = `<span style="color:#dc2626; font-weight:800;">🔴 Kedaluwarsa (Sisa Token Hangus)</span>`;
+    } else if (user.active_until) {
       const d = new Date(user.active_until);
       dashActiveUntil.textContent = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
     } else {
@@ -804,9 +879,10 @@ function startLiveQuotaPolling() {
     const data = await apiCall('/api/user/quota-live', 'GET');
     if (!data) return;
 
-    const quotaTotal = Number(data.quota_total) || 2500;
-    const quotaUsed = Number(data.quota_used) || 0;
-    const remaining = Number(data.remaining);
+    const quotaTotal = Number(data.quota_total) ?? 75;
+    const isExpired = Boolean(data.isExpired);
+    const quotaUsed = isExpired ? quotaTotal : (Number(data.quota_used) || 0);
+    const remaining = isExpired ? 0 : Number(data.remaining ?? 0);
 
     // Jika terjadi pengurangan kuota (ada chat WhatsApp yang dibalas AI)
     if (lastKnownQuotaRemaining !== null && remaining < lastKnownQuotaRemaining) {
@@ -1457,7 +1533,14 @@ async function handleUserSubmit(e) {
     const result = findBestAnswer(query);
     const rawAns = String(result.answer || '').trim();
     const planLower = String(currentUser?.plan || '').toLowerCase();
+    // Free (75 Token) & 25K (300 Token) masih ada watermark; 35K, 50K, 70K, 100K+ BEBAS watermark
     const isWatermarkFree =
+      planLower.includes('35k') ||
+      planLower.includes('plus') ||
+      planLower.includes('50k') ||
+      planLower.includes('starter') ||
+      planLower.includes('70k') ||
+      planLower.includes('100k') ||
       planLower.includes('bisnis') ||
       planLower.includes('pro') ||
       planLower.includes('enterprise') ||
@@ -1720,30 +1803,24 @@ function renderAdminVisitorChart(visitStats) {
     }
 
     const svgW = 860;
-    const svgH = 300;
-    const padL = 62;
-    const padR = 34;
-    const padT = 28;
-    const padB = 64;
+    const svgH = 260;
+    const padL = 44;
+    const padR = 24;
+    const padT = 24;
+    const padB = 46;
     const plotW = svgW - padL - padR;
     const plotH = svgH - padT - padB;
 
-    // 5 Garis Grid Horizontal Y-Axis (0%, 25%, 50%, 75%, 100%)
+    // Garis Grid Horizontal Minimalis (ala Vercel / Google Analytics)
     const gridLinesHtml = [];
-    for (let i = 0; i <= 5; i++) {
-      const val = Math.round((yMax / 5) * i);
-      const yPos = padT + plotH - (i / 5) * plotH;
-      const isZero = i === 0;
+    for (let i = 0; i <= 4; i++) {
+      const val = Math.round((yMax / 4) * i);
+      const yPos = padT + plotH - (i / 4) * plotH;
       gridLinesHtml.push(`
-        <line x1="${padL}" y1="${yPos}" x2="${svgW - padR}" y2="${yPos}" stroke="${isZero ? '#334155' : '#cbd5e1'}" stroke-width="${isZero ? '2' : '1'}" />
-        <text x="${padL - 12}" y="${yPos + 4}" text-anchor="end" font-size="12" font-weight="700" fill="#334155">${val.toLocaleString('id-ID')}</text>
+        <line x1="${padL}" y1="${yPos}" x2="${svgW - padR}" y2="${yPos}" stroke="#f1f5f9" stroke-width="1.2" />
+        <text x="${padL - 10}" y="${yPos + 4}" text-anchor="end" font-size="11" font-weight="600" fill="#94a3b8">${val.toLocaleString('id-ID')}</text>
       `);
     }
-
-    // Garis Vertikal Sumbu Y Kiri
-    gridLinesHtml.push(`
-      <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + plotH}" stroke="#334155" stroke-width="2" />
-    `);
 
     // Hitung koordinat titik (x, y) untuk setiap label
     const n = Math.max(1, labels.length);
@@ -1752,42 +1829,160 @@ function renderAdminVisitorChart(visitStats) {
       const c = Number(counts[idx]) || 0;
       const x = n > 1 ? (padL + idx * stepX) : (padL + plotW / 2);
       const y = padT + plotH - Math.min(1, c / yMax) * plotH;
-      return { x, y, val: c, label: lbl };
+      return { x, y, val: c, label: lbl, idx };
     });
 
     const polylinePoints = coords.map(pt => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
     const areaPoints = `${coords[0].x.toFixed(1)},${(padT + plotH).toFixed(1)} ${polylinePoints} ${coords[coords.length - 1].x.toFixed(1)},${(padT + plotH).toFixed(1)}`;
 
-    const dotsAndLabelsHtml = coords.map(pt => {
+    // Titik aktif default (titik terakhir yang > 0, atau titik tengah)
+    let activeIdx = coords.length - 1;
+    for (let i = coords.length - 1; i >= 0; i--) {
+      if (coords[i].val > 0) { activeIdx = i; break; }
+    }
+    const activePt = coords[activeIdx];
+
+    const xLabelsHtml = coords.map(pt => {
       const isTilt = labels.length > 7;
       const lblX = pt.x.toFixed(1);
-      const lblY = (padT + plotH + 22).toFixed(1);
-      const transformAttr = isTilt ? `transform="rotate(-38 ${lblX} ${lblY})" text-anchor="end"` : `text-anchor="middle"`;
+      const lblY = (padT + plotH + 20).toFixed(1);
+      const transformAttr = isTilt ? `transform="rotate(-35 ${lblX} ${lblY})" text-anchor="end"` : `text-anchor="middle"`;
+      return `<text x="${lblX}" y="${lblY}" ${transformAttr} font-size="11.5" font-weight="600" fill="#64748b">${escapeHtml(pt.label)}</text>`;
+    }).join('');
 
-      return `
-        <g class="chart-node-group">
-          <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="5.5" fill="#ffffff" stroke="#0f172a" stroke-width="3" />
-          <text x="${pt.x.toFixed(1)}" y="${(pt.y - 11).toFixed(1)}" text-anchor="middle" font-size="11.5" font-weight="800" fill="#15803d">${pt.val > 0 ? pt.val.toLocaleString('id-ID') : ''}</text>
-          <text x="${lblX}" y="${lblY}" ${transformAttr} font-size="12" font-weight="700" fill="#1e293b">${escapeHtml(pt.label)}</text>
-        </g>
-      `;
+    // Seri tambahan (Klik Daftar & Pendaftar Baru) untuk mode Mingguan
+    let extraSeriesHtml = '';
+    const regCounts = currentVisitorChartMode === 'weekly' ? (statsObj.weekly?.registerCounts || []) : [];
+    const newCounts = currentVisitorChartMode === 'weekly' ? (statsObj.weekly?.newUserCounts || []) : [];
+    if (regCounts.length === labels.length) {
+      const regPts = regCounts.map((v, idx) => {
+        const x = n > 1 ? (padL + idx * stepX) : (padL + plotW / 2);
+        const y = padT + plotH - Math.min(1, (Number(v) || 0) / yMax) * plotH;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+      extraSeriesHtml += `<polyline points="${regPts}" fill="none" stroke="#64748b" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" opacity="0.7" />`;
+    }
+    if (newCounts.length === labels.length) {
+      const newPts = newCounts.map((v, idx) => {
+        const x = n > 1 ? (padL + idx * stepX) : (padL + plotW / 2);
+        const y = padT + plotH - Math.min(1, (Number(v) || 0) / yMax) * plotH;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+      extraSeriesHtml += `<polyline points="${newPts}" fill="none" stroke="#4ade80" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" opacity="0.85" />`;
+    }
+
+    // Hitboxes transparan per titik untuk hover / tap interaktif
+    const hitAreasHtml = coords.map(pt => {
+      const regV = Number(regCounts[pt.idx] || 0);
+      const newV = Number(newCounts[pt.idx] || 0);
+      return `<rect x="${(pt.x - (stepX / 2 || 20)).toFixed(1)}" y="${padT}" width="${(stepX || 40).toFixed(1)}" height="${plotH}" fill="transparent" class="chart-hover-col" data-x="${pt.x.toFixed(1)}" data-y="${pt.y.toFixed(1)}" data-label="${escapeHtml(pt.label)}" data-vis="${pt.val}" data-reg="${regV}" data-new="${newV}" onmouseenter="updateAnalyticsCrosshair(this)" ontouchstart="updateAnalyticsCrosshair(this)" />`;
     }).join('');
 
     svgContainer.innerHTML = `
-      <svg viewBox="0 0 ${svgW} ${svgH}" class="visitor-line-svg" preserveAspectRatio="xMidYMid meet">
-        <defs>
-          <linearGradient id="lineAreaGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#16a34a" stop-opacity="0.22" />
-            <stop offset="100%" stop-color="#16a34a" stop-opacity="0.0" />
-          </linearGradient>
-        </defs>
-        ${gridLinesHtml.join('')}
-        <polygon points="${areaPoints}" fill="url(#lineAreaGrad)" />
-        <polyline points="${polylinePoints}" fill="none" stroke="#0f172a" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round" />
-        ${dotsAndLabelsHtml}
-      </svg>
+      <div class="sleek-chart-wrap" style="position:relative;">
+        <div id="analyticsChartTooltip" class="sleek-chart-tooltip">
+          <strong>${escapeHtml(activePt.label)}</strong>: ${activePt.val.toLocaleString('id-ID')} Pengunjung
+        </div>
+        <svg viewBox="0 0 ${svgW} ${svgH}" class="visitor-line-svg" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="lineAreaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#22c55e" stop-opacity="0.28" />
+              <stop offset="100%" stop-color="#22c55e" stop-opacity="0.01" />
+            </linearGradient>
+          </defs>
+          ${gridLinesHtml.join('')}
+          <polygon points="${areaPoints}" fill="url(#lineAreaGrad)" />
+          ${extraSeriesHtml}
+          <polyline points="${polylinePoints}" fill="none" stroke="#16a34a" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round" />
+          <line id="chartCrosshairLine" x1="${activePt.x.toFixed(1)}" y1="${padT}" x2="${activePt.x.toFixed(1)}" y2="${padT + plotH}" stroke="#64748b" stroke-width="1.3" stroke-dasharray="4 4" />
+          <circle id="chartCrosshairDot" cx="${activePt.x.toFixed(1)}" cy="${activePt.y.toFixed(1)}" r="6" fill="#16a34a" stroke="#ffffff" stroke-width="2.5" />
+          ${xLabelsHtml}
+          ${hitAreasHtml}
+        </svg>
+      </div>
     `;
   }
+
+  // Update 4 KPI Cards, Funnel CTA, Sumber Trafik & Perangkat
+  const regClicks = Number(statsObj.registerClicks || 0);
+  const logClicks = Number(statsObj.loginClicks || 0);
+  const totUsers = Number(statsObj.totalUsers || allAdminUsers.length || 0);
+  const paidUsers = Number(statsObj.paidUsers || 0);
+  const weeklyNew = Number(statsObj.weeklyNewUsers || 0);
+  const paidOrders = Number(statsObj.paidOrders || 0);
+  const denom = Math.max(1, total);
+
+  const elTodaySub = document.getElementById('kpiTodayVisitsSub');
+  const elReg = document.getElementById('kpiRegisterClicks');
+  const elRegCtr = document.getElementById('kpiRegisterCtrBadge');
+  const elLog = document.getElementById('kpiLoginClicks');
+  const elLogCtr = document.getElementById('kpiLoginCtrBadge');
+  const elTotAcc = document.getElementById('kpiTotalAccounts');
+  const elWeekNew = document.getElementById('kpiWeeklyNewBadge');
+  const elPaidSub = document.getElementById('kpiPaidAccountsSub');
+
+  if (elTodaySub) elTodaySub.textContent = `${today.toLocaleString('id-ID')} pengunjung hari ini`;
+  if (elReg) elReg.textContent = regClicks.toLocaleString('id-ID');
+  if (elRegCtr) elRegCtr.textContent = `CTR ${((regClicks / denom) * 100).toFixed(1)}%`;
+  if (elLog) elLog.textContent = logClicks.toLocaleString('id-ID');
+  if (elLogCtr) elLogCtr.textContent = `CTR ${((logClicks / denom) * 100).toFixed(1)}%`;
+  if (elTotAcc) elTotAcc.textContent = totUsers.toLocaleString('id-ID');
+  if (elWeekNew) elWeekNew.textContent = `+${weeklyNew.toLocaleString('id-ID')} minggu ini`;
+  if (elPaidSub) elPaidSub.textContent = `${paidUsers.toLocaleString('id-ID')} akun aktif berbayar`;
+
+  // Funnel
+  const loginPct = Math.min(100, (logClicks / denom) * 100);
+  const regPct = Math.min(100, (regClicks / denom) * 100);
+  const paidPct = Math.min(100, (paidOrders / denom) * 100);
+  const convRate = totUsers > 0 ? ((paidOrders / totUsers) * 100).toFixed(1) : '0.0';
+
+  const fVisVal = document.getElementById('funnelVisitVal');
+  const fLogVal = document.getElementById('funnelLoginVal');
+  const fLogBar = document.getElementById('funnelLoginBar');
+  const fRegVal = document.getElementById('funnelRegisterVal');
+  const fRegBar = document.getElementById('funnelRegisterBar');
+  const fPaidVal = document.getElementById('funnelPaidVal');
+  const fPaidBar = document.getElementById('funnelPaidBar');
+  const fConv = document.getElementById('funnelConversionRate');
+
+  if (fVisVal) fVisVal.textContent = `${total.toLocaleString('id-ID')} (100%)`;
+  if (fLogVal) fLogVal.textContent = `${logClicks.toLocaleString('id-ID')} (${loginPct.toFixed(1)}%)`;
+  if (fLogBar) fLogBar.style.width = `${loginPct}%`;
+  if (fRegVal) fRegVal.textContent = `${regClicks.toLocaleString('id-ID')} (${regPct.toFixed(1)}%)`;
+  if (fRegBar) fRegBar.style.width = `${regPct}%`;
+  if (fPaidVal) fPaidVal.textContent = `${paidOrders.toLocaleString('id-ID')} (${paidPct.toFixed(1)}%)`;
+  if (fPaidBar) fPaidBar.style.width = `${paidPct}%`;
+  if (fConv) fConv.textContent = `${convRate}%`;
+
+  // Sumber Trafik & Perangkat
+  const srcListEl = document.getElementById('trafficSourcesList');
+  if (srcListEl) {
+    const sources = Array.isArray(statsObj.trafficSources) && statsObj.trafficSources.length > 0
+      ? statsObj.trafficSources
+      : [
+          { name: 'TikTok', pct: 0 },
+          { name: 'Google Search', pct: 0 },
+          { name: 'Instagram', pct: 0 },
+          { name: 'Direct', pct: 100 }
+        ];
+    srcListEl.innerHTML = sources.map(s => `
+      <div>
+        <div class="source-item-row">
+          <span>${escapeHtml(s.name)}</span>
+          <span>${s.pct}%</span>
+        </div>
+        <div class="funnel-track"><div class="funnel-fill emerald" style="width:${s.pct}%"></div></div>
+      </div>
+    `).join('');
+  }
+
+  const elMob = document.getElementById('deviceMobilePct');
+  const elDesk = document.getElementById('deviceDesktopPct');
+  if (elMob) elMob.textContent = `${statsObj.deviceSplit?.mobilePct ?? 0}%`;
+  if (elDesk) elDesk.textContent = `${statsObj.deviceSplit?.desktopPct ?? 0}%`;
+
+  // Render Daftar Akun Terbaru di Overview
+  renderOverviewUsersTable();
 
   if (recentStrip) {
     const recents = Array.isArray(statsObj.recentVisits) ? statsObj.recentVisits : [];
@@ -1801,6 +1996,101 @@ function renderAdminVisitorChart(visitStats) {
       }).join('');
     }
   }
+}
+
+let currentOverviewWaFilter = 'all';
+
+function setOverviewWaFilter(filterKey) {
+  currentOverviewWaFilter = filterKey;
+  document.getElementById('btnOverviewWaAll')?.classList.toggle('active', filterKey === 'all');
+  document.getElementById('btnOverviewWaConn')?.classList.toggle('active', filterKey === 'connected');
+  document.getElementById('btnOverviewWaScan')?.classList.toggle('active', filterKey === 'unconnected');
+  renderOverviewUsersTable();
+}
+
+function setAnalyticsRange(rangeKey) {
+  document.getElementById('btnRangeToday')?.classList.toggle('active', rangeKey === 'today');
+  document.getElementById('btnRange7d')?.classList.toggle('active', rangeKey === '7d');
+  document.getElementById('btnRange30d')?.classList.toggle('active', rangeKey === '30d');
+  if (rangeKey === 'today' || rangeKey === '7d') {
+    setVisitorChartMode('weekly');
+  } else {
+    setVisitorChartMode('monthly');
+  }
+}
+
+function renderOverviewUsersTable() {
+  const tbody = document.getElementById('overviewUsersTableBody');
+  if (!tbody) return;
+
+  const q = (document.getElementById('overviewUserSearch')?.value || '').trim().toLowerCase();
+  const list = allAdminUsers.filter(u => {
+    const isConn = String(u.wa_status || '').toLowerCase() === 'connected';
+    if (currentOverviewWaFilter === 'connected' && !isConn) return false;
+    if (currentOverviewWaFilter === 'unconnected' && isConn) return false;
+    if (q && !String(u.email || '').toLowerCase().includes(q) && !String(u.store_name || '').toLowerCase().includes(q)) return false;
+    return true;
+  }).slice(0, 8);
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:22px; color:#64748b;">Tidak ada akun yang cocok dengan filter ini.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(u => {
+    const isConn = String(u.wa_status || '').toLowerCase() === 'connected';
+    const d = u.created_at ? new Date(u.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+    const waPill = isConn
+      ? '<span class="badge-status-active" style="white-space:nowrap;">● Terhubung</span>'
+      : '<span class="badge-status-expired" style="white-space:nowrap;">● Belum Scan</span>';
+    return `
+      <tr>
+        <td><strong style="color:#0f172a;">${escapeHtml(u.email)}</strong></td>
+        <td><span class="badge-plan-table">${escapeHtml(u.plan || 'Gratis')}</span></td>
+        <td>${waPill}</td>
+        <td style="font-size:0.8rem; color:#64748b; white-space:nowrap;">${d}</td>
+        <td>
+          <button type="button" class="btn-table-action btn-view-detail" onclick="openAdminUserDetail(${u.id})">Detail</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function exportAdminAnalyticsCSV() {
+  const stats = latestVisitStatsCache || {};
+  const lines = [
+    ['Metrik', 'Nilai'],
+    ['Total Pengunjung Web', stats.totalVisits || 0],
+    ['Pengunjung Hari Ini', stats.todayVisits || 0],
+    ['Klik Tombol Daftar', stats.registerClicks || 0],
+    ['Klik Tombol Masuk', stats.loginClicks || 0],
+    ['Total Akun Pendaftar', stats.totalUsers || allAdminUsers.length],
+    ['Akun Aktif Berbayar', stats.paidUsers || 0],
+    [''],
+    ['ID', 'Email', 'Toko', 'Paket', 'Total Token', 'Terpakai', 'Status WA', 'Tanggal Daftar']
+  ];
+  allAdminUsers.forEach(u => {
+    lines.push([
+      u.id,
+      `"${String(u.email || '').replace(/"/g, '""')}"`,
+      `"${String(u.store_name || '').replace(/"/g, '""')}"`,
+      `"${String(u.plan || '').replace(/"/g, '""')}"`,
+      u.quota_total || 0,
+      u.quota_used || 0,
+      u.wa_status === 'connected' ? 'Terhubung' : 'Belum Scan',
+      u.created_at ? new Date(u.created_at).toISOString().slice(0, 10) : ''
+    ]);
+  });
+  const csv = lines.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `artapos-analytics-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📊 Laporan CSV berhasil diunduh!', 'success');
 }
 
 function filterAdminKnowledge() {
@@ -2444,16 +2734,17 @@ async function openAdminCreateUserModal() {
           <div>
             <label style="font-size:0.82rem; font-weight:700; color:#1e293b; display:block; margin-bottom:4px;">Paket</label>
             <select id="swalNewPlan" style="width:100%; padding:10px 10px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:0.86rem;">
-              <option value="Paket Gratis (300 Token)">Paket Gratis (300 Token)</option>
-              <option value="Paket Starter">Paket Starter (1.000 Token)</option>
-              <option value="Paket Bisnis">Paket Bisnis (2.500 Token)</option>
-              <option value="Paket Pro">Paket Pro (5.000 Token)</option>
-              <option value="Paket Enterprise">Paket Enterprise (10.000 Token)</option>
+              <option value="Paket Gratis (75 Token)">Paket Gratis (75 Token)</option>
+              <option value="Paket Hemat 25K">Paket Hemat 25K (300 Token)</option>
+              <option value="Paket Plus 35K">Paket Plus 35K (500 Token)</option>
+              <option value="Paket Starter 50K">Paket Starter 50K (1.000 Token)</option>
+              <option value="Paket Pro 70K">Paket Pro 70K (1.500 Token)</option>
+              <option value="Paket Bisnis 100K">Paket Bisnis 100K (2.500 Token)</option>
             </select>
           </div>
           <div>
             <label style="font-size:0.82rem; font-weight:700; color:#1e293b; display:block; margin-bottom:4px;">Total Token</label>
-            <input id="swalNewQuota" type="number" value="300" min="0" style="width:100%; padding:10px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:0.9rem;">
+            <input id="swalNewQuota" type="number" value="75" min="0" style="width:100%; padding:10px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:0.9rem;">
           </div>
         </div>
         <div>
@@ -2598,6 +2889,9 @@ async function handleAdminAddQuota(userId, email) {
 // GLOBAL EXPORTS UNTUK EVENT HANDLERS
 // ==============================================================
 window.switchView = switchView;
+window.goToCheckoutStep = goToCheckoutStep;
+window.handleStep1Next = handleStep1Next;
+window.handleStep2Next = handleStep2Next;
 window.openCheckout = openCheckout;
 window.handleCheckoutBackClick = handleCheckoutBackClick;
 window.selectCheckoutPlan = selectCheckoutPlan;
@@ -2727,7 +3021,7 @@ function renderDetectedGoogleAccountsInModal() {
           <div class="g-chip-name">${namePart}</div>
           <div class="g-chip-email">${em}</div>
         </div>
-        <span class="g-chip-action">Pakai Akun →</span>
+        <span class="g-chip-action">Pakai Akun</span>
       </div>
     `;
   }).join('');
@@ -2742,6 +3036,7 @@ async function quickSelectDetectedGmail(email) {
 }
 
 async function openFreeRegisterModal() {
+  trackCtaEvent('cta_register');
   const modal = document.getElementById('modalFreeRegister');
   if (modal) {
     modal.classList.remove('hidden');
@@ -2823,7 +3118,7 @@ async function executeFreeRegistration(email, storeName) {
       title: '🎉 Berhasil Didaftarkan!',
       html: `
         <div style="text-align:left; font-size:0.93rem; line-height:1.6; color:#334155;">
-          <p style="margin-bottom:10px;">Akun gratis (<b>300 Token Chat AI</b> + <b>7 Template Bot</b>) untuk <b>${cleanEmail}</b> telah aktif!</p>
+          <p style="margin-bottom:10px;">Akun gratis (<b>75 Token Chat AI</b> + <b>7 Template Bot</b>) untuk <b>${cleanEmail}</b> telah aktif!</p>
           <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px 14px; margin-bottom:10px;">
             📩 <b>Cek Email Masuk / Folder Spam:</b><br>
             Kami telah mengirimkan <b>Password Login</b> Anda melalui email resmi <code>artapos26@gmail.com</code>.
@@ -2831,7 +3126,7 @@ async function executeFreeRegistration(email, storeName) {
           <p style="margin:0; font-size:0.85rem; color:#64748b;">Silakan masukkan password dari email tersebut pada halaman Login ini untuk memindai Kode QR WhatsApp Anda.</p>
         </div>
       `,
-      confirmButtonText: 'Siap, Masuk Sekarang →',
+      confirmButtonText: 'Siap, Masuk Sekarang',
       confirmButtonColor: '#16a34a',
       customClass: {
         popup: 'swal-custom-popup',
@@ -2980,19 +3275,68 @@ window.showErrorStateView = showErrorStateView;
 window.handleErrorStateBackHome = handleErrorStateBackHome;
 window.retryNetworkConnection = retryNetworkConnection;
 
+const VALID_APP_HASHES = ['', 'landing', 'login', 'checkout', 'dashboard', 'hero', 'fitur', 'cara-kerja', 'harga', 'faq', 'features', 'how-it-works', 'pricing'];
+
 window.addEventListener('hashchange', () => {
   const hash = window.location.hash.replace('#', '').toLowerCase();
-  const validHashes = ['', 'landing', 'login', 'checkout', 'dashboard', 'features', 'how-it-works', 'pricing'];
   if (hash === '403') {
     showErrorStateView(403);
   } else if (hash === '404') {
     showErrorStateView(404);
   } else if (hash === 'offline') {
     showErrorStateView('offline');
-  } else if (hash && !validHashes.includes(hash)) {
+  } else if (hash && !VALID_APP_HASHES.includes(hash)) {
     showErrorStateView(404, `Rute halaman "#${hash}" tidak ditemukan di aplikasi artapos.id.`, `Rute Tidak Dikenal: /#${hash}`);
   }
 });
+
+function updateAnalyticsCrosshair(el) {
+  if (!el) return;
+  const x = el.getAttribute('data-x');
+  const y = el.getAttribute('data-y');
+  const lbl = el.getAttribute('data-label') || '';
+  const vis = Number(el.getAttribute('data-vis') || 0).toLocaleString('id-ID');
+  const reg = Number(el.getAttribute('data-reg') || 0).toLocaleString('id-ID');
+  const nw = Number(el.getAttribute('data-new') || 0).toLocaleString('id-ID');
+
+  const line = document.getElementById('chartCrosshairLine');
+  const dot = document.getElementById('chartCrosshairDot');
+  const tip = document.getElementById('analyticsChartTooltip');
+  if (line) { line.setAttribute('x1', x); line.setAttribute('x2', x); }
+  if (dot) { dot.setAttribute('cx', x); dot.setAttribute('cy', y); }
+  if (tip) {
+    tip.innerHTML = `<strong>${escapeHtml(lbl)}</strong> • ${vis} Pengunjung · ${reg} Klik Daftar · ${nw} Pendaftar`;
+  }
+}
+
+window.updateAnalyticsCrosshair = updateAnalyticsCrosshair;
+window.setAnalyticsRange = setAnalyticsRange;
+window.setOverviewWaFilter = setOverviewWaFilter;
+window.renderOverviewUsersTable = renderOverviewUsersTable;
+window.exportAdminAnalyticsCSV = exportAdminAnalyticsCSV;
+
+function detectClientTrafficSource() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const utm = (params.get('utm_source') || '').toLowerCase();
+    const ref = (document.referrer || '').toLowerCase();
+    const combined = `${utm} ${ref}`;
+    if (combined.includes('tiktok')) return 'TikTok';
+    if (combined.includes('google')) return 'Google Search';
+    if (combined.includes('instagram') || combined.includes('ig.me')) return 'Instagram';
+  } catch (e) {}
+  return 'Direct';
+}
+
+function trackCtaEvent(eventType) {
+  try {
+    apiCall('/api/track-event', 'POST', {
+      eventType,
+      pageView: currentActiveView || 'landing',
+      trafficSource: detectClientTrafficSource()
+    }).catch(() => {});
+  } catch (e) {}
+}
 
 // ==============================================================
 // INISIALISASI APLIKASI DENGAN PERSISTENCE LOCK
@@ -3006,7 +3350,6 @@ async function initApp() {
 
   const token = localStorage.getItem('artapos_token');
   const hash = window.location.hash.replace('#', '').toLowerCase();
-  const validHashes = ['', 'landing', 'login', 'checkout', 'dashboard', 'features', 'how-it-works', 'pricing'];
 
   // Jika hash mengarah ke #403, #404, #offline, atau rute asing yang tidak dikenal -> Tampilkan Layar Error
   if (hash === '403') {
@@ -3018,7 +3361,7 @@ async function initApp() {
   } else if (hash === 'offline') {
     showErrorStateView('offline');
     return;
-  } else if (hash && !validHashes.includes(hash)) {
+  } else if (hash && !VALID_APP_HASHES.includes(hash)) {
     showErrorStateView(404, `Rute halaman "#${hash}" tidak ditemukan di aplikasi artapos.id.`, `Rute Tidak Dikenal: /#${hash}`);
     return;
   }
@@ -3038,7 +3381,8 @@ async function initApp() {
   // Catat +1 Kunjungan Website secara Real-Time setiap halaman dibuka
   apiCall('/api/track-visit', 'POST', {
     pageView: currentActiveView || 'landing',
-    email: currentUser ? currentUser.email : 'Pengunjung'
+    email: currentUser ? currentUser.email : 'Pengunjung',
+    trafficSource: detectClientTrafficSource()
   }).catch(() => {});
 
   if (token) {

@@ -333,10 +333,11 @@ async function checkMidtransStatus(orderId) {
 }
 
 const ARTAPOS_PLANS = {
-  starter: { id: 'starter', name: 'Paket Starter', price: 50000, quota: 1000, desc: 'Cocok untuk toko baru & pesan santai' },
-  bisnis: { id: 'bisnis', name: 'Paket Bisnis', price: 100000, quota: 2500, popular: true, desc: 'Paling Laris! Untuk toko online aktif harian' },
-  pro: { id: 'pro', name: 'Paket Pro', price: 150000, quota: 5000, desc: 'Untuk bisnis dengan perputaran chat tinggi' },
-  enterprise: { id: 'enterprise', name: 'Paket Enterprise', price: 200000, quota: 10000, desc: 'Kapasitas maksimal untuk toko skala besar' }
+  hemat25: { id: 'hemat25', name: 'Paket Hemat 25K', price: 25000, quota: 300, watermark: true, desc: '300 Token / bulan • Masih ada sent via artapos.id' },
+  plus35: { id: 'plus35', name: 'Paket Plus 35K', price: 35000, quota: 500, watermark: false, desc: '500 Token / bulan • Bebas Watermark' },
+  starter50: { id: 'starter50', name: 'Paket Starter 50K', price: 50000, quota: 1000, watermark: false, desc: '1.000 Token / bulan • Bebas Watermark' },
+  pro70: { id: 'pro70', name: 'Paket Pro 70K', price: 70000, quota: 1500, watermark: false, desc: '1.500 Token / bulan • Bebas Watermark' },
+  bisnis100: { id: 'bisnis100', name: 'Paket Bisnis 100K', price: 100000, quota: 2500, popular: true, watermark: false, desc: '2.500 Token / bulan • Paling Laris & Bebas Watermark' }
 };
 
 let tidbInitPromise = null;
@@ -415,17 +416,47 @@ export function createHttpHandler(waHooks = {}) {
         const session = await getAuthUser(req);
         const visitorEmail = session ? session.email : (body.email || 'Pengunjung');
         const pageView = body.pageView || 'landing';
+        const trafficSource = body.trafficSource || 'Direct';
 
         await dbRecordVisit({
           ip: String(ip),
           pageView,
           visitorEmail,
-          userAgent: String(ua)
+          userAgent: String(ua),
+          eventType: 'visit',
+          trafficSource
         });
 
         const visitStats = await dbGetVisitStats();
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ success: true, visitStats }));
+      } catch (err) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false }));
+      }
+      return;
+    }
+
+    // ----------------------------------------
+    // 0B. API TRACK CTA CLICKS (DAFTAR & MASUK)
+    // ----------------------------------------
+    if (cleanUrl === '/api/track-event' && req.method === 'POST') {
+      try {
+        const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '127.0.0.1';
+        const ua = req.headers['user-agent'] || '';
+        const body = await readJsonBody(req);
+        const allowed = ['cta_register', 'cta_login'];
+        const eventType = allowed.includes(body.eventType) ? body.eventType : 'cta_register';
+        await dbRecordVisit({
+          ip: String(ip),
+          pageView: body.pageView || 'landing',
+          visitorEmail: 'Pengunjung',
+          userAgent: String(ua),
+          eventType,
+          trafficSource: body.trafficSource || 'Direct'
+        });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
       } catch (err) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false }));
@@ -673,8 +704,8 @@ export function createHttpHandler(waHooks = {}) {
 
       try {
         const body = await readJsonBody(req);
-        const planKey = (body.planId || 'bisnis').toLowerCase();
-        const plan = ARTAPOS_PLANS[planKey] || ARTAPOS_PLANS.bisnis;
+        const planKey = (body.planId || 'bisnis100').toLowerCase();
+        const plan = ARTAPOS_PLANS[planKey] || ARTAPOS_PLANS.bisnis100;
         const email = (body.email || '').trim().toLowerCase();
         const storeName = (body.storeName || 'Toko AI Assistant').trim().slice(0, 50);
 
@@ -767,8 +798,8 @@ export function createHttpHandler(waHooks = {}) {
         const body = await readJsonBody(req);
         const orderId = body.orderId;
         const email = (body.email || '').trim().toLowerCase();
-        const planKey = (body.planId || 'bisnis').toLowerCase();
-        const plan = ARTAPOS_PLANS[planKey] || ARTAPOS_PLANS.bisnis;
+        const planKey = (body.planId || 'bisnis100').toLowerCase();
+        const plan = ARTAPOS_PLANS[planKey] || ARTAPOS_PLANS.bisnis100;
         const storeName = body.storeName || 'Toko AI Assistant';
 
         if (!orderId) {
@@ -987,7 +1018,7 @@ export function createHttpHandler(waHooks = {}) {
           category: 'REGISTER',
           recipient: regResult.email,
           title: `📝 Pendaftaran Akun Baru (${regResult.storeName})`,
-          message: `Pengguna ${regResult.email} berhasil mendaftar Paket Gratis (300 Token) • Device: ${deviceId.slice(0, 16)}.`,
+          message: `Pengguna ${regResult.email} berhasil mendaftar Paket Gratis (75 Token) • Device: ${deviceId.slice(0, 16)}.`,
           status: 'success'
         });
 
@@ -1135,9 +1166,10 @@ export function createHttpHandler(waHooks = {}) {
               email: session.email,
               storeName: session.store_name,
               plan: quota?.plan || session.plan,
-              quota_total: quota?.quota_total || session.quota_total,
-              quota_used: quota?.quota_used || session.quota_used,
-              remaining: quota?.remaining || Math.max(0, session.quota_total - session.quota_used),
+              quota_total: quota?.quota_total ?? session.quota_total,
+              quota_used: quota?.quota_used ?? session.quota_used,
+              remaining: quota?.remaining ?? Math.max(0, session.quota_total - session.quota_used),
+              isExpired: Boolean(quota?.isExpired),
               role: session.role || 'user',
               active_until: quota?.active_until || session.active_until
             }
@@ -1171,10 +1203,11 @@ export function createHttpHandler(waHooks = {}) {
           'Cache-Control': 'no-cache, no-store'
         });
         res.end(JSON.stringify({
-          quota_total: quota?.quota_total || 2500,
-          quota_used: quota?.quota_used || 0,
-          remaining: quota ? Math.max(0, quota.quota_total - quota.quota_used) : 2500,
-          plan: quota?.plan || 'Paket Bisnis',
+          quota_total: quota?.quota_total ?? 75,
+          quota_used: quota?.quota_used ?? 0,
+          remaining: quota ? quota.remaining : 0,
+          isExpired: Boolean(quota?.isExpired),
+          plan: quota?.plan || 'Paket Gratis (75 Token)',
           active_until: quota?.active_until
         }));
       } catch (err) {
