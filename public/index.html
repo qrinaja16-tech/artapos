@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>artapos.id • WhatsApp AI Auto-Reply & Sales Assistant Terdepan</title>
-  <link rel="stylesheet" href="style.css?v=31.0">
+  <link rel="stylesheet" href="style.css?v=34.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -1025,7 +1025,7 @@
                   <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
                   <line x1="1" y1="10" x2="23" y2="10"></line>
                 </svg>
-                <span>Transaksi Midtrans</span>
+                <span>Transaksi Pembayaran</span>
               </div>
             </button>
 
@@ -1591,7 +1591,7 @@
                   <span>Super Admin Workspace • Cloud Serverless</span>
                 </div>
                 <h2>👑 Monitoring Seluruh Akun Toko & Transaksi</h2>
-                <p>Pantau seluruh database toko terdaftar, omset Midtrans, pemotongan kuota AI, serta ubah kata sandi super admin secara aman.</p>
+                <p>Pantau seluruh database toko terdaftar, omset penjualan, pemotongan kuota AI, serta ubah kata sandi super admin secara aman.</p>
               </div>
               <button class="btn-admin-refresh" onclick="loadAdminData()" title="Segarkan Data Admin">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1669,6 +1669,18 @@
                   <div class="admin-stat-lbl">Soal & Jawaban AI</div>
                 </div>
               </div>
+
+              <div class="admin-stat-card">
+                <div class="admin-stat-icon green">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                  </svg>
+                </div>
+                <div class="admin-stat-info">
+                  <div class="admin-stat-val" id="adminWaConnectedCount">0 / 0</div>
+                  <div class="admin-stat-lbl">WA Terhubung</div>
+                </div>
+              </div>
             </div>
 
             <!-- Subnav Tab Filter untuk Super Admin -->
@@ -1686,7 +1698,7 @@
                 💡 Bank Soal & Jawaban (<span id="subnavKnowledgeCount">0</span>)
               </button>
               <button type="button" class="admin-subnav-btn" id="subnavBtnOrders" onclick="switchAdminSection('orders')">
-                💳 Transaksi Midtrans (<span id="subnavOrdersCount">0</span>)
+                💳 Transaksi Pembayaran (<span id="subnavOrdersCount">0</span>)
               </button>
               <button type="button" class="admin-subnav-btn" id="subnavBtnPwd" onclick="switchAdminSection('pwd')">
                 🔐 Sandi Super Admin
@@ -1850,7 +1862,7 @@
 
                     <div class="funnel-item">
                       <div class="funnel-row-top">
-                        <span>Pembayaran Midtrans Sukses</span>
+                        <span>Pembayaran Sukses</span>
                         <strong id="funnelPaidVal">0 (0%)</strong>
                       </div>
                       <div class="funnel-track"><div class="funnel-fill lime" id="funnelPaidBar" style="width:0%"></div></div>
@@ -1883,7 +1895,7 @@
                   </div>
 
                   <div class="table-responsive-wrap" style="margin-top: 14px;">
-                    <table class="table-admin overview-users-tbl">
+                    <table class="table-admin overview-users-tbl mobile-card-table">
                       <thead>
                         <tr>
                           <th>EMAIL AKUN</th>
@@ -1998,10 +2010,12 @@
                 <div class="admin-select-wrap">
                   <select id="adminPlanFilter" onchange="filterAdminUsersTable()">
                     <option value="all">Semua Paket</option>
-                    <option value="starter">Paket Starter</option>
-                    <option value="bisnis">Paket Bisnis</option>
-                    <option value="pro">Paket Pro</option>
-                    <option value="enterprise">Paket Enterprise</option>
+                    <option value="gratis">Gratis (75 Token)</option>
+                    <option value="hemat">Paket Hemat 25K</option>
+                    <option value="plus">Paket Plus 35K</option>
+                    <option value="starter">Paket Starter 50K</option>
+                    <option value="pro">Paket Pro 70K</option>
+                    <option value="bisnis">Paket Bisnis 100K</option>
                   </select>
                 </div>
                 <div class="admin-select-wrap">
@@ -2014,7 +2028,7 @@
               </div>
 
               <div class="table-responsive">
-                <table class="table-admin">
+                <table class="table-admin mobile-card-table">
                   <thead>
                     <tr>
                       <th>ID</th>
@@ -2140,11 +2154,11 @@
               </div>
             </div>
 
-            <!-- Tabel Riwayat Transaksi Midtrans -->
+            <!-- Tabel Riwayat Transaksi Pembayaran -->
             <div class="card-pro admin-table-card" id="adminOrdersSection">
               <div class="card-head-bar">
                 <div>
-                  <h3>💳 Riwayat Seluruh Transaksi & Tagihan Midtrans</h3>
+                  <h3>💳 Riwayat Seluruh Transaksi & Tagihan Pembayaran</h3>
                   <p>Semua order masuk beserta status pembayaran resmi.</p>
                 </div>
                 <span class="badge-edition-active" id="adminOrderCountBadge">0 Transaksi</span>
@@ -2158,7 +2172,7 @@
                       <th>Email Pembeli</th>
                       <th>Paket</th>
                       <th>Nominal</th>
-                      <th>Status Midtrans</th>
+                      <th>Status Pembayaran</th>
                       <th>Waktu Dibuat</th>
                     </tr>
                   </thead>
@@ -2193,7 +2207,7 @@
       <div class="admin-modal-tabs">
         <button class="modal-tab-btn active" id="modalTabBtnInfo" onclick="switchModalTab('info')">📋 Info & Kelola Akun</button>
         <button class="modal-tab-btn" id="modalTabBtnKnowledge" onclick="switchModalTab('knowledge')">💡 Database Knowledge (<span id="modalKnowledgeCount">0</span>)</button>
-        <button class="modal-tab-btn" id="modalTabBtnOrders" onclick="switchModalTab('orders')">💳 Riwayat Midtrans (<span id="modalOrdersCount">0</span>)</button>
+        <button class="modal-tab-btn" id="modalTabBtnOrders" onclick="switchModalTab('orders')">💳 Riwayat Transaksi (<span id="modalOrdersCount">0</span>)</button>
       </div>
 
       <div class="admin-modal-body">
@@ -2424,7 +2438,7 @@
   </div>
 
   <!-- Main JavaScript Controller -->
-  <script src="app.js?v=31.0"></script>
+  <script src="app.js?v=34.0"></script>
 </body>
 
 </html>

@@ -6579,24 +6579,412 @@ div.swal2-container,
   cursor: crosshair;
 }
 
+.table-responsive-wrap,
+.table-responsive {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+}
+
+.badge-plan-table {
+  white-space: nowrap;
+  display: inline-block;
+}
+
+#tabSuperAdmin,
+.admin-analytics-wrapper,
+.analytics-panel-card,
+.admin-table-card {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 @media (max-width: 1100px) {
   .analytics-kpi-grid-4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .analytics-split-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
-@media (max-width: 600px) {
-  .analytics-kpi-grid-4 {
-    grid-template-columns: 1fr;
+@media (max-width: 768px) {
+  /* Fix Topbar Overlap & Token Pill Layout on Mobile */
+  .saas-topbar {
+    height: auto !important;
+    min-height: 0 !important;
+    position: relative !important;
+    padding: 12px 14px !important;
+    gap: 10px !important;
+  }
+  .topbar-title-group {
+    min-width: 0 !important;
+    flex: 1;
+  }
+  .topbar-title-group h1 {
+    font-size: 1.05rem !important;
+    line-height: 1.25;
+    word-break: break-word;
+  }
+  .topbar-actions {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start !important;
+    gap: 6px !important;
+  }
+  .quota-pill-badge {
+    font-size: 0.72rem !important;
+    padding: 5px 10px !important;
+    border-radius: 10px !important;
+    white-space: nowrap;
+    gap: 5px !important;
+  }
+  .status-pill-badge {
+    font-size: 0.72rem !important;
+    padding: 5px 10px !important;
+    border-radius: 10px !important;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .btn-action-refresh {
+    padding: 5px 10px !important;
+    font-size: 0.72rem !important;
+    border-radius: 10px !important;
+    margin-left: auto;
+  }
+  .workspace-body {
+    padding: 14px 12px !important;
+  }
+
+  /* Table Horizontal Swipe Fix on Mobile */
+  .table-admin th,
+  .table-admin td {
+    white-space: nowrap;
+    padding: 10px 12px;
+    font-size: 0.78rem;
+  }
+
+  /* Header & Action Controls */
+  #tabSuperAdmin .admin-header-card {
+    padding: 16px;
+    border-radius: 14px;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  #tabSuperAdmin .admin-header-main h2 {
+    font-size: 1.15rem;
+    line-height: 1.3;
+  }
+  #tabSuperAdmin .admin-header-main p {
+    font-size: 0.8rem;
+    line-height: 1.45;
+  }
+
+  /* 5 Top Metric Cards -> Neat 2-column compact grid on mobile */
+  #tabSuperAdmin .admin-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  #tabSuperAdmin .admin-stat-card {
+    padding: 12px;
+    gap: 10px;
+    border-radius: 12px;
+  }
+  #tabSuperAdmin .admin-stat-card:last-child:nth-child(odd) {
+    grid-column: span 2;
+  }
+  #tabSuperAdmin .admin-stat-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+  }
+  #tabSuperAdmin .admin-stat-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  #tabSuperAdmin .admin-stat-val {
+    font-size: 1.15rem;
+  }
+  #tabSuperAdmin .admin-stat-lbl {
+    font-size: 0.72rem;
+    line-height: 1.25;
+  }
+
+  /* Subnav Pill Bar */
+  #tabSuperAdmin .admin-subnav-bar {
+    scrollbar-width: none;
+    padding: 6px;
+    gap: 6px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  #tabSuperAdmin .admin-subnav-bar::-webkit-scrollbar {
+    display: none;
+  }
+  #tabSuperAdmin .admin-subnav-btn {
+    padding: 8px 12px;
+    font-size: 0.76rem;
+    border-radius: 8px;
+  }
+
+  /* Analytics Overview Header & Range Pills */
+  .analytics-hero-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 14px;
   }
   .analytics-main-title {
     font-size: 1.2rem;
+    line-height: 1.25;
+  }
+  .analytics-main-subtitle {
+    font-size: 0.8rem;
+    line-height: 1.45;
+  }
+  .analytics-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 8px;
+  }
+  .analytics-range-pills {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+  .range-pill-btn {
+    padding: 8px 6px;
+    font-size: 0.74rem;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .btn-export-csv-pro {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 14px;
+  }
+
+  /* 4 Analytics KPI Cards -> Compact 2-Column Grid */
+  .analytics-kpi-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .kpi-spark-card {
+    padding: 12px;
+    gap: 8px;
+    border-radius: 12px;
+  }
+  .kpi-spark-label {
+    font-size: 0.62rem;
+    line-height: 1.2;
+  }
+  .kpi-spark-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+  }
+  .kpi-spark-val {
+    font-size: 1.3rem;
+  }
+  .kpi-spark-badge {
+    font-size: 0.64rem;
+    padding: 2px 7px;
+  }
+  .kpi-spark-foot {
+    font-size: 0.68rem;
+  }
+  .mini-sparkline {
+    width: 40px;
+    height: 14px;
+  }
+
+  /* Analytics Cards & Chart */
+  .analytics-panel-card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+  .analytics-panel-head h3 {
+    font-size: 1rem;
+  }
+  .chart-series-legend {
+    gap: 10px;
+    font-size: 0.72rem;
+  }
+  .chart-mode-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px;
+    margin: 10px 0;
+  }
+  .chart-mode-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    gap: 6px;
+  }
+  .chart-mode-btn {
+    padding: 7px 6px;
+    font-size: 0.72rem;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .chart-year-picker-wrap {
+    justify-content: space-between;
+    width: 100%;
+    font-size: 0.78rem;
+  }
+  .visitor-line-svg {
+    min-width: 0;
+    width: 100%;
+    height: auto;
+  }
+  .sleek-chart-tooltip {
+    max-width: 100%;
+    font-size: 0.7rem;
+    padding: 5px 10px;
+    border-radius: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* Table Filters & WA Filter Pills */
+  .analytics-table-top {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .analytics-table-filters {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
   }
   .analytics-table-filters input {
     width: 100%;
+    min-width: 0;
+  }
+  .wa-filter-pills {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+  .wa-pill-btn {
+    padding: 7px 6px;
+    font-size: 0.72rem;
+    text-align: center;
+  }
+
+  /* Card Head Bars inside Super Admin (Users, Notif, Knowledge, Pwd) */
+  #tabSuperAdmin .card-head-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+  #tabSuperAdmin .card-head-bar h3 {
+    font-size: 1rem;
+  }
+  #tabSuperAdmin .card-head-bar > div:last-child,
+  #tabSuperAdmin .card-head-bar .btn-submit-db,
+  #tabSuperAdmin .card-head-bar .btn-delete-qa {
+    width: 100%;
+    justify-content: center;
+  }
+  #tabSuperAdmin .admin-pwd-card {
+    padding: 0;
+  }
+  #tabSuperAdmin .admin-pwd-form {
+    padding: 14px 16px;
+  }
+  #tabSuperAdmin .form-row-2 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  #tabSuperAdmin .recent-visits-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+.badge-status-warn {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 99px;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .mobile-card-table {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  .mobile-card-table thead {
+    display: none;
+  }
+  .mobile-card-table tbody,
+  .mobile-card-table tr,
+  .mobile-card-table td {
+    display: block;
+    width: 100%;
+  }
+  .mobile-card-table tr {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+  }
+  .mobile-card-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0 !important;
+    border-bottom: 1px dashed #f1f5f9 !important;
+    white-space: normal !important;
+    text-align: right;
+  }
+  .mobile-card-table td:last-child {
+    border-bottom: none !important;
+    padding-top: 8px !important;
+  }
+  .mobile-card-table td::before {
+    content: attr(data-label);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-align: left;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 400px) {
+  #tabSuperAdmin .admin-stats-grid,
+  .analytics-kpi-grid-4 {
+    grid-template-columns: 1fr !important;
+  }
+  #tabSuperAdmin .admin-stat-card:last-child:nth-child(odd) {
+    grid-column: span 1;
   }
 }
 

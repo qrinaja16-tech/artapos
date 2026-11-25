@@ -1652,6 +1652,7 @@ async function loadAdminData(isSilent = false) {
   const elRev = document.getElementById('adminTotalRevenue');
   const elQuota = document.getElementById('adminTotalQuotaUsed');
   const elKnowledge = document.getElementById('adminTotalKnowledge');
+  const elWaConnected = document.getElementById('adminWaConnectedCount');
   const elUserBadge = document.getElementById('adminUserCountBadge');
   const elOrderBadge = document.getElementById('adminOrderCountBadge');
   const elKnowledgeBadge = document.getElementById('adminKnowledgeCountBadge');
@@ -1667,6 +1668,10 @@ async function loadAdminData(isSilent = false) {
   if (elRev) elRev.textContent = formatRupiah(stats?.totalRevenue || 0);
   if (elQuota) elQuota.textContent = Number(stats?.totalQuotaUsed || 0).toLocaleString('id-ID');
   if (elKnowledge) elKnowledge.textContent = Number(allAdminKnowledge.length).toLocaleString('id-ID');
+  if (elWaConnected) {
+    const waConnected = allAdminUsers.filter(u => String(u.wa_status || '').toLowerCase() === 'connected').length;
+    elWaConnected.textContent = `${waConnected} / ${allAdminUsers.length}`;
+  }
 
   if (elUserBadge) elUserBadge.textContent = `${allAdminUsers.length} Toko`;
   if (elOrderBadge) elOrderBadge.textContent = `${(orders || []).length} Transaksi`;
@@ -2045,11 +2050,11 @@ function renderOverviewUsersTable() {
       : '<span class="badge-status-expired" style="white-space:nowrap;">● Belum Scan</span>';
     return `
       <tr>
-        <td><strong style="color:#0f172a;">${escapeHtml(u.email)}</strong></td>
-        <td><span class="badge-plan-table">${escapeHtml(u.plan || 'Gratis')}</span></td>
-        <td>${waPill}</td>
-        <td style="font-size:0.8rem; color:#64748b; white-space:nowrap;">${d}</td>
-        <td>
+        <td data-label="Email"><strong style="color:#0f172a;">${escapeHtml(u.email)}</strong></td>
+        <td data-label="Paket"><span class="badge-plan-table">${escapeHtml(u.plan || 'Gratis')}</span></td>
+        <td data-label="Status WA">${waPill}</td>
+        <td data-label="Tanggal Daftar" style="font-size:0.8rem; color:#64748b; white-space:nowrap;">${d}</td>
+        <td data-label="Aksi">
           <button type="button" class="btn-table-action btn-view-detail" onclick="openAdminUserDetail(${u.id})">Detail</button>
         </td>
       </tr>
@@ -2267,7 +2272,7 @@ function switchAdminSection(sectionKey) {
     'users': 'CRUD Akun Email & Token Toko',
     'notifications': 'Log Aktivitas (Daftar, Login, Logout) & Notifikasi',
     'knowledge': 'Bank Soal & Jawaban Seluruh Akun',
-    'orders': 'Riwayat Transaksi Midtrans',
+    'orders': 'Riwayat Transaksi Pembayaran',
     'pwd': 'Pengaturan Sandi Super Admin'
   };
   const topTitle = document.getElementById('topbarTitle');
@@ -2439,23 +2444,34 @@ function renderAdminUsersTable(users) {
     const isExpired = u.active_until && new Date(u.active_until) < new Date();
     const activeDate = u.active_until ? new Date(u.active_until).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
 
+    let statusBadgeClass = 'badge-status-active';
+    let statusBadgeText = '🟢 Aktif';
+    if (isExpired) {
+      statusBadgeClass = 'badge-status-expired';
+      statusBadgeText = '🔴 Kedaluwarsa';
+    } else if (rem <= 0) {
+      statusBadgeClass = 'badge-status-expired';
+      statusBadgeText = '🔴 Token Habis';
+    } else if (rem < 20) {
+      statusBadgeClass = 'badge-status-warn';
+      statusBadgeText = '🟡 Token Menipis';
+    }
+
     return `
       <tr>
-        <td><strong>#${u.id}</strong></td>
-        <td>
+        <td data-label="ID"><strong>#${u.id}</strong></td>
+        <td data-label="Email Google">
           <div style="font-weight: 700; color: #0f172a;">${escapeHtml(u.email)}</div>
         </td>
-        <td>${escapeHtml(u.store_name || '-')}</td>
-        <td><span class="badge-plan-table">${escapeHtml(u.plan || 'Starter')}</span></td>
-        <td><strong style="color: ${rem > 0 ? '#16a34a' : '#dc2626'}; font-size: 1rem;">${rem.toLocaleString('id-ID')}</strong></td>
-        <td><span style="color: #64748b;">${used.toLocaleString('id-ID')} / ${total.toLocaleString('id-ID')}</span></td>
-        <td><span style="font-size: 12px; color: #475569;">${activeDate}</span></td>
-        <td>
-          <span class="${isExpired ? 'badge-status-expired' : 'badge-status-active'}">
-            ${isExpired ? '🔴 Kedaluwarsa' : '🟢 Aktif'}
-          </span>
+        <td data-label="Nama Toko">${escapeHtml(u.store_name || '-')}</td>
+        <td data-label="Paket"><span class="badge-plan-table">${escapeHtml(u.plan || 'Gratis')}</span></td>
+        <td data-label="Sisa Token"><strong style="color: ${rem > 0 ? '#16a34a' : '#dc2626'}; font-size: 1rem;">${rem.toLocaleString('id-ID')}</strong></td>
+        <td data-label="Terpakai / Total"><span style="color: #64748b;">${used.toLocaleString('id-ID')} / ${total.toLocaleString('id-ID')}</span></td>
+        <td data-label="Masa Aktif"><span style="font-size: 12px; color: #475569;">${activeDate}</span></td>
+        <td data-label="Status">
+          <span class="${statusBadgeClass}">${statusBadgeText}</span>
         </td>
-        <td>
+        <td data-label="Aksi">
           <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
             <button class="btn-table-action btn-view-detail" onclick="openAdminUserDetail(${u.id})">
               ✏️ Edit / Detail
@@ -2485,8 +2501,8 @@ function renderAdminOrdersTable(orders) {
         <td colspan="6" style="padding: 16px;">
           <div class="visual-empty-state-card" style="margin: 0;">
             <div class="ves-icon-badge ${isNetworkOffline ? 'offline' : ''}">${isNetworkOffline ? '📡' : '💳'}</div>
-            <div class="ves-title">${isNetworkOffline ? 'Mode Offline — Riwayat Transaksi Belum Tersedia' : 'Belum Ada Riwayat Transaksi Midtrans'}</div>
-            <div class="ves-desc">Seluruh tagihan pembelian Paket Starter, Bisnis, Pro, maupun Enterprise melalui Midtrans akan tercatat otomatis di tabel ini.</div>
+            <div class="ves-title">${isNetworkOffline ? 'Mode Offline — Riwayat Transaksi Belum Tersedia' : 'Belum Ada Riwayat Transaksi Pembayaran'}</div>
+            <div class="ves-desc">Seluruh tagihan pembelian paket berbayar akan tercatat otomatis di tabel ini.</div>
             <button type="button" class="ves-btn" onclick="loadAdminData()">🔄 Segarkan Data Transaksi</button>
           </div>
         </td>
