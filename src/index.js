@@ -216,7 +216,8 @@ async function startTenantSocket(userId) {
       connectTimeoutMs: 60000,
       qrTimeout: 45000,
       markOnlineOnConnect: false,
-      syncFullHistory: false
+      syncFullHistory: false,
+      shouldSyncHistoryMessage: () => false
     });
 
     tenant.sock = sock;
@@ -228,7 +229,7 @@ async function startTenantSocket(userId) {
       if (qr) {
         tenant.status = 'scan_qr';
         try {
-          tenant.qr = await QRCode.toDataURL(qr, { margin: 2, scale: 8 });
+          tenant.qr = await QRCode.toDataURL(qr, { margin: 1, scale: 6, errorCorrectionLevel: 'M' });
           await dbSetUserWaStatus(uid, 'scan_qr', '', tenant.qr);
           console.log(`📱 [WA USER #${uid}] Kode QR Resmi WhatsApp Web siap dipindai & disinkronkan ke TiDB Cloud!`);
         } catch (err) {
@@ -419,8 +420,11 @@ async function bootArtaposServer() {
     }
   } catch (e) {}
 
-  // Dengarkan permintaan Generate QR / Reset Sesi dari Vercel (www.artapos.id) via TiDB Cloud setiap 2 detik
+  // Dengarkan permintaan Generate QR / Reset Sesi dari Vercel (www.artapos.id) via TiDB Cloud setiap 1 detik
+  let isCheckingWaCommands = false;
   setInterval(async () => {
+    if (isCheckingWaCommands) return;
+    isCheckingWaCommands = true;
     try {
       const cmds = await dbGetPendingWaCommands();
       for (const cmd of cmds) {
@@ -440,8 +444,10 @@ async function bootArtaposServer() {
           }
         }
       }
-    } catch (e) {}
-  }, 2000);
+    } catch (e) {} finally {
+      isCheckingWaCommands = false;
+    }
+  }, 1000);
 }
 
 if (process.env.VERCEL !== '1') {

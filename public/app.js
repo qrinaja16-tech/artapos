@@ -1092,33 +1092,57 @@ function openSuperAdminPage(sectionKey = 'traffic') {
 // ==============================================================
 // 7. WHATSAPP GATEWAY (PER-USER STATUS)
 // ==============================================================
+let isWaPolling = false;
+let waPollTimeout = null;
+
+function scheduleNextWaPoll() {
+  if (waPollTimeout) clearTimeout(waPollTimeout);
+  const delay = currentWaStatus === 'connected' ? 8000 : 1000;
+  waPollTimeout = setTimeout(() => {
+    pollWhatsAppStatus();
+  }, delay);
+}
+
 async function pollWhatsAppStatus() {
   if (currentActiveView !== 'dashboard' || !localStorage.getItem('artapos_token')) {
+    scheduleNextWaPoll();
     return;
   }
   if (simulatedConnected) {
     setWaConnectedView('+62 819-4922-3100');
+    scheduleNextWaPoll();
     return;
   }
+  if (isWaPolling) return;
+  isWaPolling = true;
 
-  const data = await apiCall('/api/whatsapp/status', 'GET');
-  if (!data) return;
+  try {
+    const prevStatus = currentWaStatus;
+    const data = await apiCall('/api/whatsapp/status', 'GET');
+    if (!data) return;
 
-  currentWaStatus = data.status;
+    currentWaStatus = data.status;
 
-  if (data.status === 'connected') {
-    setWaConnectedView(data.phone ? `+${data.phone}` : 'Terhubung');
-  } else if (data.status === 'scan_qr' && data.qr) {
-    setWaScanView(data.qr);
-  } else {
-    setWaConnectingView();
-  }
+    if (data.status === 'connected') {
+      setWaConnectedView(data.phone ? `+${data.phone}` : 'Terhubung');
+      if (prevStatus && prevStatus !== 'connected') {
+        showToast('⚡ WhatsApp Berhasil Terhubung!', 'success');
+      }
+    } else if (data.status === 'scan_qr' && data.qr) {
+      setWaScanView(data.qr);
+    } else {
+      setWaConnectingView();
+    }
 
-  if (data.botName) {
-    const simName = document.getElementById('simStoreName');
-    const simAvatar = document.getElementById('simAvatarLetter');
-    if (simName) simName.textContent = data.botName;
-    if (simAvatar) simAvatar.textContent = (data.botName[0] || 'T').toUpperCase();
+    if (data.botName) {
+      const simName = document.getElementById('simStoreName');
+      const simAvatar = document.getElementById('simAvatarLetter');
+      if (simName) simName.textContent = data.botName;
+      if (simAvatar) simAvatar.textContent = (data.botName[0] || 'T').toUpperCase();
+    }
+  } finally {
+    isWaPolling = false;
+    scheduleNextWaPoll();
   }
 }
 
@@ -3404,10 +3428,9 @@ async function initApp() {
   if (token) {
     loadData();
     pollWhatsAppStatus();
+  } else {
+    scheduleNextWaPoll();
   }
-
-  if (waPollTimer) clearInterval(waPollTimer);
-  waPollTimer = setInterval(pollWhatsAppStatus, 2500);
 
   const welcomeTime = document.getElementById('welcomeTime');
   if (welcomeTime) welcomeTime.textContent = getCurrentTime();
