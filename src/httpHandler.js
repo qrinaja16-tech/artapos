@@ -386,7 +386,7 @@ export function createHttpHandler(waHooks = {}) {
         title: 'Blokir Firewall: Percobaan Akses Terlarang (.php / Script)',
         message: `Firewall menolak akses URL berbahaya: ${req.url} dari IP ${ip}`,
         status: 'warning'
-      }).catch(() => {});
+      }).catch(() => { });
 
       const acceptHeader = String(req.headers['accept'] || '');
       if (acceptHeader.includes('text/html') && !req.url.startsWith('/api/')) {
@@ -1073,7 +1073,7 @@ export function createHttpHandler(waHooks = {}) {
           title: '🎁 Klaim 75 Token Gratis Berhasil',
           message: `Akun ${session.email} berhasil klaim 75 Token Gratis (Device: ${deviceId.slice(0, 16)}).`,
           status: 'success'
-        }).catch(() => {});
+        }).catch(() => { });
 
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({
@@ -1088,7 +1088,7 @@ export function createHttpHandler(waHooks = {}) {
           title: '🛡️ Klaim 75 Token Gratis Ditolak',
           message: err.message,
           status: 'warning'
-        }).catch(() => {});
+        }).catch(() => { });
         res.writeHead(403, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ error: err.message }));
       }
@@ -1195,16 +1195,16 @@ export function createHttpHandler(waHooks = {}) {
         await dbAddNotificationLog({
           category: 'REGISTER',
           recipient: session.email,
-          title: `🎟️ Redeem Kode "${result.code}" (+15 Token / +25 Pengundang)`,
+          title: `🎟️ Redeem Kode "${result.code}" (+25 Token / +50 Pengundang)`,
           message: `${session.email} me-redeem kode ${result.code} milik ${result.inviterEmail}.`,
           status: 'success'
-        }).catch(() => {});
+        }).catch(() => { });
 
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({
           success: true,
           ...result,
-          message: `🎉 Berhasil redeem kode "${result.code}"! Anda dapat +15 Token Free & pengundang dapat +25 Token Free.`
+          message: `🎉 Berhasil redeem kode "${result.code}"! Anda dapat +25 Token Free & pengundang dapat +50 Token Free.`
         }));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -1285,7 +1285,7 @@ export function createHttpHandler(waHooks = {}) {
           title: `🔑 Masuk Akun / Login (${user.store_name || 'Toko'})`,
           message: `Pengguna ${user.email} berhasil masuk (Login) ke dashboard artapos.id (${user.plan}).`,
           status: 'success'
-        }).catch(() => {});
+        }).catch(() => { });
 
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({

@@ -96,8 +96,8 @@ export async function initTiDB() {
         redeemer_user_id INT NOT NULL,
         inviter_user_id INT NOT NULL,
         referral_code VARCHAR(16) NOT NULL,
-        reward_redeemer INT DEFAULT 15,
-        reward_inviter INT DEFAULT 25,
+        reward_redeemer INT DEFAULT 25,
+        reward_inviter INT DEFAULT 50,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uniq_redeemer_code (redeemer_user_id, referral_code),
         INDEX idx_inviter (inviter_user_id)
@@ -1604,25 +1604,25 @@ export async function dbRedeemReferralCode(userId, rawCode) {
   }
 
   await pool.query(
-    'INSERT INTO referral_redemptions (redeemer_user_id, inviter_user_id, referral_code, reward_redeemer, reward_inviter) VALUES (?, ?, ?, 15, 25)',
+    'INSERT INTO referral_redemptions (redeemer_user_id, inviter_user_id, referral_code, reward_redeemer, reward_inviter) VALUES (?, ?, ?, 25, 50)',
     [uid, inviter.id, code]
   );
 
   const extendDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-  // +15 Token ke Redeemer
+  // +25 Token ke Redeemer
   await pool.query(
     `UPDATE users
-     SET quota_total = COALESCE(quota_total, 0) + 15,
+     SET quota_total = COALESCE(quota_total, 0) + 25,
          plan = CASE WHEN plan = 'Akun Baru (Belum Klaim)' OR plan IS NULL THEN 'Paket Bonus Redeem' ELSE plan END,
          active_until = CASE WHEN active_until IS NULL OR active_until < NOW() THEN ? ELSE active_until END
      WHERE id = ?`,
     [extendDate, uid]
   );
 
-  // +25 Token ke Inviter
+  // +50 Token ke Inviter
   await pool.query(
     `UPDATE users
-     SET quota_total = COALESCE(quota_total, 0) + 25,
+     SET quota_total = COALESCE(quota_total, 0) + 50,
          plan = CASE WHEN plan = 'Akun Baru (Belum Klaim)' OR plan IS NULL THEN 'Paket Bonus Undang Teman' ELSE plan END,
          active_until = CASE WHEN active_until IS NULL OR active_until < NOW() THEN ? ELSE active_until END
      WHERE id = ?`,
@@ -1632,8 +1632,8 @@ export async function dbRedeemReferralCode(userId, rawCode) {
   return {
     success: true,
     code,
-    rewardRedeemer: 15,
-    rewardInviter: 25,
+    rewardRedeemer: 25,
+    rewardInviter: 50,
     inviterId: inviter.id,
     inviterEmail: inviter.email
   };

@@ -3573,7 +3573,7 @@ async function loadReferralStatus() {
     const rows = Array.isArray(res.redeemedCodes) ? res.redeemedCodes : [];
     if (rows.length > 0) {
       redeemedList.innerHTML = `<span style="font-size:0.75rem; color:#64748b; font-weight:700;">Sudah diredeem:</span> ` +
-        rows.map(r => `<span class="redeem-chip-done">✓ ${escapeHtml(r.referral_code)} (+${r.reward_redeemer || 15})</span>`).join('');
+        rows.map(r => `<span class="redeem-chip-done">✓ ${escapeHtml(r.referral_code)} (+${r.reward_redeemer || 25})</span>`).join('');
     } else {
       redeemedList.innerHTML = '';
     }
@@ -3621,12 +3621,12 @@ async function handleRedeemReferralCode() {
       if (input) input.value = '';
       localStorage.removeItem('artapos_pending_ref');
       await loadUserData();
-      showAlert(res.message || '🎉 Berhasil redeem +15 Token Free!', 'success', 'Redeem Berhasil!');
+      showAlert(res.message || '🎉 Berhasil redeem +25 Token Free!', 'success', 'Redeem Berhasil!');
     } else {
       showAlert(res?.error || 'Gagal me-redeem kode.', 'error');
     }
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Redeem (+15)'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Redeem (+25)'; }
   }
 }
 
@@ -3641,7 +3641,7 @@ function shareReferralWhatsApp() {
   const linkInput = document.getElementById('myReferralLinkInput');
   const code = document.getElementById('myReferralCodeDisplay')?.textContent || '';
   const url = linkInput?.value || window.location.origin;
-  const text = `Mau token gratis AI WhatsApp di artapos.id? Daftar sekarang dan masukkan kode undangan *${code}* untuk dapat +15 Token Free! Klik: ${url}`;
+  const text = `Mau token gratis AI WhatsApp di artapos.id? Daftar sekarang dan masukkan kode undangan *${code}* untuk dapat +25 Token Free! Klik: ${url}`;
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
 }
 
