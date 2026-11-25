@@ -7,6 +7,7 @@ import { knowledgeManager } from './knowledge.js';
 import { createHttpHandler } from './httpHandler.js';
 import {
   initTiDB,
+  dbGetConfig,
   dbDeductQuota,
   dbGetUserQuota,
   dbSetUserWaStatus,
@@ -311,6 +312,13 @@ async function startTenantSocket(userId) {
         const now = Date.now();
         if (now - lastMsgTime < 2500) continue;
         userCooldownMap.set(cooldownKey, now);
+
+        // Cek Saklar ON/OFF Bot (jika OFF, tetap terhubung tapi tidak membalas chat)
+        const userCfg = await dbGetConfig(uid);
+        if (userCfg && userCfg.bot_enabled === '0') {
+          console.log(`⏸️ [WA USER #${uid}] Saklar Bot sedang OFF. Pesan dari ${senderName} diabaikan.`);
+          continue;
+        }
 
         // Cek sisa token & masa aktif akun ini sebelum membalas (Kedaluwarsa = sisa token hangus)
         const userQuota = await dbGetUserQuota(uid);

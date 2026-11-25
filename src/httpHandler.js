@@ -27,6 +27,12 @@ import {
   dbGetUser,
   dbGetUserById,
   dbVerifyAndBindUserDevice,
+  dbClaimFreeTokens,
+  dbSetBotEnabled,
+  dbCheckReferralCodeAvailable,
+  dbCreateUserReferralCode,
+  dbRedeemReferralCode,
+  dbGetUserReferralStats,
   dbRegisterOrUpdatePaidUser,
   dbUpdateUserAccount,
   dbDeductQuota,
@@ -498,6 +504,7 @@ export function createHttpHandler(waHooks = {}) {
             status: isConnected ? 'connected' : (hasFreshQr ? 'scan_qr' : 'connecting'),
             qr: hasFreshQr ? cfg.wa_qr : null,
             phone: isConnected ? (cfg.wa_phone || null) : null,
+            botEnabled: cfg.bot_enabled !== '0',
             user: session.email,
             botName: userBotName
           }));
@@ -508,14 +515,14 @@ export function createHttpHandler(waHooks = {}) {
         const tenant = ensureTenantWhatsApp ? await ensureTenantWhatsApp(userId) : { status: "connecting", qr: null, phone: null };
 
         // Jika socket baru dibuat dan sedang meminta QR asli dari server WhatsApp, tunggu hingga QR siap (maks 3 detik)
-        if (tenant.status !== 'connected' && !tenant.qr) {
+        if (cfg.wa_status !== 'connected' && tenant.status !== 'connected' && !tenant.qr) {
           for (let i = 0; i < 20; i++) {
             await new Promise(r => setTimeout(r, 150));
             if (tenant.qr || tenant.status === 'connected') break;
           }
         }
 
-        const effectiveStatus = tenant.status === 'connected'
+        const effectiveStatus = (tenant.status === 'connected' || cfg.wa_status === 'connected')
           ? 'connected'
           : (tenant.qr ? 'scan_qr' : 'connecting');
 
@@ -525,8 +532,9 @@ export function createHttpHandler(waHooks = {}) {
         });
         res.end(JSON.stringify({
           status: effectiveStatus,
-          qr: tenant.qr || null,
-          phone: tenant.phone || null,
+          qr: effectiveStatus === 'connected' ? null : (tenant.qr || null),
+          phone: tenant.phone || cfg.wa_phone || null,
+          botEnabled: cfg.bot_enabled !== '0',
           user: session.email,
           botName: userBotName
         }));
@@ -1035,19 +1043,171 @@ export function createHttpHandler(waHooks = {}) {
           email: regResult.email,
           storeName: regResult.storeName,
           emailSent: Boolean(mailResult && mailResult.success),
-          message: `Akun ${regResult.email} berhasil didaftarkan! Silakan cek Kotak Masuk atau folder Spam email Google Anda untuk melihat password login.`
+          message: `Akun ${regResult.email} berhasil didaftarkan! Silakan cek email untuk password login, lalu masuk ke dashboard untuk klaim 75 Token Gratis.`
         }));
       } catch (err) {
-        if (String(err.message || '').includes('1 Perangkat')) {
-          dbAddNotificationLog({
-            category: 'SECURITY',
-            recipient: req.headers['x-device-id'] || 'Device',
-            title: '🛡️ Pencegahan Abuse: 1 Device Coba Daftar Email Baru',
-            message: err.message,
-            status: 'warning'
-          }).catch(() => {});
-        }
         res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    // ----------------------------------------
+    // KLAIM 75 TOKEN GRATIS (CEK AKUN BARU + HP BARU)
+    // ----------------------------------------
+    if (cleanUrl === '/api/auth/claim-free-token' && req.method === 'POST') {
+      try {
+        const session = await getAuthUser(req);
+        if (!session) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Silakan login terlebih dahulu.' }));
+          return;
+        }
+        const body = await readJsonBody(req);
+        const deviceId = resolveServerDeviceFingerprint(req, body.deviceId);
+        const result = await dbClaimFreeTokens(session.user_id, deviceId);
+
+        await dbAddNotificationLog({
+          category: 'REGISTER',
+          recipient: session.email,
+          title: '🎁 Klaim 75 Token Gratis Berhasil',
+          message: `Akun ${session.email} berhasil klaim 75 Token Gratis (Device: ${deviceId.slice(0, 16)}).`,
+          status: 'success'
+        }).catch(() => {});
+
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          success: true,
+          ...result,
+          message: '🎉 Selamat! 75 Token Gratis (masa aktif 30 hari) berhasil diklaim ke akun Anda!'
+        }));
+      } catch (err) {
+        dbAddNotificationLog({
+          category: 'SECURITY',
+          recipient: req.headers['x-device-id'] || 'Device',
+          title: '🛡️ Klaim 75 Token Gratis Ditolak',
+          message: err.message,
+          status: 'warning'
+        }).catch(() => {});
+        res.writeHead(403, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    // ----------------------------------------
+    // SAKLAR BOT ON / OFF
+    // ----------------------------------------
+    if (cleanUrl === '/api/bot/toggle' && req.method === 'POST') {
+      try {
+        const session = await getAuthUser(req);
+        if (!session) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Sesi login tidak sah.' }));
+          return;
+        }
+        const body = await readJsonBody(req);
+        const enabled = Boolean(body.enabled);
+        await dbSetBotEnabled(session.user_id, enabled);
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          success: true,
+          botEnabled: enabled,
+          message: enabled ? '🟢 Bot Auto-Reply DIAKTIFKAN.' : '⏸️ Bot Auto-Reply DINONAKTIFKAN (WhatsApp tetap terhubung).'
+        }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    // ----------------------------------------
+    // SISTEM KODE REDEEM & UNDANG TEMAN (+25 / +15 TOKEN)
+    // ----------------------------------------
+    if (cleanUrl === '/api/referral/check' && req.method === 'GET') {
+      try {
+        const qIndex = req.url.indexOf('?');
+        const params = new URLSearchParams(qIndex >= 0 ? req.url.slice(qIndex + 1) : '');
+        const code = params.get('code') || '';
+        const info = await dbCheckReferralCodeAvailable(code);
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify(info));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    if (cleanUrl === '/api/referral/status' && req.method === 'GET') {
+      try {
+        const session = await getAuthUser(req);
+        if (!session) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Sesi login tidak sah.' }));
+          return;
+        }
+        const stats = await dbGetUserReferralStats(session.user_id);
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ success: true, ...stats }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    if (cleanUrl === '/api/referral/create' && req.method === 'POST') {
+      try {
+        const session = await getAuthUser(req);
+        if (!session) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Sesi login tidak sah.' }));
+          return;
+        }
+        const body = await readJsonBody(req);
+        const result = await dbCreateUserReferralCode(session.user_id, body.code || '');
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          success: true,
+          code: result.code,
+          message: `🎉 Kode undangan permanen "${result.code}" berhasil dibuat!`
+        }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    if (cleanUrl === '/api/referral/redeem' && req.method === 'POST') {
+      try {
+        const session = await getAuthUser(req);
+        if (!session) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Sesi login tidak sah.' }));
+          return;
+        }
+        const body = await readJsonBody(req);
+        const result = await dbRedeemReferralCode(session.user_id, body.code || '');
+
+        await dbAddNotificationLog({
+          category: 'REGISTER',
+          recipient: session.email,
+          title: `🎟️ Redeem Kode "${result.code}" (+15 Token / +25 Pengundang)`,
+          message: `${session.email} me-redeem kode ${result.code} milik ${result.inviterEmail}.`,
+          status: 'success'
+        }).catch(() => {});
+
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          success: true,
+          ...result,
+          message: `🎉 Berhasil redeem kode "${result.code}"! Anda dapat +15 Token Free & pengundang dapat +25 Token Free.`
+        }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ error: err.message }));
       }
       return;
@@ -1156,20 +1316,25 @@ export function createHttpHandler(waHooks = {}) {
       try {
         const session = await getAuthUser(req);
         if (session) {
-          // Ambil quota terkini
+          // Ambil quota & info user terkini
           const quota = await dbGetUserQuota(session.user_id);
+          const freshUser = await dbGetUserById(session.user_id);
+          const cfg = await dbGetConfig(session.user_id);
           res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
           res.end(JSON.stringify({
             authenticated: true,
             user: {
               id: session.user_id,
               email: session.email,
-              storeName: session.store_name,
+              storeName: freshUser?.store_name || session.store_name,
               plan: quota?.plan || session.plan,
               quota_total: quota?.quota_total ?? session.quota_total,
               quota_used: quota?.quota_used ?? session.quota_used,
               remaining: quota?.remaining ?? Math.max(0, session.quota_total - session.quota_used),
               isExpired: Boolean(quota?.isExpired),
+              free_claimed: Boolean(freshUser?.free_claimed),
+              referral_code: freshUser?.referral_code || null,
+              bot_enabled: cfg?.bot_enabled !== '0',
               role: session.role || 'user',
               active_until: quota?.active_until || session.active_until
             }

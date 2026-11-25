@@ -6978,6 +6978,247 @@ div.swal2-container,
   }
 }
 
+/* ===================================================================== */
+/* SAKLAR BOT ON/OFF, KLAIM TOKEN GRATIS, & KODE REDEEM / UNDANG TEMAN   */
+/* ===================================================================== */
+.free-claim-banner {
+  background: linear-gradient(135deg, #ecfdf5 0%, #dcfce7 100%);
+  border: 1.5px solid #86efac;
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.free-claim-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #14532d;
+  margin-bottom: 2px;
+}
+.free-claim-info p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #166534;
+}
+.btn-claim-free-now {
+  background: #16a34a;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
+}
+.btn-claim-free-now:hover {
+  background: #15803d;
+}
+
+.bot-switch-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  margin-bottom: 16px;
+}
+.bot-switch-title {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+.bot-switch-sub {
+  font-size: 0.8rem;
+  color: #475569;
+  margin-top: 2px;
+}
+.toggle-switch-pro {
+  position: relative;
+  display: inline-block;
+  width: 54px;
+  height: 30px;
+  flex-shrink: 0;
+}
+.toggle-switch-pro input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.toggle-slider-pro {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #cbd5e1;
+  transition: 0.25s;
+  border-radius: 99px;
+}
+.toggle-slider-pro::before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 4px;
+  bottom: 4px;
+  background-color: #ffffff;
+  transition: 0.25s;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+.toggle-switch-pro input:checked + .toggle-slider-pro {
+  background-color: #16a34a;
+}
+.toggle-switch-pro input:checked + .toggle-slider-pro::before {
+  transform: translateX(24px);
+}
+
+.referral-redeem-card {
+  padding: 20px;
+}
+.referral-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.referral-col {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+}
+.referral-col h3 {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 8px 0 6px;
+}
+.referral-desc {
+  font-size: 0.8rem;
+  color: #475569;
+  line-height: 1.45;
+  margin: 0 0 12px;
+}
+.referral-badge-pill {
+  display: inline-block;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 3px 9px;
+  border-radius: 99px;
+}
+.referral-badge-pill.slate {
+  background: #e2e8f0;
+  color: #334155;
+}
+.referral-input-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.referral-input-row input {
+  flex: 1;
+  min-width: 140px;
+  padding: 9px 12px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: #ffffff;
+}
+.btn-ref-primary {
+  background: #16a34a;
+  color: #ffffff;
+  border: none;
+  border-radius: 9px;
+  padding: 9px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-ref-wa {
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 9px;
+  padding: 9px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-ref-dark {
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 9px;
+  padding: 9px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.referral-check-msg {
+  margin-top: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.referral-check-msg.ok { color: #16a34a; }
+.referral-check-msg.err { color: #dc2626; }
+.referral-check-msg.warn { color: #d97706; }
+.referral-check-msg.checking { color: #64748b; }
+.referral-code-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1.5px dashed #16a34a;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.84rem;
+}
+.referral-code-display strong {
+  font-size: 1.05rem;
+  color: #16a34a;
+  letter-spacing: 1px;
+}
+.referral-stats-line {
+  margin-top: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #166534;
+}
+.redeemed-codes-chips {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.redeem-chip-done {
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 99px;
+}
+
+@media (max-width: 768px) {
+  .referral-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .btn-claim-free-now {
+    width: 100%;
+  }
+  .referral-redeem-card {
+    padding: 14px;
+  }
+}
+
 @media (max-width: 400px) {
   #tabSuperAdmin .admin-stats-grid,
   .analytics-kpi-grid-4 {

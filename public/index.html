@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>artapos.id • WhatsApp AI Auto-Reply & Sales Assistant Terdepan</title>
-  <link rel="stylesheet" href="style.css?v=34.0">
+  <link rel="stylesheet" href="style.css?v=36.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -1113,10 +1113,32 @@
         <!-- Content Container -->
         <div class="workspace-body">
 
+          <!-- BANNER KLAIM 75 TOKEN GRATIS (KHUSUS AKUN BARU + HP BARU) -->
+          <div id="freeClaimBanner" class="free-claim-banner hidden">
+            <div class="free-claim-info">
+              <div class="free-claim-title">🎁 Klaim 75 Token Gratis Anda!</div>
+              <p>Khusus Akun Baru &amp; Perangkat (HP) Baru. 1 HP hanya bisa klaim 1 kali.</p>
+            </div>
+            <button type="button" class="btn-claim-free-now" id="btnClaimFreeTokens" onclick="handleClaimFreeTokens()">
+              Klaim 75 Token Gratis
+            </button>
+          </div>
+
           <!-- ============================================================ -->
           <!-- TAB 1: KONEKSI WHATSAPP & QR CODE LIVE                        -->
           <!-- ============================================================ -->
           <section id="tabWa" class="page-tab">
+            <!-- SAKLAR ON / OFF BOT AUTO-REPLY -->
+            <div class="card-pro bot-switch-card">
+              <div class="bot-switch-left">
+                <div class="bot-switch-title">⚡ Saklar Bot Auto-Reply</div>
+                <div class="bot-switch-sub" id="botSwitchStatusText">🟢 Bot Aktif — Membalas pesan pelanggan otomatis</div>
+              </div>
+              <label class="toggle-switch-pro" title="Aktifkan atau Nonaktifkan balasan otomatis bot">
+                <input type="checkbox" id="botToggleSwitch" checked onchange="handleToggleBotSwitch(this.checked)">
+                <span class="toggle-slider-pro"></span>
+              </label>
+            </div>
             <!-- KONDISI A: WHATSAPP SUDAH TERHUBUNG -->
             <div id="viewWaConnected" class="hidden">
               <div class="hero-connected-banner">
@@ -1156,7 +1178,7 @@
                 </div>
                 <div class="metric-card">
                   <span class="metric-label">Status Bot Auto-Reply:</span>
-                  <div class="metric-value color-emerald">Aktif 24 Jam Nonstop</div>
+                  <div class="metric-value color-emerald" id="metricBotAutoReplyText">Aktif 24 Jam Nonstop</div>
                   <span class="metric-foot">Otomatis memotong kuota (-1/chat)</span>
                 </div>
               </div>
@@ -1248,6 +1270,51 @@
                         dashboard ini.</p>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- KARTU KODE REDEEM & UNDANG TEMAN (+25 / +15 TOKEN) -->
+            <div class="card-pro referral-redeem-card" id="referralRedeemCard" style="margin-top: 20px;">
+              <div class="referral-grid-2">
+                <!-- KOLOM 1: UNDANG TEMAN (+25 TOKEN) -->
+                <div class="referral-col">
+                  <div class="referral-badge-pill">🎁 BONUS UNDANG TEMAN</div>
+                  <h3>Mau 25 token free? Undang temen kamu sekarang</h3>
+                  <p class="referral-desc">Buat kode undangan Anda (maksimal 10 huruf/angka, permanen 1x buat). Setiap teman yang memakai kode Anda, Anda dapat <strong>+25 Token</strong> &amp; teman Anda dapat <strong>+15 Token</strong>!</p>
+
+                  <div id="referralCreateBox">
+                    <div class="referral-input-row">
+                      <input type="text" id="referralCreateInput" maxlength="10" placeholder="Contoh: TOKOJAYA" oninput="checkReferralCodeLive(this.value)" style="text-transform: uppercase;">
+                      <button type="button" class="btn-ref-primary" id="btnCreateReferral" onclick="handleCreateReferralCode()">Buat Kode</button>
+                    </div>
+                    <div id="referralCheckStatus" class="referral-check-msg"></div>
+                  </div>
+
+                  <div id="referralShareBox" class="hidden">
+                    <div class="referral-code-display">
+                      <span>Kode Anda (Permanen):</span>
+                      <strong id="myReferralCodeDisplay">-</strong>
+                    </div>
+                    <div class="referral-input-row" style="margin-top: 8px;">
+                      <input type="text" id="myReferralLinkInput" readonly>
+                      <button type="button" class="btn-ref-primary" onclick="copyReferralLink()">Salin Link</button>
+                      <button type="button" class="btn-ref-wa" onclick="shareReferralWhatsApp()">Bagikan WA</button>
+                    </div>
+                    <div class="referral-stats-line" id="myReferralStatsText">0 teman bergabung • +0 Token didapat</div>
+                  </div>
+                </div>
+
+                <!-- KOLOM 2: REDEEM KODE TEMAN (+15 TOKEN) -->
+                <div class="referral-col referral-col-redeem">
+                  <div class="referral-badge-pill slate">🎟️ KLAIM KODE TEMAN</div>
+                  <h3>Masukkan Kode Redeem Teman</h3>
+                  <p class="referral-desc">Dapatkan <strong>+15 Token Free</strong> setiap memasukkan kode berbeda dari teman Anda. (Tidak bisa kode sendiri atau kode yang sama 2x).</p>
+                  <div class="referral-input-row">
+                    <input type="text" id="referralRedeemInput" maxlength="10" placeholder="Masukkan kode teman..." style="text-transform: uppercase;">
+                    <button type="button" class="btn-ref-dark" id="btnRedeemReferral" onclick="handleRedeemReferralCode()">Redeem (+15)</button>
+                  </div>
+                  <div id="redeemedCodesList" class="redeemed-codes-chips"></div>
                 </div>
               </div>
             </div>
@@ -2438,7 +2505,7 @@
   </div>
 
   <!-- Main JavaScript Controller -->
-  <script src="app.js?v=35.0"></script>
+  <script src="app.js?v=36.0"></script>
 </body>
 
 </html>

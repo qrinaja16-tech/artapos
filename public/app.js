@@ -797,6 +797,7 @@ async function loadUserData() {
     currentUser = res.user;
     localStorage.setItem('artapos_user', JSON.stringify(currentUser));
     updateUserDashboardUI(currentUser);
+    loadReferralStatus();
   }
 }
 
@@ -862,6 +863,19 @@ function updateUserDashboardUI(user) {
       dashActiveUntil.textContent = '30 Hari Kedepan';
     }
   }
+
+  // Banner Klaim 75 Token Gratis (hanya tampil jika akun baru belum pernah klaim & kuota masih 0)
+  const claimBanner = document.getElementById('freeClaimBanner');
+  if (claimBanner) {
+    if (user.role !== 'superadmin' && !user.free_claimed && quotaTotal === 0) {
+      claimBanner.classList.remove('hidden');
+    } else {
+      claimBanner.classList.add('hidden');
+    }
+  }
+
+  // Sinkronkan Saklar Bot ON/OFF
+  applyBotSwitchUI(user.bot_enabled !== false);
 
   if (profCurrentEmail) profCurrentEmail.value = user.email || '';
 }
@@ -1132,6 +1146,10 @@ async function pollWhatsAppStatus() {
       setWaScanView(data.qr);
     } else {
       setWaConnectingView();
+    }
+
+    if (typeof data.botEnabled === 'boolean') {
+      applyBotSwitchUI(data.botEnabled);
     }
 
     if (data.botName) {
@@ -3388,6 +3406,15 @@ async function initApp() {
     setNetworkOfflineState(true);
   }
 
+  // Tangkap ?ref=KODE dari URL undangan teman
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const refParam = (urlParams.get('ref') || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+    if (refParam && refParam.length >= 3) {
+      localStorage.setItem('artapos_pending_ref', refParam);
+    }
+  } catch (e) {}
+
   const token = localStorage.getItem('artapos_token');
   const hash = window.location.hash.replace('#', '').toLowerCase();
 
@@ -3435,6 +3462,196 @@ async function initApp() {
   const welcomeTime = document.getElementById('welcomeTime');
   if (welcomeTime) welcomeTime.textContent = getCurrentTime();
 }
+
+// ==============================================================
+// SAKLAR BOT ON/OFF, KLAIM 75 TOKEN GRATIS, & KODE REDEEM
+// ==============================================================
+function applyBotSwitchUI(enabled) {
+  const sw = document.getElementById('botToggleSwitch');
+  const txt = document.getElementById('botSwitchStatusText');
+  const metric = document.getElementById('metricBotAutoReplyText');
+  const isOn = Boolean(enabled);
+  if (sw) sw.checked = isOn;
+  if (txt) {
+    txt.innerHTML = isOn
+      ? '🟢 Bot Aktif — Membalas pesan pelanggan otomatis'
+      : '⏸️ Bot Nonaktif — WhatsApp tetap terhubung tapi bot diam';
+  }
+  if (metric) {
+    metric.textContent = isOn ? 'Aktif 24 Jam Nonstop' : 'Nonaktif (Saklar OFF)';
+    metric.style.color = isOn ? '' : '#b45309';
+  }
+}
+
+async function handleToggleBotSwitch(enabled) {
+  applyBotSwitchUI(enabled);
+  const res = await apiCall('/api/bot/toggle', 'POST', { enabled: Boolean(enabled) });
+  if (res && res.success) {
+    showToast(res.message || (enabled ? 'Bot diaktifkan.' : 'Bot dinonaktifkan.'), enabled ? 'success' : 'info');
+  } else {
+    applyBotSwitchUI(!enabled);
+    showAlert('Gagal mengubah saklar bot: ' + (res?.error || 'Kesalahan server'), 'error');
+  }
+}
+
+async function handleClaimFreeTokens() {
+  const btn = document.getElementById('btnClaimFreeTokens');
+  if (btn) { btn.disabled = true; btn.textContent = 'Memeriksa Akun & Perangkat...'; }
+  try {
+    const res = await apiCall('/api/auth/claim-free-token', 'POST', {});
+    if (res && res.success) {
+      await loadUserData();
+      showAlert(res.message || '🎉 75 Token Gratis berhasil diklaim!', 'success', 'Klaim Berhasil!');
+    } else {
+      showAlert(res?.error || 'Klaim token gratis ditolak.', 'error', 'Tidak Dapat Klaim');
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Klaim 75 Token Gratis'; }
+  }
+}
+
+let refCheckTimer = null;
+function checkReferralCodeLive(val) {
+  const statusEl = document.getElementById('referralCheckStatus');
+  const clean = String(val || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+  const input = document.getElementById('referralCreateInput');
+  if (input && input.value !== clean) input.value = clean;
+
+  if (!statusEl) return;
+  if (!clean) {
+    statusEl.textContent = '';
+    statusEl.className = 'referral-check-msg';
+    return;
+  }
+  if (clean.length < 3) {
+    statusEl.textContent = 'Minimal 3 karakter (maksimal 10 karakter).';
+    statusEl.className = 'referral-check-msg warn';
+    return;
+  }
+
+  statusEl.textContent = '⏳ Mengecek ketersediaan kode di database...';
+  statusEl.className = 'referral-check-msg checking';
+
+  if (refCheckTimer) clearTimeout(refCheckTimer);
+  refCheckTimer = setTimeout(async () => {
+    const res = await apiCall(`/api/referral/check?code=${encodeURIComponent(clean)}`, 'GET');
+    if (!res) return;
+    if (res.available) {
+      statusEl.textContent = res.message || `✅ Kode "${clean}" tersedia!`;
+      statusEl.className = 'referral-check-msg ok';
+    } else {
+      statusEl.textContent = res.message || `❌ Kode "${clean}" sudah dipakai.`;
+      statusEl.className = 'referral-check-msg err';
+    }
+  }, 280);
+}
+
+async function loadReferralStatus() {
+  const res = await apiCall('/api/referral/status', 'GET');
+  if (!res || !res.success) return;
+
+  const createBox = document.getElementById('referralCreateBox');
+  const shareBox = document.getElementById('referralShareBox');
+  const codeDisp = document.getElementById('myReferralCodeDisplay');
+  const linkInput = document.getElementById('myReferralLinkInput');
+  const statsText = document.getElementById('myReferralStatsText');
+  const redeemedList = document.getElementById('redeemedCodesList');
+
+  if (res.ownCode) {
+    if (createBox) createBox.classList.add('hidden');
+    if (shareBox) shareBox.classList.remove('hidden');
+    if (codeDisp) codeDisp.textContent = res.ownCode;
+    const shareUrl = `${window.location.origin}/?ref=${res.ownCode}`;
+    if (linkInput) linkInput.value = shareUrl;
+    if (statsText) statsText.textContent = `${res.totalInvited || 0} teman bergabung • +${(res.totalBonusEarned || 0).toLocaleString('id-ID')} Token didapat`;
+  } else {
+    if (createBox) createBox.classList.remove('hidden');
+    if (shareBox) shareBox.classList.add('hidden');
+  }
+
+  if (redeemedList) {
+    const rows = Array.isArray(res.redeemedCodes) ? res.redeemedCodes : [];
+    if (rows.length > 0) {
+      redeemedList.innerHTML = `<span style="font-size:0.75rem; color:#64748b; font-weight:700;">Sudah diredeem:</span> ` +
+        rows.map(r => `<span class="redeem-chip-done">✓ ${escapeHtml(r.referral_code)} (+${r.reward_redeemer || 15})</span>`).join('');
+    } else {
+      redeemedList.innerHTML = '';
+    }
+  }
+
+  // Isi otomatis kode dari link undangan (?ref=KODE) jika ada
+  const pendingRef = localStorage.getItem('artapos_pending_ref');
+  const redeemInput = document.getElementById('referralRedeemInput');
+  if (pendingRef && redeemInput && !redeemInput.value && pendingRef !== res.ownCode) {
+    redeemInput.value = pendingRef;
+  }
+}
+
+async function handleCreateReferralCode() {
+  const input = document.getElementById('referralCreateInput');
+  const code = (input?.value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length < 3 || code.length > 10) {
+    showAlert('Kode harus 3–10 karakter (huruf/angka tanpa spasi).', 'warning');
+    return;
+  }
+  const ok = await showConfirm('Buat Kode Permanen', `Kode "${code}" hanya bisa dibuat 1 kali dan bersifat permanen. Lanjutkan?`, 'Ya, Buat Permanen');
+  if (!ok) return;
+
+  const res = await apiCall('/api/referral/create', 'POST', { code });
+  if (res && res.success) {
+    showAlert(res.message || `Kode "${res.code}" berhasil dibuat!`, 'success');
+    await loadReferralStatus();
+  } else {
+    showAlert(res?.error || 'Gagal membuat kode undangan.', 'error');
+  }
+}
+
+async function handleRedeemReferralCode() {
+  const input = document.getElementById('referralRedeemInput');
+  const code = (input?.value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length < 3 || code.length > 10) {
+    showAlert('Masukkan kode teman yang valid (3–10 karakter).', 'warning');
+    return;
+  }
+  const btn = document.getElementById('btnRedeemReferral');
+  if (btn) { btn.disabled = true; btn.textContent = 'Memproses...'; }
+  try {
+    const res = await apiCall('/api/referral/redeem', 'POST', { code });
+    if (res && res.success) {
+      if (input) input.value = '';
+      localStorage.removeItem('artapos_pending_ref');
+      await loadUserData();
+      showAlert(res.message || '🎉 Berhasil redeem +15 Token Free!', 'success', 'Redeem Berhasil!');
+    } else {
+      showAlert(res?.error || 'Gagal me-redeem kode.', 'error');
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Redeem (+15)'; }
+  }
+}
+
+function copyReferralLink() {
+  const linkInput = document.getElementById('myReferralLinkInput');
+  if (!linkInput || !linkInput.value) return;
+  navigator.clipboard?.writeText(linkInput.value).catch(() => {});
+  showToast('📋 Link undangan berhasil disalin!', 'success');
+}
+
+function shareReferralWhatsApp() {
+  const linkInput = document.getElementById('myReferralLinkInput');
+  const code = document.getElementById('myReferralCodeDisplay')?.textContent || '';
+  const url = linkInput?.value || window.location.origin;
+  const text = `Mau token gratis AI WhatsApp di artapos.id? Daftar sekarang dan masukkan kode undangan *${code}* untuk dapat +15 Token Free! Klik: ${url}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+window.handleToggleBotSwitch = handleToggleBotSwitch;
+window.handleClaimFreeTokens = handleClaimFreeTokens;
+window.checkReferralCodeLive = checkReferralCodeLive;
+window.handleCreateReferralCode = handleCreateReferralCode;
+window.handleRedeemReferralCode = handleRedeemReferralCode;
+window.copyReferralLink = copyReferralLink;
+window.shareReferralWhatsApp = shareReferralWhatsApp;
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp);

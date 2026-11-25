@@ -65,9 +65,44 @@ export async function initTiDB() {
           await conn.query("ALTER TABLE users ADD INDEX idx_user_device (device_id)");
         } catch (_) {}
       }
+      const [colsFreeClaimed] = await conn.query("SHOW COLUMNS FROM users LIKE 'free_claimed'");
+      if (!colsFreeClaimed || colsFreeClaimed.length === 0) {
+        await conn.query("ALTER TABLE users ADD COLUMN free_claimed TINYINT(1) DEFAULT 0");
+        await conn.query("UPDATE users SET free_claimed = 1 WHERE quota_total > 0 OR role = 'superadmin'");
+      }
+      const [colsFreeDev] = await conn.query("SHOW COLUMNS FROM users LIKE 'free_claim_device_id'");
+      if (!colsFreeDev || colsFreeDev.length === 0) {
+        await conn.query("ALTER TABLE users ADD COLUMN free_claim_device_id VARCHAR(128) DEFAULT NULL");
+        await conn.query("UPDATE users SET free_claim_device_id = device_id WHERE device_id IS NOT NULL AND free_claimed = 1");
+        try {
+          await conn.query("ALTER TABLE users ADD INDEX idx_free_claim_dev (free_claim_device_id)");
+        } catch (_) {}
+      }
+      const [colsRef] = await conn.query("SHOW COLUMNS FROM users LIKE 'referral_code'");
+      if (!colsRef || colsRef.length === 0) {
+        await conn.query("ALTER TABLE users ADD COLUMN referral_code VARCHAR(16) DEFAULT NULL");
+        try {
+          await conn.query("ALTER TABLE users ADD UNIQUE INDEX idx_user_referral_code (referral_code)");
+        } catch (_) {}
+      }
     } catch (e) {
       console.warn('⚠️ Users column migration notice:', e.message);
     }
+
+    // Tabel Referral Redemptions (1 User bisa redeem banyak kode berbeda, tapi tidak bisa kode yang sama >1x)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS referral_redemptions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        redeemer_user_id INT NOT NULL,
+        inviter_user_id INT NOT NULL,
+        referral_code VARCHAR(16) NOT NULL,
+        reward_redeemer INT DEFAULT 15,
+        reward_inviter INT DEFAULT 25,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_redeemer_code (redeemer_user_id, referral_code),
+        INDEX idx_inviter (inviter_user_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
 
     // 2. Tabel Sessions (Autentikasi Aman & Anti-Session Hijacking)
     await conn.query(`
@@ -474,7 +509,7 @@ export async function dbGetUser(email) {
 
 export async function dbGetUserById(id) {
   try {
-    const [rows] = await pool.query('SELECT id, email, store_name, plan, quota_total, quota_used, active_until, role, device_id FROM users WHERE id = ? LIMIT 1', [Number(id)]);
+    const [rows] = await pool.query('SELECT id, email, store_name, plan, quota_total, quota_used, active_until, role, device_id, free_claimed, free_claim_device_id, referral_code FROM users WHERE id = ? LIMIT 1', [Number(id)]);
     return rows[0] || null;
   } catch (err) {
     return null;
@@ -495,52 +530,14 @@ function extractHardwareDevicePrefix(devId = '') {
 }
 
 export async function dbVerifyAndBindUserDevice(user, deviceId) {
+  // Semua akun diperbolehkan login; pengecekan 1 Akun Baru + 1 HP Baru dilakukan saat klaim token gratis
   if (!user || user.role === 'superadmin') {
     return { allowed: true };
   }
-
-  // Akun paket berbayar bebas dipakai di banyak akun pada 1 perangkat
-  const planLower = String(user.plan || '').toLowerCase();
-  const isFreeUser = planLower.includes('gratis') || planLower.includes('free');
-  if (!isFreeUser) {
-    return { allowed: true };
-  }
-
   const cleanDevice = deviceId ? String(deviceId).trim().slice(0, 120) : '';
-  if (!cleanDevice) {
-    return { allowed: true };
+  if (cleanDevice && !user.device_id) {
+    await pool.query('UPDATE users SET device_id = ? WHERE id = ?', [cleanDevice, Number(user.id)]).catch(() => {});
   }
-  const hwPrefix = extractHardwareDevicePrefix(cleanDevice);
-
-  // 1. Daftar/Login Gratis: 1 HP 2 Akun DITOLAK
-  const [otherUsersOnDevice] = await pool.query(
-    "SELECT id, email FROM users WHERE (device_id = ? OR device_id LIKE ?) AND id != ? AND role != 'superadmin' AND (plan LIKE '%Gratis%' OR plan LIKE '%Free%') LIMIT 1",
-    [cleanDevice, `${hwPrefix}_%`, Number(user.id)]
-  );
-  if (otherUsersOnDevice.length > 0) {
-    const boundEmail = otherUsersOnDevice[0].email;
-    return {
-      allowed: false,
-      reason: `⛔ Akun gratis hanya berlaku 1 HP 1 akun. Perangkat ini sudah terdaftar dengan ${boundEmail}.`
-    };
-  }
-
-  // 2. Daftar/Login Gratis: 2 HP 1 Akun DITOLAK
-  if (user.device_id) {
-    const existingPrefix = extractHardwareDevicePrefix(user.device_id);
-    if (user.device_id !== cleanDevice && existingPrefix !== hwPrefix) {
-      return {
-        allowed: false,
-        reason: `⛔ Akun gratis ${user.email} sudah terkunci di perangkat lain (1 HP 1 akun).`
-      };
-    }
-  }
-
-  // 3. Kunci device_id akun gratis ke perangkat ini
-  if (!user.device_id || user.device_id !== cleanDevice) {
-    await pool.query('UPDATE users SET device_id = ? WHERE id = ?', [cleanDevice, Number(user.id)]);
-  }
-
   return { allowed: true };
 }
 
@@ -684,26 +681,9 @@ export async function dbRegisterFreeUser({ email, password = null, storeName = '
   try {
     const cleanEmail = email.trim().toLowerCase();
     const cleanDevice = deviceId ? String(deviceId).trim().slice(0, 120) : null;
-    
-    // Validasi email resmi Google
+
     if (!cleanEmail.endsWith('@gmail.com')) {
       throw new Error('Wajib menggunakan email Google (@gmail.com).');
-    }
-
-    // ====================================================
-    // PROTEKSI AWAL: 1 PERANGKAT (DEVICE) = 1 AKUN EMAIL
-    // Mencegah 1 HP / Laptop mendaftar banyak email untuk dapat 300 token gratis terus-menerus
-    // ====================================================
-    if (cleanDevice) {
-      const hwPrefix = extractHardwareDevicePrefix(cleanDevice);
-      const [deviceBound] = await pool.query(
-        "SELECT id, email FROM users WHERE (device_id = ? OR device_id LIKE ?) AND LOWER(email) != ? AND role != 'superadmin' AND (plan LIKE '%Gratis%' OR plan LIKE '%Free%') LIMIT 1",
-        [cleanDevice, `${hwPrefix}_%`, cleanEmail]
-      );
-      if (deviceBound.length > 0) {
-        const boundEmail = deviceBound[0].email;
-        throw new Error(`⛔ Akun gratis hanya berlaku 1 HP 1 akun. Perangkat ini sudah terdaftar dengan ${boundEmail}.`);
-      }
     }
 
     let rawPassword = (password || '').trim();
@@ -717,7 +697,7 @@ export async function dbRegisterFreeUser({ email, password = null, storeName = '
     const hashedPassword = hashPassword(rawPassword);
 
     const [existing] = await pool.query(
-      'SELECT id, role, store_name, plan, quota_total, active_until, device_id FROM users WHERE LOWER(email) = ? LIMIT 1',
+      'SELECT id, role, store_name, plan, quota_total, active_until, free_claimed FROM users WHERE LOWER(email) = ? LIMIT 1',
       [cleanEmail]
     );
 
@@ -726,15 +706,10 @@ export async function dbRegisterFreeUser({ email, password = null, storeName = '
       if (existingUser.role === 'superadmin') {
         throw new Error('Email ini adalah akun Super Admin. Silakan langsung masuk di halaman Login.');
       }
-      // Jika akun ini sudah terkunci di perangkat lain, tolak reset dari perangkat berbeda
-      if (existingUser.device_id && cleanDevice && existingUser.device_id !== cleanDevice) {
-        throw new Error(`⛔ Proteksi 1 Email 1 Perangkat: Email ${cleanEmail} sudah terkunci pada perangkat lain dan tidak dapat diakses dari perangkat ini.`);
-      }
-      // Update password baru & kunci device_id
       const finalStore = storeName || existingUser.store_name || 'Toko AI Assistant';
       await pool.query(
-        'UPDATE users SET password = ?, store_name = ?, device_id = COALESCE(device_id, ?) WHERE id = ?',
-        [hashedPassword, finalStore, cleanDevice, existingUser.id]
+        'UPDATE users SET password = ?, store_name = ? WHERE id = ?',
+        [hashedPassword, finalStore, existingUser.id]
       );
       await seedUserDefaultKnowledgeAndConfig(existingUser.id, finalStore);
       return {
@@ -742,18 +717,17 @@ export async function dbRegisterFreeUser({ email, password = null, storeName = '
         email: cleanEmail,
         rawPassword,
         storeName: finalStore,
-        plan: existingUser.plan || 'Paket Gratis (75 Token)',
-        quota_total: existingUser.quota_total || 75,
+        plan: existingUser.plan || 'Akun Baru (Belum Klaim)',
+        quota_total: Number(existingUser.quota_total || 0),
+        free_claimed: Boolean(existingUser.free_claimed),
         active_until: existingUser.active_until
       };
     }
 
-    const activeUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 hari aktif
-
     const [res] = await pool.query(
-      `INSERT INTO users (email, password, store_name, plan, quota_total, quota_used, role, active_until, device_id) 
-       VALUES (?, ?, ?, 'Paket Gratis (75 Token)', 75, 0, 'user', ?, ?)`,
-      [cleanEmail, hashedPassword, storeName || 'Toko AI Assistant', activeUntil, cleanDevice]
+      `INSERT INTO users (email, password, store_name, plan, quota_total, quota_used, role, active_until, device_id, free_claimed)
+       VALUES (?, ?, ?, 'Akun Baru (Belum Klaim)', 0, 0, 'user', NULL, ?, 0)`,
+      [cleanEmail, hashedPassword, storeName || 'Toko AI Assistant', cleanDevice]
     );
 
     const newUserId = res.insertId;
@@ -764,14 +738,66 @@ export async function dbRegisterFreeUser({ email, password = null, storeName = '
       email: cleanEmail,
       rawPassword,
       storeName: storeName || 'Toko AI Assistant',
-      plan: 'Paket Gratis (75 Token)',
-      quota_total: 75,
-      active_until: activeUntil
+      plan: 'Akun Baru (Belum Klaim)',
+      quota_total: 0,
+      free_claimed: false,
+      active_until: null
     };
   } catch (err) {
     console.error('dbRegisterFreeUser Error:', err.message);
     throw err;
   }
+}
+
+/**
+ * Klaim 75 Token Gratis di Dashboard (HANYA untuk Akun Baru + HP Baru)
+ */
+export async function dbClaimFreeTokens(userId, deviceId) {
+  const uid = Number(userId);
+  const cleanDevice = deviceId ? String(deviceId).trim().slice(0, 120) : '';
+  const user = await dbGetUserById(uid);
+  if (!user) throw new Error('Akun tidak ditemukan.');
+  if (user.role === 'superadmin') throw new Error('Akun Super Admin tidak perlu klaim token gratis.');
+
+  // 1. Cek Akun Baru (belum pernah klaim dan belum punya kuota sebelumnya)
+  const isNewAccount = Number(user.free_claimed || 0) === 0 && Number(user.quota_total || 0) === 0;
+  if (!isNewAccount) {
+    throw new Error('⛔ Klaim ditolak: Hanya akun baru yang belum pernah klaim yang bisa mendapatkan 75 Token Gratis.');
+  }
+
+  // 2. Cek HP Baru (device_id / hardware prefix belum pernah klaim gratis di akun lain)
+  if (cleanDevice) {
+    const hwPrefix = extractHardwareDevicePrefix(cleanDevice);
+    const [usedByOther] = await pool.query(
+      `SELECT id, email FROM users
+       WHERE id != ? AND free_claimed = 1 AND (free_claim_device_id = ? OR free_claim_device_id LIKE ?)
+       LIMIT 1`,
+      [uid, cleanDevice, `${hwPrefix}_%`]
+    );
+    if (usedByOther.length > 0) {
+      throw new Error('⛔ Klaim ditolak: Perangkat (HP) ini sudah pernah digunakan untuk klaim 75 Token Gratis. Silakan beli paket berbayar untuk mengisi token.');
+    }
+  }
+
+  const activeUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  await pool.query(
+    `UPDATE users
+     SET plan = 'Paket Gratis (75 Token)',
+         quota_total = 75,
+         quota_used = 0,
+         free_claimed = 1,
+         free_claim_device_id = ?,
+         active_until = ?
+     WHERE id = ?`,
+    [cleanDevice || null, activeUntil, uid]
+  );
+
+  return {
+    success: true,
+    plan: 'Paket Gratis (75 Token)',
+    quota_total: 75,
+    active_until: activeUntil
+  };
 }
 
 export async function dbRegisterOrUpdatePaidUser({ email, password, storeName = 'Toko AI Assistant', plan = 'Paket Bisnis', quota = 2500, daysActive = 30 }) {
@@ -1499,6 +1525,137 @@ export async function dbAdminDeleteKnowledge(id) {
     console.error('dbAdminDeleteKnowledge Error:', err.message);
     throw err;
   }
+}
+
+export async function dbSetBotEnabled(userId, enabled) {
+  await dbSaveConfig(userId, { bot_enabled: enabled ? '1' : '0' });
+  return Boolean(enabled);
+}
+
+function normalizeReferralCode(raw) {
+  return String(raw || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+export async function dbCheckReferralCodeAvailable(rawCode) {
+  const code = normalizeReferralCode(rawCode);
+  if (code.length < 3 || code.length > 10) {
+    return {
+      code,
+      validFormat: false,
+      available: false,
+      message: 'Kode harus 3–10 karakter (huruf/angka saja).'
+    };
+  }
+  const [rows] = await pool.query('SELECT id FROM users WHERE referral_code = ? LIMIT 1', [code]);
+  const available = rows.length === 0;
+  return {
+    code,
+    validFormat: true,
+    available,
+    message: available ? `✅ Kode "${code}" tersedia!` : `❌ Kode "${code}" sudah dipakai pengguna lain.`
+  };
+}
+
+export async function dbCreateUserReferralCode(userId, rawCode) {
+  const uid = Number(userId);
+  const code = normalizeReferralCode(rawCode);
+  if (code.length < 3 || code.length > 10) {
+    throw new Error('Kode undangan harus 3–10 karakter (huruf atau angka tanpa spasi).');
+  }
+
+  const user = await dbGetUserById(uid);
+  if (!user) throw new Error('Akun tidak ditemukan.');
+  if (user.referral_code) {
+    throw new Error(`Kode undangan Anda sudah dibuat (${user.referral_code}) dan bersifat permanen (maksimal 1 kali).`);
+  }
+
+  const [taken] = await pool.query('SELECT id FROM users WHERE referral_code = ? LIMIT 1', [code]);
+  if (taken.length > 0) {
+    throw new Error(`Kode "${code}" sudah ada di database. Silakan pilih kode lain.`);
+  }
+
+  await pool.query('UPDATE users SET referral_code = ? WHERE id = ?', [code, uid]);
+  return { success: true, code };
+}
+
+export async function dbRedeemReferralCode(userId, rawCode) {
+  const uid = Number(userId);
+  const code = normalizeReferralCode(rawCode);
+  if (code.length < 3 || code.length > 10) {
+    throw new Error('Masukkan kode redeem yang valid (3–10 karakter).');
+  }
+
+  const [inviterRows] = await pool.query('SELECT id, email, referral_code, active_until FROM users WHERE referral_code = ? LIMIT 1', [code]);
+  if (inviterRows.length === 0) {
+    throw new Error(`Kode "${code}" tidak ditemukan.`);
+  }
+  const inviter = inviterRows[0];
+
+  if (Number(inviter.id) === uid) {
+    throw new Error('⛔ Anda tidak bisa me-redeem kode undangan milik sendiri.');
+  }
+
+  const [dup] = await pool.query(
+    'SELECT id FROM referral_redemptions WHERE redeemer_user_id = ? AND referral_code = ? LIMIT 1',
+    [uid, code]
+  );
+  if (dup.length > 0) {
+    throw new Error(`⛔ Anda sudah pernah me-redeem kode "${code}". Gunakan kode berbeda dari teman lain.`);
+  }
+
+  await pool.query(
+    'INSERT INTO referral_redemptions (redeemer_user_id, inviter_user_id, referral_code, reward_redeemer, reward_inviter) VALUES (?, ?, ?, 15, 25)',
+    [uid, inviter.id, code]
+  );
+
+  const extendDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  // +15 Token ke Redeemer
+  await pool.query(
+    `UPDATE users
+     SET quota_total = COALESCE(quota_total, 0) + 15,
+         plan = CASE WHEN plan = 'Akun Baru (Belum Klaim)' OR plan IS NULL THEN 'Paket Bonus Redeem' ELSE plan END,
+         active_until = CASE WHEN active_until IS NULL OR active_until < NOW() THEN ? ELSE active_until END
+     WHERE id = ?`,
+    [extendDate, uid]
+  );
+
+  // +25 Token ke Inviter
+  await pool.query(
+    `UPDATE users
+     SET quota_total = COALESCE(quota_total, 0) + 25,
+         plan = CASE WHEN plan = 'Akun Baru (Belum Klaim)' OR plan IS NULL THEN 'Paket Bonus Undang Teman' ELSE plan END,
+         active_until = CASE WHEN active_until IS NULL OR active_until < NOW() THEN ? ELSE active_until END
+     WHERE id = ?`,
+    [extendDate, inviter.id]
+  );
+
+  return {
+    success: true,
+    code,
+    rewardRedeemer: 15,
+    rewardInviter: 25,
+    inviterId: inviter.id,
+    inviterEmail: inviter.email
+  };
+}
+
+export async function dbGetUserReferralStats(userId) {
+  const uid = Number(userId);
+  const user = await dbGetUserById(uid);
+  const [[invStats]] = await pool.query(
+    'SELECT COUNT(*) AS total_invited, COALESCE(SUM(reward_inviter), 0) AS total_earned FROM referral_redemptions WHERE inviter_user_id = ?',
+    [uid]
+  );
+  const [redeemedRows] = await pool.query(
+    'SELECT referral_code, reward_redeemer, created_at FROM referral_redemptions WHERE redeemer_user_id = ? ORDER BY id DESC LIMIT 30',
+    [uid]
+  );
+  return {
+    ownCode: user?.referral_code || null,
+    totalInvited: Number(invStats?.total_invited || 0),
+    totalBonusEarned: Number(invStats?.total_earned || 0),
+    redeemedCodes: redeemedRows || []
+  };
 }
 
 export { pool };
