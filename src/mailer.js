@@ -32,6 +32,7 @@ function getTransporter() {
 export async function sendFreeRegistrationEmail(toEmail, rawPassword, storeName = 'Toko AI Assistant') {
   const mailTransporter = getTransporter();
   const gmailUser = process.env.GMAIL_USER || 'no-reply@artapos.id';
+  const appBaseUrl = (process.env.APP_URL || 'https://www.artapos.id').replace(/\/+$/, '');
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -75,7 +76,7 @@ export async function sendFreeRegistrationEmail(toEmail, rawPassword, storeName 
             <div class="pw-box">${rawPassword}</div>
           </div>
 
-          <a href="http://localhost:3000/#login" class="btn">Masuk ke Dashboard artapos.id</a>
+          <a href="${appBaseUrl}/#login" class="btn">Masuk ke Dashboard artapos.id</a>
 
           <div class="spam-note">
             💡 <strong>Penting:</strong> Jika email ini masuk ke folder <strong>Spam</strong> atau <strong>Promosi</strong>, mohon klik <em>"Bukan Spam" (Report Not Spam)</em> agar notifikasi penting berikutnya masuk langsung ke Kotak Masuk Anda.

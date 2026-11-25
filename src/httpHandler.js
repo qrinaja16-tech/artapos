@@ -484,7 +484,7 @@ export function createHttpHandler(waHooks = {}) {
         if (process.env.VERCEL === '1') {
           const isConnected = cfg.wa_status === 'connected';
           const qrAgeMs = Date.now() - Number(cfg.wa_updated_at || 0);
-          const hasFreshQr = !isConnected && Boolean(cfg.wa_qr) && qrAgeMs < 65000;
+          const hasFreshQr = !isConnected && Boolean(cfg.wa_qr) && qrAgeMs < 35000;
 
           if (!isConnected && !hasFreshQr) {
             await dbRequestUserWaCommand(userId, 'ensure');

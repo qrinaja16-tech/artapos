@@ -190,19 +190,32 @@ async function startTenantSocket(userId) {
       fs.mkdirSync(userDir, { recursive: true });
     }
 
-    const { default: makeWASocket, DisconnectReason, useMultiFileAuthState } = await import('@whiskeysockets/baileys');
+    const {
+      default: makeWASocket,
+      Browsers,
+      DisconnectReason,
+      makeCacheableSignalKeyStore,
+      useMultiFileAuthState
+    } = await import('@whiskeysockets/baileys');
     const { default: pino } = await import('pino');
     const { default: QRCode } = await import('qrcode');
 
+    const waLogger = pino({ level: 'silent' });
     const { state, saveCreds } = await useMultiFileAuthState(userDir);
     const version = await getBaileysVersion();
 
     const sock = makeWASocket({
       version,
-      logger: pino({ level: 'silent' }),
+      logger: waLogger,
       printQRInTerminal: false,
-      auth: state,
-      browser: ['artapos.id Web', 'Chrome', '122.0.0'],
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, waLogger)
+      },
+      browser: Browsers.ubuntu('Chrome'),
+      connectTimeoutMs: 60000,
+      qrTimeout: 45000,
+      markOnlineOnConnect: false,
       syncFullHistory: false
     });
 
