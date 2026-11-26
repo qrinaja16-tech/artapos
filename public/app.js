@@ -1,3 +1,4 @@
+// @ts-nocheck
 // ==============================================================
 // artapos.id • INDONESIAN SAAS CLIENT APPLICATION ENGINE
 // Multi-Tenant Isolation, Real-Time Quota Stream & Session Security

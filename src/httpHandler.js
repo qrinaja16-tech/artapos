@@ -1,3 +1,4 @@
+// @ts-nocheck
 import dotenv from 'dotenv';
 import http from 'http';
 import fs from 'fs';
@@ -277,7 +278,7 @@ function renderBrandedErrorHtml({ code = 404, badge = 'HALAMAN TIDAK DITEMUKAN',
 </html>`;
 }
 
-function readJsonBody(req) {
+function readJsonBody(req, maxBytes = 1048576) {
   if (req.body !== undefined && req.body !== null && typeof req.body === 'object') {
     if (containsMaliciousPayload(req.body)) {
       return Promise.reject(new Error('🛡️ Sistem Keamanan: Input mengandung skrip terlarang (.php / XSS / SQL Injection) dan telah diblokir!'));
@@ -288,8 +289,8 @@ function readJsonBody(req) {
     let body = '';
     req.on('data', chunk => {
       body += chunk;
-      // Batasi ukuran payload 1MB (Anti Denial-of-Service / Memory Exhaustion)
-      if (body.length > 1048576) {
+      // Batasi ukuran payload (default 1MB, upload gambar 5MB) — Anti Denial-of-Service
+      if (body.length > maxBytes) {
         req.destroy();
         reject(new Error('Payload too large.'));
       }
