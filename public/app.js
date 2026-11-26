@@ -304,6 +304,7 @@ function switchView(viewName) {
     'checkout': document.getElementById('viewCheckout'),
     'email-success': document.getElementById('viewSuccessEmail'),
     'login': document.getElementById('viewLogin'),
+    'forgot-password': document.getElementById('viewForgotPassword'),
     'dashboard': document.getElementById('viewDashboard'),
     'error': document.getElementById('viewErrorState')
   };
@@ -3661,9 +3662,7 @@ let forgotVerifiedEmail = '';
 let forgotVerifiedCode = '';
 
 function openForgotPasswordModal() {
-  const modal = document.getElementById('modalForgotPassword');
-  if (!modal) return;
-  modal.classList.remove('hidden');
+  switchView('forgot-password');
   goToForgotStep(1);
   const loginEmail = (document.getElementById('loginEmail')?.value || '').trim();
   const fEmail = document.getElementById('forgotEmail');
@@ -3675,8 +3674,7 @@ function openForgotPasswordModal() {
 }
 
 function closeForgotPasswordModal() {
-  const modal = document.getElementById('modalForgotPassword');
-  if (modal) modal.classList.add('hidden');
+  switchView('login');
 }
 
 function goToForgotStep(step) {

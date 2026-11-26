@@ -23,7 +23,7 @@
   <meta name="twitter:description" content="Balas chat pelanggan otomatis tanpa sewa server mahal. Gratis 75 Token untuk pendaftar pertama!">
   <meta name="twitter:image" content="https://www.artapos.id/og-preview.jpg?v=2">
   <link rel="icon" type="image/jpeg" href="logo.jpg?v=2">
-  <link rel="stylesheet" href="style.css?v=39.0">
+  <link rel="stylesheet" href="style.css?v=40.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -2465,24 +2465,23 @@
   </div>
 
   <!-- ===================================================================== -->
-  <!-- MODAL LUPA PASSWORD (3 STEP: EMAIL REALTIME -> KODE OTP -> PW BARU)   -->
+  <!-- HALAMAN LUPA PASSWORD (TAMPILAN BARU 3 STEP)                          -->
   <!-- ===================================================================== -->
-  <div id="modalForgotPassword" class="free-reg-modal-overlay hidden">
-    <div class="free-reg-modal-card">
-      <div class="free-reg-modal-head">
-        <div>
-          <span class="free-reg-badge">🔐 RESET PASSWORD</span>
-          <h2>Lupa Password Akun</h2>
+  <div id="viewForgotPassword" class="view-screen login-screen hidden">
+    <div class="login-container">
+      <div class="login-card-pro">
+        <div class="login-brand-header">
+          <div class="brand-badge-icon has-custom-logo">
+            <img src="logo.jpg?v=2" alt="artapos.id" class="brand-logo-img">
+          </div>
+          <h2>Reset Password</h2>
           <p>Verifikasi email terdaftar untuk membuat password baru tanpa password lama.</p>
         </div>
-        <button type="button" class="btn-close-free-reg" onclick="closeForgotPasswordModal()">✕</button>
-      </div>
 
-      <div class="free-reg-modal-body">
         <!-- STEP 1: CEK EMAIL REALTIME -->
         <div id="forgotStep1">
           <div class="field-group">
-            <label for="forgotEmail">1. Masukkan Email Terdaftar (Maks. 100 Karakter) <span class="required-star">*</span></label>
+            <label for="forgotEmail">1. Email Terdaftar (Maks. 100 Karakter) <span class="required-star">*</span></label>
             <div class="input-with-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
@@ -2492,7 +2491,7 @@
             </div>
             <div id="forgotEmailStatus" class="referral-check-msg" style="margin-top:6px;"></div>
           </div>
-          <button type="button" class="btn-submit-free-reg" id="btnForgotSendCode" onclick="handleForgotSendCode()" disabled style="margin-top:14px;">
+          <button type="button" class="btn-login-submit" id="btnForgotSendCode" onclick="handleForgotSendCode()" disabled style="margin-top:14px;">
             <span>Minta Kode</span>
           </button>
         </div>
@@ -2500,11 +2499,11 @@
         <!-- STEP 2: MASUKKAN KODE OTP -->
         <div id="forgotStep2" class="hidden">
           <div class="field-group">
-            <label for="forgotOtpCode">2. Masukkan Kode Verifikasi dari Email <strong id="forgotTargetEmailLabel"></strong></label>
-            <input type="text" id="forgotOtpCode" maxlength="6" placeholder="Tempel 6 digit kode di sini..." style="text-align:center; font-size:1.25rem; font-weight:800; letter-spacing:4px; padding:12px;">
+            <label for="forgotOtpCode">2. Kode Verifikasi dari Email <strong id="forgotTargetEmailLabel"></strong></label>
+            <input type="text" id="forgotOtpCode" maxlength="6" placeholder="Tempel 6 digit kode di sini..." style="width:100%; text-align:center; font-size:1.25rem; font-weight:800; letter-spacing:4px; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px;">
             <div id="forgotOtpStatus" class="referral-check-msg" style="margin-top:6px;"></div>
           </div>
-          <button type="button" class="btn-submit-free-reg" id="btnForgotVerifyCode" onclick="handleForgotVerifyCode()" style="margin-top:12px;">
+          <button type="button" class="btn-login-submit" id="btnForgotVerifyCode" onclick="handleForgotVerifyCode()" style="margin-top:12px;">
             <span>Verifikasi Kode</span>
           </button>
           <div style="display:flex; justify-content:space-between; margin-top:12px; font-size:0.8rem;">
@@ -2517,11 +2516,11 @@
         <form id="forgotStep3" class="hidden" onsubmit="handleForgotResetSubmit(event)">
           <div class="field-group">
             <label for="forgotNewPwd">3. Password Baru (8–20 Karakter)</label>
-            <input type="password" id="forgotNewPwd" maxlength="20" placeholder="Buat password baru..." oninput="validateForgotPwdLive()" required>
+            <input type="password" id="forgotNewPwd" maxlength="20" placeholder="Buat password baru..." oninput="validateForgotPwdLive()" required style="width:100%; padding:11px 12px; border:1.5px solid #e2e8f0; border-radius:10px;">
           </div>
           <div class="field-group" style="margin-top:10px;">
             <label for="forgotConfirmPwd">Konfirmasi Password Baru</label>
-            <input type="password" id="forgotConfirmPwd" maxlength="20" placeholder="Ulangi password baru..." oninput="validateForgotPwdLive()" required>
+            <input type="password" id="forgotConfirmPwd" maxlength="20" placeholder="Ulangi password baru..." oninput="validateForgotPwdLive()" required style="width:100%; padding:11px 12px; border:1.5px solid #e2e8f0; border-radius:10px;">
           </div>
           <div class="forgot-rules-list" id="forgotRulesList">
             <div class="fp-rule-item" id="fpRuleLen">• Minimal 8, maksimal 20 karakter</div>
@@ -2531,10 +2530,16 @@
             <div class="fp-rule-item" id="fpRuleSafe">• Tidak mengandung file/skrip (.php, .html, &lt;, &gt;)</div>
             <div class="fp-rule-item" id="fpRuleMatch">• Konfirmasi password sama</div>
           </div>
-          <button type="submit" class="btn-submit-free-reg" id="btnForgotResetSave" disabled style="margin-top:14px;">
+          <button type="submit" class="btn-login-submit" id="btnForgotResetSave" disabled style="margin-top:14px;">
             <span>Simpan Password Baru</span>
           </button>
         </form>
+
+        <div class="login-footer-modern" style="margin-top:18px;">
+          <button type="button" class="btn-login-back-home" onclick="closeForgotPasswordModal()">
+            <span>Kembali ke Halaman Login</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -2585,7 +2590,7 @@
   </div>
 
   <!-- Main JavaScript Controller -->
-  <script src="app.js?v=39.0"></script>
+  <script src="app.js?v=40.0"></script>
 </body>
 
 </html>

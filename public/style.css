@@ -7268,6 +7268,13 @@ div.swal2-container,
 .fp-rule-item.bad {
   color: #dc2626;
 }
+.btn-login-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+#loginPassword {
+  padding-right: 42px !important;
+}
 .btn-submit-free-reg:disabled {
   opacity: 0.5;
   cursor: not-allowed;
