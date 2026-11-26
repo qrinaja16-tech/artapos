@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { knowledgeManager } from './knowledge.js';
 import {
@@ -36,6 +37,9 @@ import {
   dbCreatePasswordResetCode,
   dbVerifyPasswordResetCode,
   dbConsumePasswordResetAndSetPassword,
+  dbGetUserActivityLogs,
+  getImageLimitForPlan,
+  dbCountUserKnowledgeImages,
   dbRegisterOrUpdatePaidUser,
   dbUpdateUserAccount,
   dbDeductQuota,
@@ -507,7 +511,7 @@ export function createHttpHandler(waHooks = {}) {
             status: isConnected ? 'connected' : (hasFreshQr ? 'scan_qr' : 'connecting'),
             qr: hasFreshQr ? cfg.wa_qr : null,
             phone: isConnected ? (cfg.wa_phone || null) : null,
-            botEnabled: cfg.bot_enabled !== '0',
+            botEnabled: String(cfg.bot_enabled) !== '0' && cfg.bot_enabled !== false,
             user: session.email,
             botName: userBotName
           }));
@@ -537,7 +541,7 @@ export function createHttpHandler(waHooks = {}) {
           status: effectiveStatus,
           qr: effectiveStatus === 'connected' ? null : (tenant.qr || null),
           phone: tenant.phone || cfg.wa_phone || null,
-          botEnabled: cfg.bot_enabled !== '0',
+          botEnabled: String(cfg.bot_enabled) !== '0' && cfg.bot_enabled !== false,
           user: session.email,
           botName: userBotName
         }));
@@ -598,13 +602,35 @@ export function createHttpHandler(waHooks = {}) {
         return;
       }
 
-      // [C] CREATE ITEM (Wajib Login & Maks 100 Karakter)
+      // [C] CREATE ITEM (100 Kata Kunci, 100 Pertanyaan, 250 Jawaban + Anti-File + Batas Gambar)
       if (req.method === 'POST') {
         try {
           const body = await readJsonBody(req);
-          if (String(body.answer || '').length > 100) {
-            throw new Error('Jawaban bot maksimal 100 karakter.');
+          const kwStr = Array.isArray(body.keywords) ? body.keywords.join(', ') : String(body.keywords || '');
+          const qStr = Array.isArray(body.questions) ? body.questions.join('\n') : String(body.questions || '');
+          const ansStr = String(body.answer || '');
+
+          if (kwStr.length > 100) throw new Error('Kata kunci maksimal 100 karakter.');
+          if (qStr.length > 100) throw new Error('Contoh pertanyaan maksimal 100 karakter.');
+          if (ansStr.length > 250) throw new Error('Jawaban bot maksimal 250 karakter.');
+
+          for (const f of [kwStr, qStr, ansStr]) {
+            if (containsMaliciousPayload(f) || /\.(php|html?|js|exe|sh)\b/i.test(f) || /[<>]/.test(f)) {
+              throw new Error('⛔ Input mengandung skrip/ekstensi file terlarang (.php, .html, <, >).');
+            }
           }
+
+          if (body.image_url) {
+            const imgLimit = getImageLimitForPlan(session.plan, session.role);
+            if (imgLimit <= 0) {
+              throw new Error('Paket Gratis tidak mendukung upload gambar. Upgrade minimal Paket 25K.');
+            }
+            const usedImgs = await dbCountUserKnowledgeImages(session.user_id);
+            if (usedImgs >= imgLimit) {
+              throw new Error(`Batas maksimal ${imgLimit} gambar untuk paket Anda sudah tercapai.`);
+            }
+          }
+
           const newItem = await dbAddKnowledge(session.user_id, body);
           knowledgeManager.lastCacheTime = 0;
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -621,9 +647,27 @@ export function createHttpHandler(waHooks = {}) {
         try {
           const body = await readJsonBody(req);
           if (!body.id) throw new Error('ID wajib disertakan.');
-          if (String(body.answer || '').length > 100) {
-            throw new Error('Jawaban bot maksimal 100 karakter.');
+          const kwStr = Array.isArray(body.keywords) ? body.keywords.join(', ') : String(body.keywords || '');
+          const qStr = Array.isArray(body.questions) ? body.questions.join('\n') : String(body.questions || '');
+          const ansStr = String(body.answer || '');
+
+          if (kwStr.length > 100) throw new Error('Kata kunci maksimal 100 karakter.');
+          if (qStr.length > 100) throw new Error('Contoh pertanyaan maksimal 100 karakter.');
+          if (ansStr.length > 250) throw new Error('Jawaban bot maksimal 250 karakter.');
+
+          for (const f of [kwStr, qStr, ansStr]) {
+            if (containsMaliciousPayload(f) || /\.(php|html?|js|exe|sh)\b/i.test(f) || /[<>]/.test(f)) {
+              throw new Error('⛔ Input mengandung skrip/ekstensi file terlarang (.php, .html, <, >).');
+            }
           }
+
+          if (body.image_url) {
+            const imgLimit = getImageLimitForPlan(session.plan, session.role);
+            if (imgLimit <= 0) {
+              throw new Error('Paket Gratis tidak mendukung upload gambar. Upgrade minimal Paket 25K.');
+            }
+          }
+
           await dbUpdateKnowledge(session.user_id, body.id, body);
           knowledgeManager.lastCacheTime = 0;
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -650,6 +694,93 @@ export function createHttpHandler(waHooks = {}) {
         }
         return;
       }
+    }
+
+    // ----------------------------------------
+    // UPLOAD GAMBAR KE CLOUDINARY (NON-GRATIS)
+    // ----------------------------------------
+    if (cleanUrl === '/api/upload-image' && req.method === 'POST') {
+      try {
+        const session = await getAuthUser(req);
+        if (!session) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Sesi login tidak sah.' }));
+          return;
+        }
+
+        const imgLimit = getImageLimitForPlan(session.plan, session.role);
+        if (imgLimit <= 0) {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Paket Gratis tidak mendukung upload gambar. Upgrade minimal Paket 25K.' }));
+          return;
+        }
+        const usedImgs = await dbCountUserKnowledgeImages(session.user_id);
+        if (usedImgs >= imgLimit) {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: `Kuota gambar paket Anda (${imgLimit} gambar) sudah penuh.` }));
+          return;
+        }
+
+        const body = await readJsonBody(req, 5 * 1024 * 1024);
+        const fileName = String(body.fileName || 'produk.jpg');
+        const dataUrl = String(body.dataUrl || '');
+        if (/\.(php|html?|js|exe|sh)$/i.test(fileName)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: '⛔ File .php / .html / skrip dilarang!' }));
+          return;
+        }
+        if (!/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(dataUrl)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Format wajib gambar PNG, JPG, atau WEBP.' }));
+          return;
+        }
+
+        let cloudName = process.env.CLOUDINARY_CLOUD_NAME || '';
+        let apiKey = process.env.CLOUDINARY_API_KEY || '';
+        let apiSecret = process.env.CLOUDINARY_API_SECRET || '';
+        if ((!cloudName || !apiKey || !apiSecret) && process.env.CLOUDINARY_URL) {
+          const m = process.env.CLOUDINARY_URL.match(/^cloudinary:\/\/([^:]+):([^@]+)@(.+)$/);
+          if (m) { apiKey = m[1]; apiSecret = m[2]; cloudName = m[3]; }
+        }
+        if (!cloudName || !apiKey || !apiSecret) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Kredensial Cloudinary belum diatur di .env (CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET).' }));
+          return;
+        }
+
+        const timestamp = Math.floor(Date.now() / 1000);
+        const folder = `artapos/user_${session.user_id}`;
+        const sigRaw = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
+        const signature = crypto.createHash('sha1').update(sigRaw).digest('hex');
+
+        const form = new FormData();
+        form.append('file', dataUrl);
+        form.append('api_key', apiKey);
+        form.append('timestamp', String(timestamp));
+        form.append('folder', folder);
+        form.append('signature', signature);
+
+        const cloudResp = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: 'POST',
+          body: form
+        });
+        const cloudData = await cloudResp.json();
+        if (!cloudResp.ok || !cloudData.secure_url) {
+          throw new Error(cloudData?.error?.message || 'Gagal upload ke Cloudinary.');
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          success: true,
+          url: cloudData.secure_url,
+          used: usedImgs + 1,
+          limit: imgLimit
+        }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
     }
 
     // ----------------------------------------
@@ -1196,10 +1327,10 @@ export function createHttpHandler(waHooks = {}) {
         const result = await dbRedeemReferralCode(session.user_id, body.code || '');
 
         await dbAddNotificationLog({
-          category: 'REGISTER',
+          category: 'REDEEM',
           recipient: session.email,
-          title: `🎟️ Redeem Kode "${result.code}" (+25 Token / +50 Pengundang)`,
-          message: `${session.email} me-redeem kode ${result.code} milik ${result.inviterEmail}.`,
+          title: `🎟️ Redeem Kode "${result.code}" (+25 Token)`,
+          message: `Anda berhasil menukarkan kode "${result.code}" dan mendapat +25 Token Free.`,
           status: 'success'
         }).catch(() => { });
 
@@ -1207,7 +1338,7 @@ export function createHttpHandler(waHooks = {}) {
         res.end(JSON.stringify({
           success: true,
           ...result,
-          message: `🎉 Berhasil redeem kode "${result.code}"! Anda dapat +25 Token Free & pengundang dapat +50 Token Free.`
+          message: `🎉 Berhasil redeem kode "${result.code}"! Anda dapat +25 Token Free.`
         }));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -1490,7 +1621,9 @@ export function createHttpHandler(waHooks = {}) {
               isExpired: Boolean(quota?.isExpired),
               free_claimed: Boolean(freshUser?.free_claimed),
               referral_code: freshUser?.referral_code || null,
-              bot_enabled: cfg?.bot_enabled !== '0',
+              bot_enabled: String(cfg?.bot_enabled) !== '0' && cfg?.bot_enabled !== false,
+              image_limit: getImageLimitForPlan(quota?.plan || session.plan, session.role),
+              image_used: await dbCountUserKnowledgeImages(session.user_id),
               role: session.role || 'user',
               active_until: quota?.active_until || session.active_until
             }
@@ -1509,6 +1642,24 @@ export function createHttpHandler(waHooks = {}) {
     // ----------------------------------------
     // 10. API REAL-TIME QUOTA STREAM / LIVE SYNC
     // ----------------------------------------
+    if (cleanUrl === '/api/user/activity-logs' && req.method === 'GET') {
+      try {
+        const session = await getAuthUser(req);
+        if (!session) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Sesi login tidak sah.' }));
+          return;
+        }
+        const logs = await dbGetUserActivityLogs(session.user_id, session.email);
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ success: true, logs }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
     if (cleanUrl === '/api/user/quota-live') {
       try {
         const session = await getAuthUser(req);

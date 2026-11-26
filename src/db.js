@@ -63,7 +63,7 @@ export async function initTiDB() {
         await conn.query("ALTER TABLE users ADD COLUMN device_id VARCHAR(128) DEFAULT NULL");
         try {
           await conn.query("ALTER TABLE users ADD INDEX idx_user_device (device_id)");
-        } catch (_) {}
+        } catch (_) { }
       }
       const [colsFreeClaimed] = await conn.query("SHOW COLUMNS FROM users LIKE 'free_claimed'");
       if (!colsFreeClaimed || colsFreeClaimed.length === 0) {
@@ -76,14 +76,14 @@ export async function initTiDB() {
         await conn.query("UPDATE users SET free_claim_device_id = device_id WHERE device_id IS NOT NULL AND free_claimed = 1");
         try {
           await conn.query("ALTER TABLE users ADD INDEX idx_free_claim_dev (free_claim_device_id)");
-        } catch (_) {}
+        } catch (_) { }
       }
       const [colsRef] = await conn.query("SHOW COLUMNS FROM users LIKE 'referral_code'");
       if (!colsRef || colsRef.length === 0) {
         await conn.query("ALTER TABLE users ADD COLUMN referral_code VARCHAR(16) DEFAULT NULL");
         try {
           await conn.query("ALTER TABLE users ADD UNIQUE INDEX idx_user_referral_code (referral_code)");
-        } catch (_) {}
+        } catch (_) { }
       }
     } catch (e) {
       console.warn('⚠️ Users column migration notice:', e.message);
@@ -151,8 +151,12 @@ export async function initTiDB() {
         await conn.query("ALTER TABLE knowledge ADD COLUMN user_id INT NOT NULL DEFAULT 1");
         try {
           await conn.query("ALTER TABLE knowledge ADD INDEX idx_user_knowledge (user_id)");
-        } catch (_) {}
+        } catch (_) { }
         console.log('✅ Kolom user_id berhasil ditambahkan ke knowledge.');
+      }
+      const [colsImg] = await conn.query("SHOW COLUMNS FROM knowledge LIKE 'image_url'");
+      if (!colsImg || colsImg.length === 0) {
+        await conn.query("ALTER TABLE knowledge ADD COLUMN image_url VARCHAR(500) DEFAULT NULL");
       }
     } catch (e) {
       console.warn('⚠️ Knowledge migration notice:', e.message);
@@ -168,7 +172,7 @@ export async function initTiDB() {
           await conn.query("DROP TABLE IF EXISTS config");
         }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     await conn.query(`
       CREATE TABLE IF NOT EXISTS config (
@@ -233,7 +237,7 @@ export async function initTiDB() {
       if (!colsSrc || colsSrc.length === 0) {
         await conn.query("ALTER TABLE visits_log ADD COLUMN traffic_source VARCHAR(80) DEFAULT 'Direct'");
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Pastikan akun Paket Gratis lama disesuaikan ke 75 Token jika masih bawaan trial
     try {
@@ -241,7 +245,7 @@ export async function initTiDB() {
         `UPDATE users SET plan = 'Paket Gratis (75 Token)', quota_total = 75 
          WHERE quota_total IN (100, 300) AND (plan LIKE '%Gratis%' OR plan LIKE '%Free%')`
       );
-    } catch (e) {}
+    } catch (e) { }
 
     try {
       const [nCount] = await conn.query('SELECT COUNT(*) AS total FROM notifications_log');
@@ -253,7 +257,7 @@ export async function initTiDB() {
            ('AUTH', 'achmadfurqon33@gmail.com', 'Login Super Admin Berhasil', 'Super Admin achmadfurqon33@gmail.com masuk ke pusat pemantauan artapos.id.', 'success')`
         );
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Seed default knowledge untuk user_id = 1 jika kosong
     const [rows] = await conn.query('SELECT COUNT(*) AS total FROM knowledge');
@@ -361,7 +365,7 @@ export async function dbGetAllKnowledge(userId = 1) {
   try {
     const targetUserId = typeof userId === 'number' || (typeof userId === 'string' && !isNaN(userId)) ? Number(userId) : 1;
     const [rows] = await pool.query(
-      'SELECT id, questions, keywords, answer, category FROM knowledge WHERE user_id = ? ORDER BY id ASC',
+      'SELECT id, questions, keywords, answer, category, image_url FROM knowledge WHERE user_id = ? ORDER BY id ASC',
       [targetUserId]
     );
     return rows.map(r => ({
@@ -369,7 +373,8 @@ export async function dbGetAllKnowledge(userId = 1) {
       questions: typeof r.questions === 'string' ? JSON.parse(r.questions) : r.questions,
       keywords: typeof r.keywords === 'string' ? JSON.parse(r.keywords) : r.keywords,
       answer: r.answer,
-      category: r.category
+      category: r.category,
+      image_url: r.image_url || null
     }));
   } catch (err) {
     console.error('dbGetAllKnowledge Error:', err.message);
@@ -384,17 +389,19 @@ export async function dbAddKnowledge(arg1, arg2) {
     userId = Number(arg1);
     data = arg2;
   }
-  const { questions = [], keywords = [], answer = '', category = 'umum' } = data || {};
+  const { questions = [], keywords = [], answer = '', category = 'umum', image_url = null } = data || {};
+  const cleanImg = image_url ? String(image_url).trim().slice(0, 500) : null;
 
   try {
     const [result] = await pool.query(
-      'INSERT INTO knowledge (user_id, questions, keywords, answer, category) VALUES (?, ?, ?, ?, ?)',
+      'INSERT INTO knowledge (user_id, questions, keywords, answer, category, image_url) VALUES (?, ?, ?, ?, ?, ?)',
       [
         Number(userId),
         JSON.stringify(Array.isArray(questions) ? questions : [questions]),
         JSON.stringify(Array.isArray(keywords) ? keywords : String(keywords).split(',').map(s => s.trim())),
         String(answer).trim(),
-        String(category).trim()
+        String(category).trim(),
+        cleanImg
       ]
     );
     return {
@@ -402,7 +409,8 @@ export async function dbAddKnowledge(arg1, arg2) {
       questions,
       keywords,
       answer,
-      category
+      category,
+      image_url: cleanImg
     };
   } catch (err) {
     console.error('dbAddKnowledge Error:', err.message);
@@ -419,16 +427,18 @@ export async function dbUpdateKnowledge(arg1, arg2, arg3) {
     id = arg2;
     data = arg3;
   }
-  const { questions = [], keywords = [], answer = '', category = 'umum' } = data || {};
+  const { questions = [], keywords = [], answer = '', category = 'umum', image_url = null } = data || {};
+  const cleanImg = image_url ? String(image_url).trim().slice(0, 500) : null;
 
   try {
     await pool.query(
-      'UPDATE knowledge SET questions = ?, keywords = ?, answer = ?, category = ? WHERE id = ? AND user_id = ?',
+      'UPDATE knowledge SET questions = ?, keywords = ?, answer = ?, category = ?, image_url = ? WHERE id = ? AND user_id = ?',
       [
         JSON.stringify(Array.isArray(questions) ? questions : [questions]),
         JSON.stringify(Array.isArray(keywords) ? keywords : String(keywords).split(',').map(s => s.trim())),
         String(answer).trim(),
         String(category).trim(),
+        cleanImg,
         Number(id),
         Number(userId)
       ]
@@ -437,6 +447,30 @@ export async function dbUpdateKnowledge(arg1, arg2, arg3) {
   } catch (err) {
     console.error('dbUpdateKnowledge Error:', err.message);
     return false;
+  }
+}
+
+export function getImageLimitForPlan(planName = '', role = 'user') {
+  if (role === 'superadmin') return 999;
+  const p = String(planName || '').toLowerCase();
+  if (p.includes('gratis') || p.includes('free') || p.includes('belum klaim') || p.includes('bonus')) return 0;
+  if (p.includes('25k') || p.includes('hemat')) return 1;
+  if (p.includes('35k') || p.includes('plus')) return 5;
+  if (p.includes('50k') || p.includes('starter')) return 10;
+  if (p.includes('70k') || p.includes('pro')) return 15;
+  if (p.includes('100k') || p.includes('bisnis') || p.includes('enterprise') || p.includes('unlimited')) return 25;
+  return 0;
+}
+
+export async function dbCountUserKnowledgeImages(userId) {
+  try {
+    const [[row]] = await pool.query(
+      "SELECT COUNT(*) AS total FROM knowledge WHERE user_id = ? AND image_url IS NOT NULL AND image_url != ''",
+      [Number(userId)]
+    );
+    return Number(row?.total || 0);
+  } catch (e) {
+    return 0;
   }
 }
 
@@ -547,7 +581,7 @@ export async function dbVerifyAndBindUserDevice(user, deviceId) {
   }
   const cleanDevice = deviceId ? String(deviceId).trim().slice(0, 120) : '';
   if (cleanDevice && !user.device_id) {
-    await pool.query('UPDATE users SET device_id = ? WHERE id = ?', [cleanDevice, Number(user.id)]).catch(() => {});
+    await pool.query('UPDATE users SET device_id = ? WHERE id = ?', [cleanDevice, Number(user.id)]).catch(() => { });
   }
   return { allowed: true };
 }
@@ -1075,7 +1109,7 @@ export async function dbGetUserDetailsForAdmin(userId) {
     );
     const config = {};
     for (const r of configRows) {
-      try { config[r.config_key] = JSON.parse(r.config_value); } catch(e) { config[r.config_key] = r.config_value; }
+      try { config[r.config_key] = JSON.parse(r.config_value); } catch (e) { config[r.config_key] = r.config_value; }
     }
 
     // Ambil order transaksi milik user ini
@@ -1724,6 +1758,61 @@ export async function dbConsumePasswordResetAndSetPassword(email, code, newPassw
   await pool.query('UPDATE users SET password = ? WHERE LOWER(email) = ?', [hashed, cleanEmail]);
   await pool.query('DELETE FROM password_resets WHERE LOWER(email) = ?', [cleanEmail]);
   return true;
+}
+
+export async function dbGetUserActivityLogs(userId, email) {
+  const uid = Number(userId);
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  const logs = [];
+
+  try {
+    const [notifRows] = await pool.query(
+      `SELECT id, category, title, message, status, created_at
+       FROM notifications_log
+       WHERE (LOWER(recipient) = ? OR title LIKE ?)
+         AND title NOT LIKE '%Redeem Kode%'
+       ORDER BY id DESC LIMIT 40`,
+      [cleanEmail, `%(User #${uid})%`]
+    );
+    for (const r of notifRows) {
+      logs.push({
+        id: `n_${r.id}`,
+        category: String(r.category || 'AUTH').toUpperCase(),
+        title: r.title,
+        message: r.message,
+        status: r.status || 'info',
+        created_at: r.created_at
+      });
+    }
+  } catch (e) { }
+
+  try {
+    const [refRows] = await pool.query(
+      `SELECT id, redeemer_user_id, inviter_user_id, referral_code, reward_redeemer, reward_inviter, created_at
+       FROM referral_redemptions
+       WHERE redeemer_user_id = ? OR inviter_user_id = ?
+       ORDER BY id DESC LIMIT 30`,
+      [uid, uid]
+    );
+    for (const r of refRows) {
+      const isRedeemer = Number(r.redeemer_user_id) === uid;
+      logs.push({
+        id: `r_${r.id}_${isRedeemer ? 'in' : 'inv'}`,
+        category: 'REDEEM',
+        title: isRedeemer
+          ? `🎟️ Redeem Kode "${r.referral_code}" (+${r.reward_redeemer} Token)`
+          : `🎁 Kode "${r.referral_code}" Dipakai Teman (+${r.reward_inviter} Token)`,
+        message: isRedeemer
+          ? `Anda berhasil menukarkan kode ${r.referral_code} dan mendapat +${r.reward_redeemer} Token Free.`
+          : `Ada teman yang menggunakan kode undangan ${r.referral_code} milik Anda (+${r.reward_inviter} Token Free).`,
+        status: 'success',
+        created_at: r.created_at
+      });
+    }
+  } catch (e) { }
+
+  logs.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+  return logs.slice(0, 50);
 }
 
 export { pool };

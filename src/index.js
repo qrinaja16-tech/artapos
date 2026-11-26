@@ -315,7 +315,7 @@ async function startTenantSocket(userId) {
 
         // Cek Saklar ON/OFF Bot (jika OFF, tetap terhubung tapi tidak membalas chat)
         const userCfg = await dbGetConfig(uid);
-        if (userCfg && userCfg.bot_enabled === '0') {
+        if (userCfg && (String(userCfg.bot_enabled) === '0' || userCfg.bot_enabled === false)) {
           console.log(`⏸️ [WA USER #${uid}] Saklar Bot sedang OFF. Pesan dari ${senderName} diabaikan.`);
           continue;
         }
@@ -375,7 +375,15 @@ async function startTenantSocket(userId) {
           await sock.sendPresenceUpdate('composing', jid);
           await new Promise(res => setTimeout(res, 1100));
           await sock.sendPresenceUpdate('paused', jid);
-          await sock.sendMessage(jid, { text: finalReplyText }, { quoted: msg });
+          if (match.item && match.item.image_url) {
+            try {
+              await sock.sendMessage(jid, { image: { url: match.item.image_url }, caption: finalReplyText }, { quoted: msg });
+            } catch (imgErr) {
+              await sock.sendMessage(jid, { text: finalReplyText }, { quoted: msg });
+            }
+          } else {
+            await sock.sendMessage(jid, { text: finalReplyText }, { quoted: msg });
+          }
 
           // Potong kuota (-1 token) dari akun pemilik nomor WhatsApp ini
           await dbDeductQuota(uid);

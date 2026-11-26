@@ -105,7 +105,7 @@ function showAlert(msg, icon = 'info', title = null) {
 }
 
 // Override window.alert default agar semua notifikasi langsung menggunakan SweetAlert2
-window.alert = function(msg) {
+window.alert = function (msg) {
   showAlert(String(msg || ''));
 };
 
@@ -138,7 +138,7 @@ function showToast(title, icon = 'success') {
   if (typeof Swal === 'undefined') return;
   const Toast = Swal.mixin({
     toast: true,
-    position: 'top-end',
+    position: 'center',
     showConfirmButton: false,
     timer: 2500,
     timerProgressBar: true,
@@ -279,7 +279,7 @@ async function apiCall(endpoint, method = 'GET', data = null) {
       if (jsonBody) {
         return jsonBody;
       }
-    } catch (err) {}
+    } catch (err) { }
   }
 
   // Hanya tampilkan layar offline jika perangkat benar-benar tidak punya koneksi internet
@@ -359,7 +359,7 @@ function isLoggedInSession() {
       currentUser = saved;
       return true;
     }
-  } catch (e) {}
+  } catch (e) { }
   return false;
 }
 
@@ -430,6 +430,9 @@ function openCheckout(planId = 'plus35') {
   const orderStoreInput = document.getElementById('orderStoreName');
   const sumEmailTarget = document.getElementById('sumEmailTarget');
   const step2El = document.getElementById('step2Indicator');
+  const step2Line = document.getElementById('step2Line');
+  const step3Circle = document.getElementById('step3Circle');
+  const step3Title = document.getElementById('checkoutStep3Title');
   const step1NextBtn = document.getElementById('btnStep1NextText');
 
   if (isLoggedInSession() && currentUser) {
@@ -439,6 +442,9 @@ function openCheckout(planId = 'plus35') {
     if (guestSection) guestSection.classList.add('hidden');
     if (loggedInBanner) loggedInBanner.classList.remove('hidden');
     if (step2El) step2El.classList.add('hidden');
+    if (step2Line) step2Line.classList.add('hidden');
+    if (step3Circle) step3Circle.textContent = '2';
+    if (step3Title) step3Title.textContent = '2. Konfirmasi & Bayar';
     if (step1NextBtn) step1NextBtn.textContent = 'Lanjut Bayar';
     if (activeEmailEl) activeEmailEl.textContent = `${userEm} (${userSt})`;
     if (activeAvatarEl) activeAvatarEl.textContent = (userEm[0] || 'A').toUpperCase();
@@ -451,6 +457,9 @@ function openCheckout(planId = 'plus35') {
     if (guestSection) guestSection.classList.remove('hidden');
     if (loggedInBanner) loggedInBanner.classList.add('hidden');
     if (step2El) step2El.classList.remove('hidden');
+    if (step2Line) step2Line.classList.remove('hidden');
+    if (step3Circle) step3Circle.textContent = '3';
+    if (step3Title) step3Title.textContent = '3. Konfirmasi & Bayar';
     if (step1NextBtn) step1NextBtn.textContent = 'Lanjut Isi Email';
     if (backTextEl) backTextEl.textContent = 'Kembali';
   }
@@ -567,19 +576,19 @@ function triggerSnapPayment(token) {
   if (!token || !window.snap) return;
 
   window.snap.pay(token, {
-    onSuccess: async function(result) {
+    onSuccess: async function (result) {
       console.log('✅ Snap melaporkan selesai:', result);
       await checkActiveOrderPayment();
     },
-    onPending: function(result) {
+    onPending: function (result) {
       console.log('⏳ Snap Pending:', result);
       alert('⏳ Tagihan berstatus Menunggu Pembayaran.\n\nSilakan scan QRIS atau transfer melalui Bank/E-Wallet Anda. Akun HANYA akan aktif setelah pembayaran terverifikasi sah oleh Midtrans.');
     },
-    onError: function(result) {
+    onError: function (result) {
       console.error('❌ Midtrans Error:', result);
       alert('Pembayaran gagal atau dibatalkan.');
     },
-    onClose: function() {
+    onClose: function () {
       console.log('Popup ditutup oleh pengguna.');
       alert('⚠️ Jendela pembayaran ditutup. Pembayaran belum diselesaikan, sehingga akun Anda belum diaktifkan.\n\nJika Anda sudah melakukan transfer/scan QRIS, klik tombol "Cek Status Pembayaran" di bawah.');
     }
@@ -799,6 +808,7 @@ async function loadUserData() {
     localStorage.setItem('artapos_user', JSON.stringify(currentUser));
     updateUserDashboardUI(currentUser);
     loadReferralStatus();
+    loadUserActivityLogs();
   }
 }
 
@@ -877,6 +887,7 @@ function updateUserDashboardUI(user) {
 
   // Sinkronkan Saklar Bot ON/OFF
   applyBotSwitchUI(user.bot_enabled !== false);
+  updateTeachImageQuotaUI(user);
 
   if (profCurrentEmail) profCurrentEmail.value = user.email || '';
 }
@@ -1139,7 +1150,8 @@ async function pollWhatsAppStatus() {
     currentWaStatus = data.status;
 
     if (data.status === 'connected') {
-      setWaConnectedView(data.phone ? `+${data.phone}` : 'Terhubung');
+      const cleanPhone = data.phone ? (String(data.phone).startsWith('+') ? String(data.phone) : `+${data.phone}`) : 'Terhubung';
+      setWaConnectedView(cleanPhone);
       if (prevStatus && prevStatus !== 'connected') {
         showToast('⚡ WhatsApp Berhasil Terhubung!', 'success');
       }
@@ -1149,7 +1161,7 @@ async function pollWhatsAppStatus() {
       setWaConnectingView();
     }
 
-    if (typeof data.botEnabled === 'boolean') {
+    if (typeof data.botEnabled === 'boolean' && (Date.now() - lastBotToggleAt > 3500)) {
       applyBotSwitchUI(data.botEnabled);
     }
 
@@ -1277,7 +1289,7 @@ async function loadData(showToastMsg = false) {
     const list = await apiCall('/api/knowledge', 'GET');
     if (Array.isArray(list)) {
       knowledgeData = list;
-      try { localStorage.setItem('artapos_cached_knowledge', JSON.stringify(list)); } catch (e) {}
+      try { localStorage.setItem('artapos_cached_knowledge', JSON.stringify(list)); } catch (e) { }
     } else {
       // Fallback ke cache lokal jika sedang Offline
       try {
@@ -1363,6 +1375,7 @@ function renderKnowledgeList(items) {
           <span class="k-category-pill">${escapeHtml(item.category || 'umum')}</span>
           <div class="k-question-text">❓ ${escapeHtml(displayQuestion)}</div>
           <div class="k-answer-text">💡 ${escapeHtml(item.answer)}</div>
+          ${item.image_url ? `<div class="k-item-img-wrap"><img src="${escapeHtml(item.image_url)}" alt="Gambar" class="k-item-thumb"></div>` : ''}
           <div class="k-keywords-meta">🏷️ Kata Kunci: ${escapeHtml(displayKw)}</div>
         </div>
         <div class="k-item-actions">
@@ -1398,35 +1411,48 @@ async function handleTeachSubmit(e) {
   const keywordsStr = document.getElementById('teachKeywords')?.value || '';
   const questionsStr = document.getElementById('teachQuestions')?.value || '';
   const answer = document.getElementById('teachAnswer')?.value || '';
+  const image_url = (document.getElementById('teachImageUrl')?.value || '').trim() || null;
+
+  if (keywordsStr.length > 100) { showAlert('Kata kunci maksimal 100 karakter.', 'warning'); return; }
+  if (questionsStr.length > 100) { showAlert('Contoh pertanyaan maksimal 100 karakter.', 'warning'); return; }
+  if (answer.length > 250) { showAlert('Jawaban bot maksimal 250 karakter.', 'warning'); return; }
+  if (hasForbiddenFilePattern(keywordsStr) || hasForbiddenFilePattern(questionsStr) || hasForbiddenFilePattern(answer)) {
+    showAlert('⛔ Input tidak boleh mengandung file/skrip terlarang (.php, .html, <, >).', 'error');
+    return;
+  }
 
   const questions = questionsStr.split('\n').map(s => s.trim()).filter(Boolean);
   const keywords = keywordsStr.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
   if (questions.length === 0 || !answer) {
-    alert('Pertanyaan dan jawaban bot wajib diisi.');
+    showAlert('Pertanyaan dan jawaban bot wajib diisi.', 'warning');
     return;
   }
 
-  const payload = { questions, keywords, answer, category };
+  const payload = { questions, keywords, answer, category, image_url };
 
   if (editId) {
     payload.id = editId;
     const res = await apiCall('/api/knowledge', 'PUT', payload);
     if (res && res.success) {
-      alert('✅ Pengetahuan berhasil diperbarui!');
+      showToast('✅ Pengetahuan berhasil diperbarui!', 'success');
       cancelEditMode();
-      loadData();
+      await loadData();
+      loadUserData();
     } else {
-      alert('Gagal update: ' + (res?.error || 'Kesalahan sistem'));
+      showAlert('Gagal update: ' + (res?.error || 'Kesalahan sistem'), 'error');
     }
   } else {
     const res = await apiCall('/api/knowledge', 'POST', payload);
     if (res && res.success) {
-      alert('✅ Pengetahuan baru berhasil disimpan!');
+      showToast('✅ Pengetahuan baru berhasil disimpan!', 'success');
       document.getElementById('teachForm')?.reset();
-      loadData();
+      clearTeachImage();
+      updateTeachCharCounters();
+      await loadData();
+      loadUserData();
     } else {
-      alert('Gagal simpan: ' + (res?.error || 'Kesalahan sistem'));
+      showAlert('Gagal simpan: ' + (res?.error || 'Kesalahan sistem'), 'error');
     }
   }
 }
@@ -1455,6 +1481,12 @@ function startEditKnowledge(id) {
   if (qInput) qInput.value = Array.isArray(item.questions) ? item.questions.join('\n') : (item.questions || '');
   if (ansInput) ansInput.value = item.answer || '';
 
+  if (item.image_url) {
+    setTeachImagePreview(item.image_url);
+  } else {
+    clearTeachImage();
+  }
+  updateTeachCharCounters();
   document.getElementById('teachForm')?.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -1470,6 +1502,8 @@ function cancelEditMode() {
   if (btnCancel) btnCancel.classList.add('hidden');
 
   document.getElementById('teachForm')?.reset();
+  clearTeachImage();
+  updateTeachCharCounters();
 }
 
 async function deleteKnowledge(id) {
@@ -2008,11 +2042,11 @@ function renderAdminVisitorChart(visitStats) {
     const sources = Array.isArray(statsObj.trafficSources) && statsObj.trafficSources.length > 0
       ? statsObj.trafficSources
       : [
-          { name: 'TikTok', pct: 0 },
-          { name: 'Google Search', pct: 0 },
-          { name: 'Instagram', pct: 0 },
-          { name: 'Direct', pct: 100 }
-        ];
+        { name: 'TikTok', pct: 0 },
+        { name: 'Google Search', pct: 0 },
+        { name: 'Instagram', pct: 0 },
+        { name: 'Direct', pct: 100 }
+      ];
     srcListEl.innerHTML = sources.map(s => `
       <div>
         <div class="source-item-row">
@@ -2615,7 +2649,7 @@ async function openAdminUserDetail(userId) {
   if (editNewPwd) editNewPwd.value = '';
 
   if (editCurrentActive) {
-    editCurrentActive.textContent = user.active_until 
+    editCurrentActive.textContent = user.active_until
       ? new Date(user.active_until).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
       : 'Belum ditentukan';
   }
@@ -3033,7 +3067,7 @@ function getDetectedDeviceGoogleAccounts() {
         if (typeof em === 'string' && em.endsWith('@gmail.com')) accounts.add(em.toLowerCase());
       });
     }
-  } catch (e) {}
+  } catch (e) { }
 
   const lastEm = (localStorage.getItem('artapos_last_email') || '').trim().toLowerCase();
   if (lastEm && lastEm.endsWith('@gmail.com')) accounts.add(lastEm);
@@ -3041,7 +3075,7 @@ function getDetectedDeviceGoogleAccounts() {
   try {
     const u = JSON.parse(localStorage.getItem('artapos_user') || 'null');
     if (u && u.email && u.email.endsWith('@gmail.com')) accounts.add(u.email.toLowerCase());
-  } catch (e) {}
+  } catch (e) { }
 
   return Array.from(accounts);
 }
@@ -3109,7 +3143,7 @@ async function openFreeRegisterModal() {
           rememberDetectedGmail(cred.id);
           renderDetectedGoogleAccountsInModal();
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const emailInput = document.getElementById('freeEmail');
@@ -3216,7 +3250,7 @@ async function handleGoogleInstantRegister() {
         await quickSelectDetectedGmail(cred.id);
         return;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   // 2. Jika sudah ada email di kotak input atau akun terdeteksi di perangkat, tampilkan Google Account Chooser Interaktif
@@ -3326,7 +3360,7 @@ async function retryNetworkConnection() {
       }
       return;
     }
-  } catch (e) {}
+  } catch (e) { }
   if (!navigator.onLine) setNetworkOfflineState(true);
 }
 
@@ -3383,7 +3417,7 @@ function detectClientTrafficSource() {
     if (combined.includes('tiktok')) return 'TikTok';
     if (combined.includes('google')) return 'Google Search';
     if (combined.includes('instagram') || combined.includes('ig.me')) return 'Instagram';
-  } catch (e) {}
+  } catch (e) { }
   return 'Direct';
 }
 
@@ -3393,8 +3427,8 @@ function trackCtaEvent(eventType) {
       eventType,
       pageView: currentActiveView || 'landing',
       trafficSource: detectClientTrafficSource()
-    }).catch(() => {});
-  } catch (e) {}
+    }).catch(() => { });
+  } catch (e) { }
 }
 
 // ==============================================================
@@ -3414,7 +3448,7 @@ async function initApp() {
     if (refParam && refParam.length >= 3) {
       localStorage.setItem('artapos_pending_ref', refParam);
     }
-  } catch (e) {}
+  } catch (e) { }
 
   const token = localStorage.getItem('artapos_token');
   const hash = window.location.hash.replace('#', '').toLowerCase();
@@ -3451,7 +3485,7 @@ async function initApp() {
     pageView: currentActiveView || 'landing',
     email: currentUser ? currentUser.email : 'Pengunjung',
     trafficSource: detectClientTrafficSource()
-  }).catch(() => {});
+  }).catch(() => { });
 
   if (token) {
     loadData();
@@ -3467,6 +3501,8 @@ async function initApp() {
 // ==============================================================
 // SAKLAR BOT ON/OFF, KLAIM 75 TOKEN GRATIS, & KODE REDEEM
 // ==============================================================
+let lastBotToggleAt = 0;
+
 function applyBotSwitchUI(enabled) {
   const sw = document.getElementById('botToggleSwitch');
   const txt = document.getElementById('botSwitchStatusText');
@@ -3485,9 +3521,11 @@ function applyBotSwitchUI(enabled) {
 }
 
 async function handleToggleBotSwitch(enabled) {
+  lastBotToggleAt = Date.now();
   applyBotSwitchUI(enabled);
   const res = await apiCall('/api/bot/toggle', 'POST', { enabled: Boolean(enabled) });
   if (res && res.success) {
+    if (currentUser) currentUser.bot_enabled = Boolean(enabled);
     showToast(res.message || (enabled ? 'Bot diaktifkan.' : 'Bot dinonaktifkan.'), enabled ? 'success' : 'info');
   } else {
     applyBotSwitchUI(!enabled);
@@ -3634,7 +3672,7 @@ async function handleRedeemReferralCode() {
 function copyReferralLink() {
   const linkInput = document.getElementById('myReferralLinkInput');
   if (!linkInput || !linkInput.value) return;
-  navigator.clipboard?.writeText(linkInput.value).catch(() => {});
+  navigator.clipboard?.writeText(linkInput.value).catch(() => { });
   showToast('📋 Link undangan berhasil disalin!', 'success');
 }
 
@@ -3856,6 +3894,211 @@ window.handleForgotSendCode = handleForgotSendCode;
 window.handleForgotVerifyCode = handleForgotVerifyCode;
 window.validateForgotPwdLive = validateForgotPwdLive;
 window.handleForgotResetSubmit = handleForgotResetSubmit;
+
+// ==============================================================
+// LOG AKTIVITAS & REDEEM PER AKUN
+// ==============================================================
+let cachedUserActivityLogs = [];
+let currentUserLogFilter = 'all';
+
+async function loadUserActivityLogs(showToastMsg = false) {
+  const res = await apiCall('/api/user/activity-logs', 'GET');
+  if (res && res.success) {
+    cachedUserActivityLogs = Array.isArray(res.logs) ? res.logs : [];
+    renderUserActivityLogs();
+    if (showToastMsg) showToast('Log aktivitas diperbarui.', 'success');
+  }
+}
+
+function setUserLogFilter(filter) {
+  currentUserLogFilter = filter || 'all';
+  const map = {
+    all: 'btnUserLogAll',
+    REDEEM: 'btnUserLogRedeem',
+    AUTH: 'btnUserLogAuth',
+    WHATSAPP: 'btnUserLogWa'
+  };
+  Object.entries(map).forEach(([k, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('active', k === currentUserLogFilter);
+  });
+  renderUserActivityLogs();
+}
+
+function renderUserActivityLogs() {
+  const container = document.getElementById('userActivityLogsList');
+  if (!container) return;
+
+  const list = cachedUserActivityLogs.filter(l => {
+    const cat = String(l.category || '').toUpperCase();
+    if (currentUserLogFilter === 'all') return true;
+    if (currentUserLogFilter === 'REDEEM') return cat === 'REDEEM' || cat === 'REGISTER';
+    if (currentUserLogFilter === 'AUTH') return cat === 'LOGIN' || cat === 'LOGOUT' || cat === 'AUTH';
+    if (currentUserLogFilter === 'WHATSAPP') return cat === 'WHATSAPP';
+    return true;
+  });
+
+  if (list.length === 0) {
+    container.innerHTML = '<div class="user-log-empty">Belum ada riwayat aktivitas untuk filter ini.</div>';
+    return;
+  }
+
+  container.innerHTML = list.map(l => {
+    const cat = String(l.category || 'INFO').toUpperCase();
+    const dt = l.created_at
+      ? new Date(l.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+      : '-';
+    const dotClass = cat === 'REDEEM' ? 'green' : (cat === 'LOGOUT' ? 'slate' : (cat === 'WHATSAPP' ? 'emerald' : 'blue'));
+    return `
+      <div class="user-log-row">
+        <span class="user-log-dot ${dotClass}"></span>
+        <div class="user-log-body">
+          <div class="user-log-row-head">
+            <span class="user-log-title">${escapeHtml(l.title || '')}</span>
+            <span class="user-log-time">${dt}</span>
+          </div>
+          <div class="user-log-msg">${escapeHtml(l.message || '')}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+window.loadUserActivityLogs = loadUserActivityLogs;
+window.setUserLogFilter = setUserLogFilter;
+
+// ==============================================================
+// CHAR COUNTERS, WHATSAPP FORMAT TOOLBAR, & CLOUDINARY UPLOAD
+// ==============================================================
+function updateTeachCharCounters() {
+  const kw = document.getElementById('teachKeywords')?.value || '';
+  const q = document.getElementById('teachQuestions')?.value || '';
+  const ans = document.getElementById('teachAnswer')?.value || '';
+
+  const kwEl = document.getElementById('kwCharCount');
+  const qEl = document.getElementById('qCharCount');
+  const ansEl = document.getElementById('ansCharCount');
+
+  if (kwEl) kwEl.textContent = `${kw.length}/100`;
+  if (qEl) qEl.textContent = `${q.length}/100`;
+  if (ansEl) ansEl.textContent = `${ans.length}/250`;
+}
+
+function wrapWaFormat(prefix, suffix) {
+  const el = document.getElementById('teachAnswer');
+  if (!el) return;
+  const start = el.selectionStart || 0;
+  const end = el.selectionEnd || 0;
+  const val = el.value || '';
+  const selected = val.slice(start, end) || 'teks';
+  const next = val.slice(0, start) + prefix + selected + suffix + val.slice(end);
+  if (next.length > 250) {
+    showToast('Maksimal 250 karakter!', 'warning');
+    return;
+  }
+  el.value = next;
+  el.focus();
+  updateTeachCharCounters();
+}
+
+function insertWaEmoji(emoji) {
+  const el = document.getElementById('teachAnswer');
+  if (!el) return;
+  const start = el.selectionStart ?? el.value.length;
+  const end = el.selectionEnd ?? el.value.length;
+  const next = el.value.slice(0, start) + emoji + el.value.slice(end);
+  if (next.length > 250) {
+    showToast('Maksimal 250 karakter!', 'warning');
+    return;
+  }
+  el.value = next;
+  el.focus();
+  updateTeachCharCounters();
+}
+
+function updateTeachImageQuotaUI(user) {
+  const badge = document.getElementById('teachImageQuotaBadge');
+  const btn = document.getElementById('btnPickTeachImage');
+  const hint = document.getElementById('teachImageHintText');
+  const limit = Number(user?.image_limit ?? 0);
+  const used = Number(user?.image_used ?? 0);
+
+  if (badge) badge.textContent = limit > 0 ? `${used}/${limit} Gambar` : 'Paket Gratis (0 Gambar)';
+  if (btn) btn.disabled = limit <= 0;
+  if (hint) {
+    hint.textContent = limit <= 0
+      ? 'Upgrade minimal Paket 25K (1 gambar) atau 35K (5 gambar) untuk upload gambar produk.'
+      : `Tersisa ${Math.max(0, limit - used)} slot gambar di paket Anda (disimpan di Cloudinary).`;
+  }
+}
+
+function setTeachImagePreview(url) {
+  const hidden = document.getElementById('teachImageUrl');
+  const wrap = document.getElementById('teachImagePreviewWrap');
+  const img = document.getElementById('teachImagePreviewImg');
+  if (hidden) hidden.value = url || '';
+  if (img) img.src = url || '';
+  if (wrap) wrap.classList.toggle('hidden', !url);
+}
+
+function clearTeachImage() {
+  setTeachImagePreview('');
+  const fileIn = document.getElementById('teachImageFileInput');
+  if (fileIn) fileIn.value = '';
+}
+
+async function handleTeachImageSelected(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  if (/\.(php|html?|js|exe|sh)$/i.test(file.name)) {
+    showAlert('⛔ File .php / .html / skrip ditolak!', 'error');
+    input.value = '';
+    return;
+  }
+  if (!/^image\/(png|jpeg|jpg|webp)$/i.test(file.type)) {
+    showAlert('Wajib file gambar (PNG, JPG, WEBP).', 'warning');
+    input.value = '';
+    return;
+  }
+  if (file.size > 3 * 1024 * 1024) {
+    showAlert('Ukuran gambar maksimal 3 MB.', 'warning');
+    input.value = '';
+    return;
+  }
+
+  const btn = document.getElementById('btnPickTeachImage');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Mengupload ke Cloudinary...'; }
+
+  try {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Gagal membaca file.'));
+      reader.readAsDataURL(file);
+    });
+    const res = await apiCall('/api/upload-image', 'POST', { fileName: file.name, dataUrl });
+    if (res && res.success && res.url) {
+      setTeachImagePreview(res.url);
+      if (currentUser) {
+        currentUser.image_used = res.used;
+        currentUser.image_limit = res.limit;
+        updateTeachImageQuotaUI(currentUser);
+      }
+      showToast('✅ Gambar berhasil diupload ke Cloudinary!', 'success');
+    } else {
+      showAlert(res?.error || 'Gagal upload gambar.', 'error');
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🖼️ Pilih & Upload Gambar'; }
+    input.value = '';
+  }
+}
+
+window.updateTeachCharCounters = updateTeachCharCounters;
+window.wrapWaFormat = wrapWaFormat;
+window.insertWaEmoji = insertWaEmoji;
+window.handleTeachImageSelected = handleTeachImageSelected;
+window.clearTeachImage = clearTeachImage;
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp);
