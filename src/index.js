@@ -37,6 +37,7 @@ const respondGroupTagOnly = process.env.RESPOND_GROUP_TAG_ONLY !== 'false';
 const WEB_PORT = Number(process.env.PORT) || 3000;
 let webServerStarted = false;
 const userCooldownMap = new Map();
+const processedMsgIds = new Map(); // Anti-double reply per msg.key.id
 
 function cleanupTenantWa(uid) {
   try {
@@ -305,11 +306,24 @@ async function startTenantSocket(userId) {
         if (!trimmedText || isFromMe) continue;
 
         const senderName = msg.pushName || (isGroup ? 'Pelanggan Grup' : 'Kakak Pelanggan');
+        const now = Date.now();
+
+        // Proteksi Anti-Double Reply berdasarkan msg.key.id
+        const msgId = msg.key?.id;
+        if (msgId) {
+          const msgKey = `${uid}:${msgId}`;
+          if (processedMsgIds.has(msgKey)) continue;
+          processedMsgIds.set(msgKey, now);
+          if (processedMsgIds.size > 2000) {
+            for (const [k, ts] of processedMsgIds) {
+              if (now - ts > 120000) processedMsgIds.delete(k);
+            }
+          }
+        }
 
         // Proteksi Cooldown per pengirim & akun
         const cooldownKey = `${uid}:${jid}`;
         const lastMsgTime = userCooldownMap.get(cooldownKey) || 0;
-        const now = Date.now();
         if (now - lastMsgTime < 2500) continue;
         userCooldownMap.set(cooldownKey, now);
 
