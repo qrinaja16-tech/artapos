@@ -4195,11 +4195,14 @@ async function loadReferralStatus() {
 
   if (redeemedList) {
     const rows = Array.isArray(res.redeemedCodes) ? res.redeemedCodes : [];
+    const todayUsed = Number(res.todayRedeemedCount || 0);
+    const dailyMax = Number(res.dailyRedeemLimit || 2);
+    const quotaChip = `<span style="font-size:0.74rem; color:#475569; font-weight:700;">Kuota Hari Ini: ${todayUsed}/${dailyMax}</span> `;
     if (rows.length > 0) {
-      redeemedList.innerHTML = `<span style="font-size:0.75rem; color:#64748b; font-weight:700;">Sudah diredeem:</span> ` +
-        rows.map(r => `<span class="redeem-chip-done">✓ ${escapeHtml(r.referral_code)} (+${r.reward_redeemer || 25})</span>`).join('');
+      redeemedList.innerHTML = quotaChip + `<span style="font-size:0.75rem; color:#64748b; font-weight:700;">• Sudah diredeem:</span> ` +
+        rows.map(r => `<span class="redeem-chip-done">✓ ${escapeHtml(r.referral_code)} (+${r.reward_redeemer || 50})</span>`).join('');
     } else {
-      redeemedList.innerHTML = '';
+      redeemedList.innerHTML = quotaChip;
     }
   }
 
@@ -4240,17 +4243,18 @@ async function handleRedeemReferralCode() {
   const btn = document.getElementById('btnRedeemReferral');
   if (btn) { btn.disabled = true; btn.textContent = 'Memproses...'; }
   try {
-    const res = await apiCall('/api/referral/redeem', 'POST', { code });
+    const deviceFingerprint = typeof getClientDeviceFingerprint === 'function' ? getClientDeviceFingerprint() : '';
+    const res = await apiCall('/api/referral/redeem', 'POST', { code, deviceFingerprint });
     if (res && res.success) {
       if (input) input.value = '';
       localStorage.removeItem('artapos_pending_ref');
       await loadUserData();
-      showAlert(res.message || '🎉 Berhasil redeem +25 Token Free!', 'success', 'Redeem Berhasil!');
+      showAlert(res.message || '🎉 Berhasil redeem +50 Token Free!', 'success', 'Redeem Berhasil!');
     } else {
       showAlert(res?.error || 'Gagal me-redeem kode.', 'error');
     }
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Redeem (+25)'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Redeem (+50)'; }
   }
 }
 
@@ -4265,7 +4269,7 @@ function shareReferralWhatsApp() {
   const linkInput = document.getElementById('myReferralLinkInput');
   const code = document.getElementById('myReferralCodeDisplay')?.textContent || '';
   const url = linkInput?.value || window.location.origin;
-  const text = `Mau token gratis AI WhatsApp di artapos.id? Daftar sekarang dan masukkan kode undangan *${code}* untuk dapat +25 Token Free! Klik: ${url}`;
+  const text = `Mau token gratis AI WhatsApp di artapos.id? Daftar sekarang dan masukkan kode undangan *${code}* untuk dapat +50 Token Free! Klik: ${url}`;
   window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
 }
 

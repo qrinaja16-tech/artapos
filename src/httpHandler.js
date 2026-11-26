@@ -1400,13 +1400,14 @@ export function createHttpHandler(waHooks = {}) {
           return;
         }
         const body = await readJsonBody(req);
-        const result = await dbRedeemReferralCode(session.user_id, body.code || '');
+        const deviceFp = resolveServerDeviceFingerprint(req, body.deviceFingerprint || '');
+        const result = await dbRedeemReferralCode(session.user_id, body.code || '', deviceFp);
 
         await dbAddNotificationLog({
           category: 'REDEEM',
           recipient: session.email,
-          title: `🎟️ Redeem Kode "${result.code}" (+25 Token)`,
-          message: `Anda berhasil menukarkan kode "${result.code}" dan mendapat +25 Token Free.`,
+          title: `🎟️ Redeem Kode "${result.code}" (+${result.rewardRedeemer} Token)`,
+          message: `Anda berhasil menukarkan kode "${result.code}" dan mendapat +${result.rewardRedeemer} Token Free (berlaku 14 hari).`,
           status: 'success'
         }).catch(() => { });
 
@@ -1414,7 +1415,7 @@ export function createHttpHandler(waHooks = {}) {
         res.end(JSON.stringify({
           success: true,
           ...result,
-          message: `🎉 Berhasil redeem kode "${result.code}"! Anda dapat +25 Token Free.`
+          message: `🎉 Berhasil redeem kode "${result.code}"! Anda dapat +${result.rewardRedeemer} Token Free (berlaku 14 hari).`
         }));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });

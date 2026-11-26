@@ -218,18 +218,57 @@ export async function initTiDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // Tabel Referral Redemptions (1 User bisa redeem banyak kode berbeda, tapi tidak bisa kode yang sama >1x)
+    // Tabel Referral Redemptions (1 User bisa redeem banyak kode berbeda maks 2x/hari, anti-self, anti-clone, anti-loop)
     await conn.query(`
       CREATE TABLE IF NOT EXISTS referral_redemptions (
         id INT AUTO_INCREMENT PRIMARY KEY,
         redeemer_user_id INT NOT NULL,
         inviter_user_id INT NOT NULL,
         referral_code VARCHAR(16) NOT NULL,
-        reward_redeemer INT DEFAULT 25,
-        reward_inviter INT DEFAULT 50,
+        reward_redeemer INT DEFAULT 50,
+        reward_inviter INT DEFAULT 25,
+        redeemer_device_id VARCHAR(128) DEFAULT NULL,
+        redeemer_wa_phone VARCHAR(64) DEFAULT NULL,
+        expires_at DATETIME DEFAULT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uniq_redeemer_code (redeemer_user_id, referral_code),
         INDEX idx_inviter (inviter_user_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+    try {
+      const [colsRefDev] = await conn.query("SHOW COLUMNS FROM referral_redemptions LIKE 'redeemer_device_id'");
+      if (!colsRefDev || colsRefDev.length === 0) {
+        await conn.query("ALTER TABLE referral_redemptions ADD COLUMN redeemer_device_id VARCHAR(128) DEFAULT NULL");
+      }
+      const [colsRefWa] = await conn.query("SHOW COLUMNS FROM referral_redemptions LIKE 'redeemer_wa_phone'");
+      if (!colsRefWa || colsRefDev.length === 0) {
+        try { await conn.query("ALTER TABLE referral_redemptions ADD COLUMN redeemer_wa_phone VARCHAR(64) DEFAULT NULL"); } catch (_) {}
+      }
+      const [colsRefExp] = await conn.query("SHOW COLUMNS FROM referral_redemptions LIKE 'expires_at'");
+      if (!colsRefExp || colsRefExp.length === 0) {
+        try { await conn.query("ALTER TABLE referral_redemptions ADD COLUMN expires_at DATETIME DEFAULT NULL"); } catch (_) {}
+      }
+      try {
+        await conn.query("ALTER TABLE referral_redemptions ADD UNIQUE INDEX uniq_pair_direction (redeemer_user_id, inviter_user_id)");
+      } catch (_) {}
+      try {
+        await conn.query("ALTER TABLE referral_redemptions ADD INDEX idx_redeemer_date (redeemer_user_id, created_at)");
+      } catch (_) {}
+    } catch (_) {}
+
+    // Tabel Riwayat Transaksi Token Transparan (Termasuk Bonus Referral + Masa Berlaku)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS token_transactions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        tx_type VARCHAR(40) NOT NULL,
+        amount INT NOT NULL,
+        description VARCHAR(255) NOT NULL,
+        reference_id VARCHAR(80) DEFAULT NULL,
+        expires_at DATETIME DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_token_tx_user (user_id),
+        INDEX idx_token_tx_expires (expires_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
@@ -1833,65 +1872,199 @@ export async function dbCreateUserReferralCode(userId, rawCode) {
   return { success: true, code };
 }
 
-export async function dbRedeemReferralCode(userId, rawCode) {
+function normalizeWaPhoneForCheck(rawVal) {
+  if (!rawVal) return '';
+  let digits = String(rawVal).replace(/[^0-9]/g, '');
+  if (digits.startsWith('08')) digits = '62' + digits.slice(1);
+  return digits.length >= 9 ? digits : '';
+}
+
+export async function dbRedeemReferralCode(userId, rawCode, clientDeviceFp = '') {
   const uid = Number(userId);
   const code = normalizeReferralCode(rawCode);
   if (code.length < 3 || code.length > 10) {
     throw new Error('Masukkan kode redeem yang valid (3–10 karakter).');
   }
 
-  const [inviterRows] = await pool.query('SELECT id, email, referral_code, active_until FROM users WHERE referral_code = ? LIMIT 1', [code]);
-  if (inviterRows.length === 0) {
-    throw new Error(`Kode "${code}" tidak ditemukan.`);
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // 1. Lock baris user yang me-redeem (Redeemer)
+    const [redeemerRows] = await conn.query(
+      'SELECT id, email, device_id, free_claim_device_id, referral_code, active_until FROM users WHERE id = ? LIMIT 1 FOR UPDATE',
+      [uid]
+    );
+    if (!redeemerRows || redeemerRows.length === 0) {
+      throw new Error('Akun pengguna tidak ditemukan.');
+    }
+    const redeemer = redeemerRows[0];
+
+    // 2. Lock baris pemilik kode referral (Inviter)
+    const [inviterRows] = await conn.query(
+      'SELECT id, email, device_id, free_claim_device_id, referral_code, active_until FROM users WHERE referral_code = ? LIMIT 1 FOR UPDATE',
+      [code]
+    );
+    if (!inviterRows || inviterRows.length === 0) {
+      throw new Error(`Kode referral "${code}" tidak ditemukan. Pastikan kode yang dimasukkan sudah benar.`);
+    }
+    const inviter = inviterRows[0];
+    const inviterId = Number(inviter.id);
+
+    // 3. Cegah redeem kode milik sendiri
+    if (inviterId === uid) {
+      throw new Error('⛔ Anda tidak dapat me-redeem kode referral milik akun Anda sendiri.');
+    }
+
+    // 4. Cegah redeem kode yang sama / pemilik kode yang sama lebih dari 1 kali
+    const [dup] = await conn.query(
+      'SELECT id FROM referral_redemptions WHERE redeemer_user_id = ? AND (referral_code = ? OR inviter_user_id = ?) LIMIT 1 FOR UPDATE',
+      [uid, code, inviterId]
+    );
+    if (dup && dup.length > 0) {
+      throw new Error(`⛔ Anda sudah pernah me-redeem kode "${code}" sebelumnya. Gunakan kode berbeda dari teman lain.`);
+    }
+
+    // 5. Rate Limit Harian: Maksimal 2 kali redeem per hari per akun
+    const [[todayRow]] = await conn.query(
+      'SELECT COUNT(*) AS today_count FROM referral_redemptions WHERE redeemer_user_id = ? AND DATE(created_at) = CURDATE() FOR UPDATE',
+      [uid]
+    );
+    if (Number(todayRow?.today_count || 0) >= 2) {
+      throw new Error('⛔ Batas klaim harian tercapai (maksimal 2 kode referral per hari). Silakan coba lagi besok.');
+    }
+
+    // 6. Cegah device_id / fingerprint yang sama antara redeemer & pemilik kode
+    const cleanClientFp = String(clientDeviceFp || '').trim();
+    const redeemerDevices = new Set(
+      [cleanClientFp, redeemer.device_id, redeemer.free_claim_device_id]
+        .map(v => String(v || '').trim())
+        .filter(Boolean)
+    );
+    const inviterDevices = new Set(
+      [inviter.device_id, inviter.free_claim_device_id]
+        .map(v => String(v || '').trim())
+        .filter(Boolean)
+    );
+    for (const dev of redeemerDevices) {
+      if (inviterDevices.has(dev)) {
+        throw new Error('⛔ Redeem ditolak: Perangkat Anda terdeteksi sama dengan perangkat pemilik kode referral.');
+      }
+    }
+
+    // 7. Cegah nomor WhatsApp yang sama antara redeemer & pemilik kode
+    const [cfgRows] = await conn.query(
+      "SELECT user_id, key_name, value_data FROM config WHERE user_id IN (?, ?) AND key_name IN ('wa_phone', 'owner_number')",
+      [uid, inviterId]
+    );
+    const redeemerPhones = new Set();
+    const inviterPhones = new Set();
+    for (const row of cfgRows || []) {
+      let val = row.value_data;
+      try { val = JSON.parse(row.value_data); } catch (_) {}
+      const norm = normalizeWaPhoneForCheck(val);
+      if (!norm) continue;
+      if (Number(row.user_id) === uid) redeemerPhones.add(norm);
+      if (Number(row.user_id) === inviterId) inviterPhones.add(norm);
+    }
+    for (const ph of redeemerPhones) {
+      if (inviterPhones.has(ph)) {
+        throw new Error('⛔ Redeem ditolak: Nomor WhatsApp akun Anda sama dengan nomor WhatsApp pemilik kode referral.');
+      }
+    }
+
+    // 8. Cegah saling redeem langsung (A <-> B)
+    const [mutualRows] = await conn.query(
+      'SELECT id FROM referral_redemptions WHERE redeemer_user_id = ? AND inviter_user_id = ? LIMIT 1',
+      [inviterId, uid]
+    );
+    if (mutualRows && mutualRows.length > 0) {
+      throw new Error('⛔ Redeem ditolak: Pemilik kode ini sudah pernah menggunakan kode referral Anda (tidak diperbolehkan saling tukar kode).');
+    }
+
+    // 9. Cegah loop pendek berantai (A -> B -> C -> A)
+    const [loopRows] = await conn.query(
+      `SELECT r1.id
+       FROM referral_redemptions r1
+       INNER JOIN referral_redemptions r2 ON r1.inviter_user_id = r2.redeemer_user_id
+       WHERE r1.redeemer_user_id = ? AND r2.inviter_user_id = ?
+       LIMIT 1`,
+      [inviterId, uid]
+    );
+    if (loopRows && loopRows.length > 0) {
+      throw new Error('⛔ Redeem ditolak: Terdeteksi putaran referral berantai (loop) antar akun yang saling terhubung.');
+    }
+
+    // 10. Eksekusi Atomic Reward: +50 Token untuk yang me-redeem, +25 Token untuk pemilik kode (Masa berlaku 14 hari)
+    const rewardRedeemer = 50;
+    const rewardInviter = 25;
+    const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    const primaryDevice = cleanClientFp || redeemer.device_id || redeemer.free_claim_device_id || null;
+    const primaryPhone = [...redeemerPhones][0] || null;
+
+    await conn.query(
+      `INSERT INTO referral_redemptions
+       (redeemer_user_id, inviter_user_id, referral_code, reward_redeemer, reward_inviter, redeemer_device_id, redeemer_wa_phone, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [uid, inviterId, code, rewardRedeemer, rewardInviter, primaryDevice, primaryPhone, expiresAt]
+    );
+
+    // +50 Token ke Redeemer
+    await conn.query(
+      `UPDATE users
+       SET quota_total = COALESCE(quota_total, 0) + ?,
+           plan = CASE WHEN plan = 'Akun Baru (Belum Klaim)' OR plan IS NULL THEN 'Paket Bonus Redeem' ELSE plan END,
+           active_until = CASE WHEN active_until IS NULL OR active_until < NOW() THEN ? ELSE active_until END
+       WHERE id = ?`,
+      [rewardRedeemer, expiresAt, uid]
+    );
+
+    // +25 Token ke Inviter (Pemilik Kode)
+    await conn.query(
+      `UPDATE users
+       SET quota_total = COALESCE(quota_total, 0) + ?,
+           plan = CASE WHEN plan = 'Akun Baru (Belum Klaim)' OR plan IS NULL THEN 'Paket Bonus Undang Teman' ELSE plan END,
+           active_until = CASE WHEN active_until IS NULL OR active_until < NOW() THEN ? ELSE active_until END
+       WHERE id = ?`,
+      [rewardInviter, expiresAt, inviterId]
+    );
+
+    // Catat di tabel riwayat transaksi token (token_transactions)
+    await conn.query(
+      `INSERT INTO token_transactions (user_id, tx_type, amount, description, reference_id, expires_at)
+       VALUES (?, 'REFERRAL_REDEEM', ?, ?, ?, ?),
+              (?, 'REFERRAL_INVITE_BONUS', ?, ?, ?, ?)`,
+      [
+        uid,
+        rewardRedeemer,
+        `Bonus Redeem Kode Referral "${code}" (+${rewardRedeemer} Token, berlaku 14 hari)`,
+        code,
+        expiresAt,
+        inviterId,
+        rewardInviter,
+        `Bonus Kode Referral "${code}" dipakai oleh akun #${uid} (+${rewardInviter} Token, berlaku 14 hari)`,
+        code,
+        expiresAt
+      ]
+    );
+
+    await conn.commit();
+
+    return {
+      success: true,
+      code,
+      rewardRedeemer,
+      rewardInviter,
+      expiresAt,
+      inviterId,
+      inviterEmail: inviter.email
+    };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
-  const inviter = inviterRows[0];
-
-  if (Number(inviter.id) === uid) {
-    throw new Error('⛔ Anda tidak bisa me-redeem kode undangan milik sendiri.');
-  }
-
-  const [dup] = await pool.query(
-    'SELECT id FROM referral_redemptions WHERE redeemer_user_id = ? AND referral_code = ? LIMIT 1',
-    [uid, code]
-  );
-  if (dup.length > 0) {
-    throw new Error(`⛔ Anda sudah pernah me-redeem kode "${code}". Gunakan kode berbeda dari teman lain.`);
-  }
-
-  await pool.query(
-    'INSERT INTO referral_redemptions (redeemer_user_id, inviter_user_id, referral_code, reward_redeemer, reward_inviter) VALUES (?, ?, ?, 25, 50)',
-    [uid, inviter.id, code]
-  );
-
-  const extendDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-  // +25 Token ke Redeemer
-  await pool.query(
-    `UPDATE users
-     SET quota_total = COALESCE(quota_total, 0) + 25,
-         plan = CASE WHEN plan = 'Akun Baru (Belum Klaim)' OR plan IS NULL THEN 'Paket Bonus Redeem' ELSE plan END,
-         active_until = CASE WHEN active_until IS NULL OR active_until < NOW() THEN ? ELSE active_until END
-     WHERE id = ?`,
-    [extendDate, uid]
-  );
-
-  // +50 Token ke Inviter
-  await pool.query(
-    `UPDATE users
-     SET quota_total = COALESCE(quota_total, 0) + 50,
-         plan = CASE WHEN plan = 'Akun Baru (Belum Klaim)' OR plan IS NULL THEN 'Paket Bonus Undang Teman' ELSE plan END,
-         active_until = CASE WHEN active_until IS NULL OR active_until < NOW() THEN ? ELSE active_until END
-     WHERE id = ?`,
-    [extendDate, inviter.id]
-  );
-
-  return {
-    success: true,
-    code,
-    rewardRedeemer: 25,
-    rewardInviter: 50,
-    inviterId: inviter.id,
-    inviterEmail: inviter.email
-  };
 }
 
 export async function dbGetUserReferralStats(userId) {
@@ -1901,14 +2074,20 @@ export async function dbGetUserReferralStats(userId) {
     'SELECT COUNT(*) AS total_invited, COALESCE(SUM(reward_inviter), 0) AS total_earned FROM referral_redemptions WHERE inviter_user_id = ?',
     [uid]
   );
+  const [[todayStats]] = await pool.query(
+    'SELECT COUNT(*) AS today_count FROM referral_redemptions WHERE redeemer_user_id = ? AND DATE(created_at) = CURDATE()',
+    [uid]
+  );
   const [redeemedRows] = await pool.query(
-    'SELECT referral_code, reward_redeemer, created_at FROM referral_redemptions WHERE redeemer_user_id = ? ORDER BY id DESC LIMIT 30',
+    'SELECT referral_code, reward_redeemer, expires_at, created_at FROM referral_redemptions WHERE redeemer_user_id = ? ORDER BY id DESC LIMIT 30',
     [uid]
   );
   return {
     ownCode: user?.referral_code || null,
     totalInvited: Number(invStats?.total_invited || 0),
     totalBonusEarned: Number(invStats?.total_earned || 0),
+    todayRedeemedCount: Number(todayStats?.today_count || 0),
+    dailyRedeemLimit: 2,
     redeemedCodes: redeemedRows || []
   };
 }
