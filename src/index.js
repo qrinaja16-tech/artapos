@@ -4,6 +4,7 @@ import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { knowledgeManager } from './knowledge.js';
+import { generateTieredBotReply } from './aiBrain.js';
 import { createHttpHandler } from './httpHandler.js';
 import {
   initTiDB,
@@ -46,7 +47,7 @@ function cleanupTenantWa(uid) {
       fs.rmSync(userDir, { recursive: true, force: true });
     }
     tenantSessions.delete(Number(uid));
-  } catch (e) {}
+  } catch (e) { }
 }
 
 const handleHttpRequest = createHttpHandler({
@@ -65,7 +66,7 @@ function startWebServer() {
     if (err.code === 'EADDRINUSE') {
       console.log(`⚠️ Port ${WEB_PORT} masih terpakai, mencoba menghubungkan ulang dalam 1.5 detik...`);
       setTimeout(() => {
-        try { server.close(); } catch (e) {}
+        try { server.close(); } catch (e) { }
         server.listen(WEB_PORT, () => {
           console.log(`🌐 Web Dashboard Aktif: http://localhost:${WEB_PORT}`);
         });
@@ -139,9 +140,9 @@ async function resetTenantWhatsApp(userId) {
       tenant.reconnectTimer = null;
     }
     if (tenant.sock) {
-      try { tenant.sock.ev.removeAllListeners(); } catch (e) {}
-      try { await tenant.sock.logout(); } catch (e) {}
-      try { tenant.sock.end(undefined); } catch (e) {}
+      try { tenant.sock.ev.removeAllListeners(); } catch (e) { }
+      try { await tenant.sock.logout(); } catch (e) { }
+      try { tenant.sock.end(undefined); } catch (e) { }
       tenant.sock = null;
     }
     tenant.status = 'connecting';
@@ -155,7 +156,7 @@ async function resetTenantWhatsApp(userId) {
     if (fs.existsSync(userDir)) {
       fs.rmSync(userDir, { recursive: true, force: true });
     }
-  } catch (e) {}
+  } catch (e) { }
 
   await dbSetUserWaStatus(uid, 'scan_qr', '');
   await ensureTenantWhatsApp(uid);
@@ -182,8 +183,8 @@ async function startTenantSocket(userId) {
 
   try {
     if (tenant.sock) {
-      try { tenant.sock.ev.removeAllListeners(); } catch (e) {}
-      try { tenant.sock.end(undefined); } catch (e) {}
+      try { tenant.sock.ev.removeAllListeners(); } catch (e) { }
+      try { tenant.sock.end(undefined); } catch (e) { }
       tenant.sock = null;
     }
 
@@ -259,7 +260,7 @@ async function startTenantSocket(userId) {
             if (fs.existsSync(userDir)) {
               fs.rmSync(userDir, { recursive: true, force: true });
             }
-          } catch (e) {}
+          } catch (e) { }
           await dbSetUserWaStatus(uid, 'scan_qr', '');
           if (tenant.reconnectTimer) clearTimeout(tenant.reconnectTimer);
           tenant.reconnectTimer = setTimeout(() => {
@@ -282,7 +283,7 @@ async function startTenantSocket(userId) {
           title: `WhatsApp Tertaut (User #${uid})`,
           message: `Nomor WhatsApp ${tenant.phone} berhasil tertaut ke sistem bot AI (User ID #${uid}).`,
           status: 'success'
-        }).catch(() => {});
+        }).catch(() => { });
       }
     });
 
@@ -341,10 +342,6 @@ async function startTenantSocket(userId) {
           continue;
         }
 
-        if (autoRead) {
-          try { await sock.readMessages([msg.key]); } catch (e) {}
-        }
-
         console.log(`📩 [WA USER #${uid}] Pesan dari ${senderName}: "${trimmedText.slice(0, 50)}"`);
 
         if (isGroup && respondGroupTagOnly) {
@@ -362,53 +359,44 @@ async function startTenantSocket(userId) {
           cleanQuery = cleanQuery.replace(/@\d+/g, '').trim();
         }
 
-        // Cari jawaban dari Knowledge Base milik akun userId ini
-        const match = await knowledgeManager.findAnswer(cleanQuery, uid);
+        // Proses balasan AI bertingkat sesuai paket (Basic KB -> Inventory -> Invoice -> Ongkir -> Memory -> Handover -> Genius)
+        const reply = await generateTieredBotReply({
+          userId: uid,
+          jid,
+          senderName,
+          text: cleanQuery,
+          userPlan: userQuota?.plan || 'free',
+          userRole: userQuota?.role || 'user'
+        });
 
-        if (match.found) {
-          const rawAns = String(match.answer || '').trim();
-          const planLower = String(userQuota?.plan || '').toLowerCase();
-          // Free (75 Token) & 25K (300 Token) masih ada watermark; 35K, 50K, 70K, 100K+ BEBAS watermark
-          const isWatermarkFree =
-            planLower.includes('35k') ||
-            planLower.includes('plus') ||
-            planLower.includes('50k') ||
-            planLower.includes('starter') ||
-            planLower.includes('70k') ||
-            planLower.includes('100k') ||
-            planLower.includes('bisnis') ||
-            planLower.includes('pro') ||
-            planLower.includes('enterprise') ||
-            planLower.includes('unlimited') ||
-            planLower.includes('admin');
-
-          const finalReplyText = (isWatermarkFree || rawAns.toLowerCase().includes('sent via artapos.id'))
-            ? rawAns
-            : `${rawAns}\n\n> sent via artapos.id`;
-
+        if (reply.found && reply.answer) {
+          // Hanya Auto-Read jika pesan memang ada jawabannya di DB (agar chat pribadi tetap Unread di HP owner)
+          if (autoRead) {
+            try { await sock.readMessages([msg.key]); } catch (e) { }
+          }
           await sock.sendPresenceUpdate('composing', jid);
           await new Promise(res => setTimeout(res, 1100));
           await sock.sendPresenceUpdate('paused', jid);
-          if (match.item && match.item.image_url) {
+          if (reply.imageUrl) {
             try {
-              await sock.sendMessage(jid, { image: { url: match.item.image_url }, caption: finalReplyText }, { quoted: msg });
+              await sock.sendMessage(jid, { image: { url: reply.imageUrl }, caption: reply.answer }, { quoted: msg });
             } catch (imgErr) {
-              await sock.sendMessage(jid, { text: finalReplyText }, { quoted: msg });
+              await sock.sendMessage(jid, { text: reply.answer }, { quoted: msg });
             }
           } else {
-            await sock.sendMessage(jid, { text: finalReplyText }, { quoted: msg });
+            await sock.sendMessage(jid, { text: reply.answer }, { quoted: msg });
           }
 
           // Potong kuota (-1 token) dari akun pemilik nomor WhatsApp ini
           await dbDeductQuota(uid);
-          console.log(`✅ [WA USER #${uid}] Dijawab otomatis & kuota terpotong (-1).`);
+          console.log(`✅ [WA USER #${uid} | ${reply.aiTier}] Dijawab otomatis & kuota terpotong (-1).`);
           dbAddNotificationLog({
             category: 'WHATSAPP',
             recipient: `${senderName} (${jid.split('@')[0]})`,
             title: `Bot AI Membalas Pesan WhatsApp (User #${uid})`,
-            message: `Pesan Masuk: "${cleanQuery.slice(0, 80)}" -> Dijawab otomatis (Kuota -1).`,
+            message: `Pesan Masuk: "${cleanQuery.slice(0, 80)}" -> Dijawab (${reply.aiTier}, Kuota -1).`,
             status: 'success'
-          }).catch(() => {});
+          }).catch(() => { });
         }
       }
     });
@@ -448,7 +436,7 @@ async function bootArtaposServer() {
         }
       }
     }
-  } catch (e) {}
+  } catch (e) { }
 
   // Dengarkan permintaan Generate QR / Reset Sesi dari Vercel (www.artapos.id) via TiDB Cloud setiap 1 detik
   let isCheckingWaCommands = false;
@@ -461,12 +449,12 @@ async function bootArtaposServer() {
         if (!cmd.userId) continue;
         if (cmd.command === 'reset') {
           console.log(`🔄 [CLOUD SYNC] Menerima perintah Reset QR untuk User #${cmd.userId} dari www.artapos.id`);
-          resetTenantWhatsApp(cmd.userId).catch(() => {});
+          resetTenantWhatsApp(cmd.userId).catch(() => { });
         } else if (cmd.command === 'ensure') {
           const existing = tenantSessions.get(cmd.userId);
           if (!existing || (existing.status !== 'connected' && !existing.qr && !existing.isConnecting)) {
             console.log(`📲 [CLOUD SYNC] Menerima permintaan QR baru untuk User #${cmd.userId} dari www.artapos.id`);
-            ensureTenantWhatsApp(cmd.userId).catch(() => {});
+            ensureTenantWhatsApp(cmd.userId).catch(() => { });
           } else if (existing.qr) {
             await dbSetUserWaStatus(cmd.userId, 'scan_qr', '', existing.qr);
           } else if (existing.status === 'connected') {
@@ -474,7 +462,7 @@ async function bootArtaposServer() {
           }
         }
       }
-    } catch (e) {} finally {
+    } catch (e) { } finally {
       isCheckingWaCommands = false;
     }
   }, 1000);

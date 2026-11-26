@@ -1337,6 +1337,8 @@ function switchTab(tabName) {
     'whatsapp': document.getElementById('tabWa'),
     'admin': document.getElementById('tabAdmin'),
     'chat': document.getElementById('tabChat'),
+    'inventory': document.getElementById('tabInventory'),
+    'storeOrders': document.getElementById('tabStoreOrders'),
     'settings': document.getElementById('tabSettings'),
     'account': document.getElementById('tabAccount'),
     'superadmin': document.getElementById('tabSuperAdmin')
@@ -1346,6 +1348,8 @@ function switchTab(tabName) {
     'whatsapp': document.getElementById('navWaBtn'),
     'admin': document.getElementById('navAdminBtn'),
     'chat': document.getElementById('navChatBtn'),
+    'inventory': document.getElementById('navInventoryBtn'),
+    'storeOrders': document.getElementById('navStoreOrdersBtn'),
     'settings': document.getElementById('navSettingsBtn'),
     'account': document.getElementById('navAccountBtn'),
     'superadmin': document.getElementById('navSuperAdminBtn')
@@ -1355,6 +1359,8 @@ function switchTab(tabName) {
     'whatsapp': { title: 'Koneksi WhatsApp & Kode QR', category: 'WhatsApp Gateway' },
     'admin': { title: 'Knowledge Base & Jawaban Bot (CRUD)', category: 'Manajemen Data' },
     'chat': { title: 'Simulator Web Chat (Testing)', category: 'Uji Coba Sistem' },
+    'inventory': { title: 'Inventory & Produk Toko (Live AI)', category: 'Manajemen Stok' },
+    'storeOrders': { title: 'Order & Invoice Pelanggan', category: 'Transaksi Toko' },
     'settings': { title: 'Pengaturan Profil Toko', category: 'Konfigurasi' },
     'account': { title: 'Token & Pengaturan Akun', category: 'Langganan' },
     'superadmin': { title: 'Super Admin Monitoring', category: 'Administrator Pusat' }
@@ -1380,6 +1386,8 @@ function switchTab(tabName) {
   if (topCategory && titles[tabName]) topCategory.textContent = titles[tabName].category;
 
   if (tabName === 'account') loadUserData();
+  if (tabName === 'inventory') loadInventoryProducts();
+  if (tabName === 'storeOrders') loadStoreOrders();
   if (tabName === 'superadmin') {
     switchAdminSection(currentAdminSection || 'traffic');
     loadAdminData();
@@ -1892,12 +1900,22 @@ async function handleUserSubmit(e) {
   appendMessage(query, true);
   if (input) input.value = '';
 
-  // Simulator Web Chat adalah mode testing internal pemilik toko (TIDAK MEMOTONG KUOTA)
+  // Simulator Web Chat menguji otak AI sesuai paket (TIDAK MEMOTONG KUOTA)
+  try {
+    const res = await apiCall('/api/ai/reply', 'POST', { message: query, isSimulator: true });
+    if (res && res.success && res.found && res.answer) {
+      appendMessage(res.answer, false);
+      if (res.createdOrder) {
+        showToast(`Invoice ${res.createdOrder.invoice_no} berhasil dibuat di Order & Invoice!`, 'success');
+      }
+      return;
+    }
+  } catch (_) {}
+
   setTimeout(() => {
     const result = findBestAnswer(query);
     const rawAns = String(result.answer || '').trim();
     const planLower = String(currentUser?.plan || '').toLowerCase();
-    // Free (75 Token) & 25K (300 Token) masih ada watermark; 35K, 50K, 70K, 100K+ BEBAS watermark
     const isWatermarkFree =
       planLower.includes('35k') ||
       planLower.includes('plus') ||
@@ -1915,7 +1933,7 @@ async function handleUserSubmit(e) {
       ? rawAns
       : `${rawAns}\n\n> sent via artapos.id`;
     appendMessage(finalReplyText, false);
-  }, 300);
+  }, 250);
 }
 
 function askQuick(text) {
@@ -1923,6 +1941,221 @@ function askQuick(text) {
   if (input) {
     input.value = text;
     document.getElementById('chatForm')?.dispatchEvent(new Event('submit'));
+  }
+}
+
+// ==============================================================
+// 9B. INVENTORY PRODUK & ORDER/INVOICE TERHUBUNG AI
+// ==============================================================
+let inventoryProductsCache = [];
+let storeOrdersCache = [];
+
+async function loadInventoryProducts() {
+  const locked = document.getElementById('inventoryLockedBanner');
+  const content = document.getElementById('inventoryContentArea');
+  const badge = document.getElementById('inventoryAiTierBadge');
+  const res = await apiCall('/api/products', 'GET');
+  if (!res || !res.success) return;
+
+  if (badge) badge.textContent = `AI Tier: ${(res.aiTier || 'basic').toUpperCase()}`;
+  if (!res.unlocked) {
+    if (locked) locked.classList.remove('hidden');
+    if (content) content.classList.add('hidden');
+    return;
+  }
+  if (locked) locked.classList.add('hidden');
+  if (content) content.classList.remove('hidden');
+
+  inventoryProductsCache = res.products || [];
+  renderInventoryProducts(inventoryProductsCache);
+}
+
+function renderInventoryProducts(products) {
+  const list = document.getElementById('inventoryListContainer');
+  const countEl = document.getElementById('totalProductsCount');
+  if (countEl) countEl.textContent = String(products.length);
+  if (!list) return;
+
+  if (products.length === 0) {
+    list.innerHTML = `<div class="loading-state-box">Belum ada produk di Inventory. Tambahkan produk pertama Anda di atas agar AI bisa menjawab stok &amp; harga secara live!</div>`;
+    return;
+  }
+
+  list.innerHTML = products.map(p => {
+    const stock = Number(p.stock || 0);
+    const stockBadge = stock <= 0
+      ? `<span class="badge-nav" style="background:#fee2e2;color:#b91c1c;">Habis (0)</span>`
+      : (stock <= 5
+        ? `<span class="badge-nav" style="background:#fef3c7;color:#b45309;">Menipis (${stock})</span>`
+        : `<span class="badge-nav badge-nav-emerald">Stok: ${stock}</span>`);
+
+    return `
+      <div class="knowledge-item-card">
+        <div class="knowledge-item-header">
+          <div>
+            <strong>${escapeHtml(p.name)}</strong> ${p.sku ? `<span style="color:#64748b;font-size:0.78rem;">(${escapeHtml(p.sku)})</span>` : ''}
+            ${stockBadge}
+          </div>
+          <div class="knowledge-item-actions">
+            <button type="button" class="btn-edit-sm" onclick="editInventoryProduct(${p.id})">✏️ Edit</button>
+            <button type="button" class="btn-delete-sm" onclick="deleteInventoryProduct(${p.id})">🗑️</button>
+          </div>
+        </div>
+        <div class="knowledge-item-answer" style="margin-top:6px;">
+          💰 Harga Jual: <strong>Rp ${Number(p.price || 0).toLocaleString('id-ID')}</strong> • Modal: Rp ${Number(p.cost_price || 0).toLocaleString('id-ID')} • ⚖️ Berat: ${Number(p.weight_gram || 500)} gr
+          ${p.description ? `<div style="color:#475569;margin-top:4px;">${escapeHtml(p.description)}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function handleSaveProduct(e) {
+  e.preventDefault();
+  const id = document.getElementById('editProductId')?.value;
+  const payload = {
+    id: id ? Number(id) : undefined,
+    name: document.getElementById('prodName')?.value?.trim(),
+    sku: document.getElementById('prodSku')?.value?.trim(),
+    cost_price: Number(document.getElementById('prodCostPrice')?.value || 0),
+    price: Number(document.getElementById('prodPrice')?.value || 0),
+    stock: Number(document.getElementById('prodStock')?.value || 0),
+    weight_gram: Number(document.getElementById('prodWeight')?.value || 500),
+    description: document.getElementById('prodDesc')?.value?.trim()
+  };
+
+  const res = await apiCall('/api/products', id ? 'PUT' : 'POST', payload);
+  if (res && res.success) {
+    showToast(id ? 'Produk diperbarui!' : 'Produk ditambahkan ke Inventory!', 'success');
+    resetProductForm();
+    loadInventoryProducts();
+  } else {
+    showAlert(res?.error || 'Gagal menyimpan produk.', 'error');
+  }
+}
+
+function editInventoryProduct(id) {
+  const p = inventoryProductsCache.find(x => Number(x.id) === Number(id));
+  if (!p) return;
+  document.getElementById('editProductId').value = p.id;
+  document.getElementById('prodName').value = p.name || '';
+  document.getElementById('prodSku').value = p.sku || '';
+  document.getElementById('prodCostPrice').value = p.cost_price || 0;
+  document.getElementById('prodPrice').value = p.price || 0;
+  document.getElementById('prodStock').value = p.stock || 0;
+  document.getElementById('prodWeight').value = p.weight_gram || 500;
+  document.getElementById('prodDesc').value = p.description || '';
+  document.getElementById('btnSaveProduct').textContent = '💾 Simpan Perubahan Produk';
+  document.getElementById('btnCancelEditProduct')?.classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetProductForm() {
+  document.getElementById('editProductId').value = '';
+  document.getElementById('productInventoryForm')?.reset();
+  document.getElementById('btnSaveProduct').textContent = '💾 Simpan Produk ke Inventory';
+  document.getElementById('btnCancelEditProduct')?.classList.add('hidden');
+}
+
+async function deleteInventoryProduct(id) {
+  const ok = await showConfirm('Hapus Produk', 'Yakin ingin menghapus produk ini dari Inventory?', 'Ya, Hapus');
+  if (!ok) return;
+  const res = await apiCall('/api/products', 'DELETE', { id });
+  if (res && res.success) {
+    showToast('Produk dihapus.', 'success');
+    loadInventoryProducts();
+  } else {
+    showAlert(res?.error || 'Gagal menghapus produk.', 'error');
+  }
+}
+
+async function loadStoreOrders() {
+  const locked = document.getElementById('ordersLockedBanner');
+  const content = document.getElementById('ordersContentArea');
+  const res = await apiCall('/api/store-orders', 'GET');
+  if (!res || !res.success) return;
+
+  if (!res.unlocked) {
+    if (locked) locked.classList.remove('hidden');
+    if (content) content.classList.add('hidden');
+    return;
+  }
+  if (locked) locked.classList.add('hidden');
+  if (content) content.classList.remove('hidden');
+
+  storeOrdersCache = res.orders || [];
+  renderStoreOrders(storeOrdersCache);
+}
+
+function renderStoreOrders(orders) {
+  const list = document.getElementById('storeOrdersListContainer');
+  const countEl = document.getElementById('storeTotalOrdersCount');
+  const revEl = document.getElementById('storeTotalRevenue');
+  const profEl = document.getElementById('storeTotalProfit');
+
+  let revenue = 0;
+  let profit = 0;
+  orders.forEach(o => {
+    if (o.status === 'paid' || o.status === 'shipped') {
+      revenue += Number(o.subtotal || 0);
+      const modal = (o.items || []).reduce((acc, it) => acc + (Number(it.cost_price || 0) * Number(it.qty || 1)), 0);
+      profit += Math.max(0, Number(o.subtotal || 0) - modal);
+    }
+  });
+
+  if (countEl) countEl.textContent = String(orders.length);
+  if (revEl) revEl.textContent = `Rp ${revenue.toLocaleString('id-ID')}`;
+  if (profEl) profEl.textContent = `Rp ${profit.toLocaleString('id-ID')}`;
+  if (!list) return;
+
+  if (orders.length === 0) {
+    list.innerHTML = `<div class="loading-state-box">Belum ada order masuk. Ketika pelanggan mengetik "pesan [nama produk]" di WhatsApp, invoice otomatis muncul di sini!</div>`;
+    return;
+  }
+
+  list.innerHTML = orders.map(o => {
+    const itemsText = (o.items || []).map(it => `${escapeHtml(it.name)} x${it.qty}`).join(', ');
+    const stColors = {
+      pending: 'background:#fef3c7;color:#b45309;',
+      paid: 'background:#dcfce7;color:#15803d;',
+      shipped: 'background:#dbeafe;color:#1d4ed8;',
+      cancelled: 'background:#fee2e2;color:#b91c1c;'
+    };
+    return `
+      <div class="knowledge-item-card">
+        <div class="knowledge-item-header">
+          <div>
+            <strong>${escapeHtml(o.invoice_no)}</strong> • ${escapeHtml(o.customer_name)}
+            <span class="badge-nav" style="${stColors[o.status] || ''}">${escapeHtml(o.status).toUpperCase()}</span>
+          </div>
+          <strong style="color:#16a34a;">Rp ${Number(o.total_amount || 0).toLocaleString('id-ID')}</strong>
+        </div>
+        <div class="knowledge-item-answer" style="margin-top:6px;">
+          <div>🛍️ Item: ${itemsText || '-'}</div>
+          <div>🚚 Kurir: ${escapeHtml(o.courier || '-')} (Ongkir Rp ${Number(o.shipping_cost || 0).toLocaleString('id-ID')}) ${o.tracking_no ? `• Resi: <strong>${escapeHtml(o.tracking_no)}</strong>` : ''}</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+            <button type="button" class="btn-edit-sm" onclick="updateStoreOrderStatus(${o.id}, 'paid')">✅ Tandai Lunas</button>
+            <button type="button" class="btn-edit-sm" onclick="updateStoreOrderStatus(${o.id}, 'shipped')">🚚 Kirim + Resi</button>
+            <button type="button" class="btn-delete-sm" onclick="updateStoreOrderStatus(${o.id}, 'cancelled')">❌ Batalkan</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function updateStoreOrderStatus(orderId, status) {
+  let tracking_no = '';
+  if (status === 'shipped') {
+    tracking_no = window.prompt('Masukkan Nomor Resi Pengiriman (opsional):', '') || '';
+  }
+  const res = await apiCall('/api/store-orders', 'PUT', { id: orderId, status, tracking_no });
+  if (res && res.success) {
+    showToast(`Status order diperbarui ke ${status.toUpperCase()}`, 'success');
+    loadStoreOrders();
+    loadInventoryProducts();
+  } else {
+    showAlert(res?.error || 'Gagal memperbarui status order.', 'error');
   }
 }
 

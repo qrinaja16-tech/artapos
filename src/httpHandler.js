@@ -5,6 +5,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { knowledgeManager } from './knowledge.js';
+import { generateTieredBotReply } from './aiBrain.js';
 import {
   hashPassword,
   verifyPassword,
@@ -46,6 +47,13 @@ import {
   dbGetPlanByKey,
   dbUpdatePlanConfig,
   dbGetEffectiveUserLimits,
+  dbGetProducts,
+  dbAddProduct,
+  dbUpdateProduct,
+  dbDeleteProduct,
+  dbGetStoreOrders,
+  dbCreateStoreOrder,
+  dbUpdateStoreOrderStatus,
   dbRegisterOrUpdatePaidUser,
   dbUpdateUserAccount,
   dbDeductQuota,
@@ -677,8 +685,8 @@ export function createHttpHandler(waHooks = {}) {
 
           if (body.image_url) {
             const freshUserImg = await dbGetUserById(session.user_id);
-        const effImgLimits = await dbGetEffectiveUserLimits(session.plan, session.role, freshUserImg?.extra_knowledge, freshUserImg?.extra_images);
-        const imgLimit = effImgLimits.imageLimit;
+            const effImgLimits = await dbGetEffectiveUserLimits(session.plan, session.role, freshUserImg?.extra_knowledge, freshUserImg?.extra_images);
+            const imgLimit = effImgLimits.imageLimit;
             if (imgLimit <= 0) {
               throw new Error('Paket Gratis tidak mendukung upload gambar. Upgrade minimal Paket 25K.');
             }
@@ -833,7 +841,7 @@ export function createHttpHandler(waHooks = {}) {
           title: `⚙️ Super Admin Mengubah Paket "${updated?.name || body.plan_key}"`,
           message: `Harga: Rp ${Number(updated?.price || 0).toLocaleString('id-ID')}, Token: ${updated?.quota_tokens}, Knowledge: ${updated?.max_knowledge}, Gambar: ${updated?.max_images}.`,
           status: 'success'
-        }).catch(() => {});
+        }).catch(() => { });
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ success: true, plan: updated, plans: allPlans }));
       } catch (err) {
@@ -1785,6 +1793,160 @@ export function createHttpHandler(waHooks = {}) {
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({
           success: true,
+          quota_used: updated?.quota_used || 0,
+          remaining: updated ? Math.max(0, updated.quota_total - updated.quota_used) : 0
+        }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    // ----------------------------------------
+    // API INVENTORY PRODUK (MINIMAL PAKET HEMAT 25K)
+    // ----------------------------------------
+    if (cleanUrl === '/api/products') {
+      const session = await getAuthUser(req);
+      if (!session) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized' }));
+        return;
+      }
+      const userObj = await dbGetUserById(session.user_id);
+      const limits = await dbGetEffectiveUserLimits(userObj?.plan || '', userObj?.role || 'user', userObj?.extra_knowledge, userObj?.extra_images);
+
+      if (req.method === 'GET') {
+        const products = limits.features?.inventory ? await dbGetProducts(session.user_id) : [];
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ success: true, unlocked: Boolean(limits.features?.inventory), aiTier: limits.aiTier, features: limits.features, products }));
+        return;
+      }
+
+      if (!limits.features?.inventory) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Fitur Inventory Produk & AI Cerdas hanya tersedia mulai Paket Hemat 25K ke atas.' }));
+        return;
+      }
+
+      try {
+        if (req.method === 'POST') {
+          const body = await readJsonBody(req);
+          const created = await dbAddProduct(session.user_id, body);
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ success: true, product: created }));
+          return;
+        }
+        if (req.method === 'PUT') {
+          const body = await readJsonBody(req);
+          await dbUpdateProduct(session.user_id, body.id, body);
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ success: true }));
+          return;
+        }
+        if (req.method === 'DELETE') {
+          const body = await readJsonBody(req);
+          await dbDeleteProduct(session.user_id, body.id);
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ success: true }));
+          return;
+        }
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+        return;
+      }
+    }
+
+    // ----------------------------------------
+    // API ORDER & INVOICE TOKO (MINIMAL PAKET PLUS 35K)
+    // ----------------------------------------
+    if (cleanUrl === '/api/store-orders') {
+      const session = await getAuthUser(req);
+      if (!session) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized' }));
+        return;
+      }
+      const userObj = await dbGetUserById(session.user_id);
+      const limits = await dbGetEffectiveUserLimits(userObj?.plan || '', userObj?.role || 'user', userObj?.extra_knowledge, userObj?.extra_images);
+
+      if (req.method === 'GET') {
+        const orders = limits.features?.invoice ? await dbGetStoreOrders(session.user_id) : [];
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ success: true, unlocked: Boolean(limits.features?.invoice), aiTier: limits.aiTier, features: limits.features, orders }));
+        return;
+      }
+
+      if (!limits.features?.invoice) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Fitur Order & Auto-Invoice tersedia mulai Paket Plus 35K ke atas.' }));
+        return;
+      }
+
+      try {
+        if (req.method === 'POST') {
+          const body = await readJsonBody(req);
+          const order = await dbCreateStoreOrder(session.user_id, body);
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ success: true, order }));
+          return;
+        }
+        if (req.method === 'PUT') {
+          const body = await readJsonBody(req);
+          await dbUpdateStoreOrderStatus(session.user_id, body.id, body.status, body.tracking_no || '');
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ success: true }));
+          return;
+        }
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+        return;
+      }
+    }
+
+    // ----------------------------------------
+    // API AI BRAIN REPLY (UNTUK SIMULATOR WEB CHAT)
+    // ----------------------------------------
+    if (cleanUrl === '/api/ai/reply' && req.method === 'POST') {
+      try {
+        const session = await getAuthUser(req);
+        if (!session) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Unauthorized' }));
+          return;
+        }
+        const body = await readJsonBody(req);
+        const userObj = await dbGetUserById(session.user_id);
+        const quotaInfo = await dbGetUserQuota(session.user_id);
+        if (quotaInfo && (quotaInfo.isExpired || quotaInfo.remaining <= 0)) {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Token habis atau masa aktif kedaluwarsa.' }));
+          return;
+        }
+
+        const reply = await generateTieredBotReply({
+          userId: session.user_id,
+          jid: 'web_simulator_' + session.user_id,
+          senderName: userObj?.store_name || 'Simulasi Pembeli',
+          text: body.message || '',
+          userPlan: userObj?.plan || 'free',
+          userRole: userObj?.role || 'user'
+        });
+
+        if (reply.found && !body.isSimulator) {
+          await dbDeductQuota(session.user_id);
+        }
+        const updated = await dbGetUserQuota(session.user_id);
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          success: true,
+          found: reply.found,
+          answer: reply.answer || '',
+          imageUrl: reply.imageUrl || null,
+          aiTier: reply.aiTier,
+          createdOrder: reply.createdOrder || null,
           quota_used: updated?.quota_used || 0,
           remaining: updated ? Math.max(0, updated.quota_total - updated.quota_used) : 0
         }));

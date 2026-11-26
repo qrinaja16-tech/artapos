@@ -97,7 +97,7 @@ export async function initTiDB() {
       console.warn('⚠️ Users column migration notice:', e.message);
     }
 
-    // Tabel Plans Config (Harga, Token, Knowledge, Gambar, Watermark Dinamis dari Super Admin)
+    // Tabel Plans Config (Harga, Token, Knowledge, Gambar, Watermark & Tier AI Dinamis dari Super Admin)
     await conn.query(`
       CREATE TABLE IF NOT EXISTS plans_config (
         plan_key VARCHAR(40) PRIMARY KEY,
@@ -109,24 +109,114 @@ export async function initTiDB() {
         max_images INT NOT NULL DEFAULT 0,
         has_watermark TINYINT(1) DEFAULT 1,
         is_popular TINYINT(1) DEFAULT 0,
+        ai_tier VARCHAR(30) DEFAULT 'basic',
+        context_limit INT DEFAULT 0,
+        features_json TEXT,
         sort_order INT DEFAULT 0,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
     try {
+      const [colsAiTier] = await conn.query("SHOW COLUMNS FROM plans_config LIKE 'ai_tier'");
+      if (!colsAiTier || colsAiTier.length === 0) {
+        await conn.query("ALTER TABLE plans_config ADD COLUMN ai_tier VARCHAR(30) DEFAULT 'basic'");
+      }
+      const [colsCtx] = await conn.query("SHOW COLUMNS FROM plans_config LIKE 'context_limit'");
+      if (!colsCtx || colsCtx.length === 0) {
+        await conn.query("ALTER TABLE plans_config ADD COLUMN context_limit INT DEFAULT 0");
+      }
+      const [colsFeat] = await conn.query("SHOW COLUMNS FROM plans_config LIKE 'features_json'");
+      if (!colsFeat || colsFeat.length === 0) {
+        await conn.query("ALTER TABLE plans_config ADD COLUMN features_json TEXT");
+      }
       const [[pCount]] = await conn.query('SELECT COUNT(*) AS total FROM plans_config');
       if (Number(pCount?.total || 0) === 0) {
         await conn.query(`
-          INSERT INTO plans_config (plan_key, name, price, quota_tokens, days_active, max_knowledge, max_images, has_watermark, is_popular, sort_order) VALUES
-          ('free', 'Paket Gratis (Free)', 0, 75, 30, 10, 0, 1, 0, 1),
-          ('hemat25', 'Paket Hemat 25K', 25000, 300, 30, 25, 1, 1, 0, 2),
-          ('plus35', 'Paket Plus 35K', 35000, 500, 30, 50, 5, 0, 1, 3),
-          ('starter50', 'Paket Starter 50K', 50000, 1000, 30, 100, 10, 0, 0, 4),
-          ('pro70', 'Paket Pro 70K', 70000, 1500, 30, 200, 15, 0, 0, 5),
-          ('bisnis100', 'Paket Bisnis 100K', 100000, 2500, 30, 500, 25, 0, 0, 6)
+          INSERT INTO plans_config (plan_key, name, price, quota_tokens, days_active, max_knowledge, max_images, has_watermark, is_popular, ai_tier, context_limit, features_json, sort_order) VALUES
+          ('free', 'Paket Gratis (Free)', 0, 75, 30, 10, 0, 1, 0, 'basic', 0, '{"inventory":false,"invoice":false,"ongkir":false,"memory":false,"handover":false,"vision":false}', 1),
+          ('hemat25', 'Paket Hemat 25K', 25000, 300, 30, 25, 1, 1, 0, 'starter', 3, '{"inventory":true,"invoice":false,"ongkir":false,"memory":false,"handover":false,"vision":false}', 2),
+          ('plus35', 'Paket Plus 35K', 35000, 500, 30, 50, 5, 0, 1, 'sales', 6, '{"inventory":true,"invoice":true,"ongkir":false,"memory":false,"handover":false,"vision":false}', 3),
+          ('starter50', 'Paket Starter 50K', 50000, 1000, 30, 100, 10, 0, 0, 'smart', 12, '{"inventory":true,"invoice":true,"ongkir":true,"memory":true,"handover":false,"vision":false}', 4),
+          ('pro70', 'Paket Pro 70K', 70000, 1500, 30, 200, 15, 0, 0, 'pro', 20, '{"inventory":true,"invoice":true,"ongkir":true,"memory":true,"handover":true,"vision":false}', 5),
+          ('bisnis100', 'Paket Bisnis 100K', 100000, 2500, 30, 500, 25, 0, 0, 'genius', 40, '{"inventory":true,"invoice":true,"ongkir":true,"memory":true,"handover":true,"vision":true}', 6)
         `);
+      } else {
+        // Pastikan baris lama yang baru ditambah kolomnya terisi default tier
+        const tierSeeds = [
+          ['free', 'basic', 0, '{"inventory":false,"invoice":false,"ongkir":false,"memory":false,"handover":false,"vision":false}'],
+          ['hemat25', 'starter', 3, '{"inventory":true,"invoice":false,"ongkir":false,"memory":false,"handover":false,"vision":false}'],
+          ['plus35', 'sales', 6, '{"inventory":true,"invoice":true,"ongkir":false,"memory":false,"handover":false,"vision":false}'],
+          ['starter50', 'smart', 12, '{"inventory":true,"invoice":true,"ongkir":true,"memory":true,"handover":false,"vision":false}'],
+          ['pro70', 'pro', 20, '{"inventory":true,"invoice":true,"ongkir":true,"memory":true,"handover":true,"vision":false}'],
+          ['bisnis100', 'genius', 40, '{"inventory":true,"invoice":true,"ongkir":true,"memory":true,"handover":true,"vision":true}']
+        ];
+        for (const [k, tier, ctx, feat] of tierSeeds) {
+          await conn.query(
+            `UPDATE plans_config SET ai_tier = COALESCE(NULLIF(ai_tier, ''), ?), context_limit = CASE WHEN context_limit IS NULL OR (plan_key != 'free' AND context_limit = 0) THEN ? ELSE context_limit END, features_json = COALESCE(NULLIF(features_json, ''), ?) WHERE plan_key = ?`,
+            [tier, ctx, feat, k]
+          );
+        }
       }
     } catch (e) {}
+
+    // Tabel Inventory Produk Toko (Terhubung langsung ke AI & Order/Invoice)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        sku VARCHAR(64) DEFAULT '',
+        name VARCHAR(180) NOT NULL,
+        category VARCHAR(80) DEFAULT 'Umum',
+        cost_price INT DEFAULT 0,
+        price INT NOT NULL DEFAULT 0,
+        stock INT NOT NULL DEFAULT 0,
+        weight_gram INT DEFAULT 500,
+        image_url VARCHAR(500) DEFAULT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_products_user (user_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Tabel Order & Invoice Toko (Otomatis potong/kembalikan stok Inventory)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS store_orders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        invoice_no VARCHAR(64) NOT NULL,
+        customer_name VARCHAR(150) DEFAULT 'Pelanggan WhatsApp',
+        customer_phone VARCHAR(80) DEFAULT '',
+        customer_address TEXT,
+        courier VARCHAR(80) DEFAULT 'Reguler',
+        shipping_cost INT DEFAULT 0,
+        subtotal INT DEFAULT 0,
+        total_amount INT DEFAULT 0,
+        status VARCHAR(30) DEFAULT 'pending',
+        tracking_no VARCHAR(100) DEFAULT '',
+        items_json TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_store_orders_user (user_id),
+        UNIQUE INDEX idx_store_invoice (invoice_no)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Tabel Memori Personal Pelanggan (Untuk AI Smart CS, Pro, Genius)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS customer_memories (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        customer_jid VARCHAR(120) NOT NULL,
+        customer_name VARCHAR(150) DEFAULT '',
+        last_city VARCHAR(120) DEFAULT '',
+        last_product VARCHAR(180) DEFAULT '',
+        notes TEXT,
+        label VARCHAR(50) DEFAULT 'Tanya-tanya',
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE INDEX idx_cust_mem_unique (user_id, customer_jid)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
 
     // Tabel Referral Redemptions (1 User bisa redeem banyak kode berbeda, tapi tidak bisa kode yang sama >1x)
     await conn.query(`
@@ -1948,60 +2038,366 @@ export async function dbGetPlanByKey(planKey) {
   }
 }
 
+export function getPlanDefaultFeatures(planKey = 'free') {
+  const map = {
+    free: { ai_tier: 'basic', context_limit: 0, features: { inventory: false, invoice: false, ongkir: false, memory: false, handover: false, vision: false } },
+    hemat25: { ai_tier: 'starter', context_limit: 3, features: { inventory: true, invoice: false, ongkir: false, memory: false, handover: false, vision: false } },
+    plus35: { ai_tier: 'sales', context_limit: 6, features: { inventory: true, invoice: true, ongkir: false, memory: false, handover: false, vision: false } },
+    starter50: { ai_tier: 'smart', context_limit: 12, features: { inventory: true, invoice: true, ongkir: true, memory: true, handover: false, vision: false } },
+    pro70: { ai_tier: 'pro', context_limit: 20, features: { inventory: true, invoice: true, ongkir: true, memory: true, handover: true, vision: false } },
+    bisnis100: { ai_tier: 'genius', context_limit: 40, features: { inventory: true, invoice: true, ongkir: true, memory: true, handover: true, vision: true } }
+  };
+  return map[String(planKey || 'free').toLowerCase()] || map.free;
+}
+
 export async function dbUpdatePlanConfig(planKey, data) {
   const key = String(planKey || '').trim().toLowerCase();
   if (!key) throw new Error('plan_key wajib diisi.');
+  const defaults = getPlanDefaultFeatures(key);
   const name = String(data.name || '').trim().slice(0, 100);
   const price = Math.max(0, Number(data.price || 0));
-  const quotaTokens = Math.max(1, Number(data.quota_tokens || 75));
+  const quotaTokens = Math.max(1, Number(data.quota_tokens ?? data.quota ?? 75));
   const daysActive = Math.max(1, Number(data.days_active || 30));
   const maxKnowledge = Math.max(1, Number(data.max_knowledge || 10));
   const maxImages = Math.max(0, Number(data.max_images || 0));
   const hasWatermark = data.has_watermark ? 1 : 0;
   const isPopular = data.is_popular ? 1 : 0;
+  const aiTier = String(data.ai_tier || defaults.ai_tier).trim().slice(0, 30);
+  const contextLimit = Math.max(0, Number(data.context_limit ?? defaults.context_limit));
+  const featuresJson = data.features_json
+    ? (typeof data.features_json === 'string' ? data.features_json : JSON.stringify(data.features_json))
+    : undefined;
 
   if (isPopular) {
     await pool.query('UPDATE plans_config SET is_popular = 0 WHERE plan_key != ?', [key]);
   }
 
-  await pool.query(
-    `UPDATE plans_config
-     SET name = ?, price = ?, quota_tokens = ?, days_active = ?, max_knowledge = ?, max_images = ?, has_watermark = ?, is_popular = ?
-     WHERE plan_key = ?`,
-    [name, price, quotaTokens, daysActive, maxKnowledge, maxImages, hasWatermark, isPopular, key]
-  );
+  if (featuresJson) {
+    await pool.query(
+      `UPDATE plans_config
+       SET name = ?, price = ?, quota_tokens = ?, days_active = ?, max_knowledge = ?, max_images = ?, has_watermark = ?, is_popular = ?, ai_tier = ?, context_limit = ?, features_json = ?
+       WHERE plan_key = ?`,
+      [name, price, quotaTokens, daysActive, maxKnowledge, maxImages, hasWatermark, isPopular, aiTier, contextLimit, featuresJson, key]
+    );
+  } else {
+    await pool.query(
+      `UPDATE plans_config
+       SET name = ?, price = ?, quota_tokens = ?, days_active = ?, max_knowledge = ?, max_images = ?, has_watermark = ?, is_popular = ?, ai_tier = ?, context_limit = ?
+       WHERE plan_key = ?`,
+      [name, price, quotaTokens, daysActive, maxKnowledge, maxImages, hasWatermark, isPopular, aiTier, contextLimit, key]
+    );
+  }
   return await dbGetPlanByKey(key);
 }
 
 export async function dbGetEffectiveUserLimits(planName = '', role = 'user', extraKnowledge = 0, extraImages = 0) {
   if (role === 'superadmin') {
-    return { knowledgeLimit: 9999, imageLimit: 999 };
+    return {
+      knowledgeLimit: 9999,
+      imageLimit: 999,
+      planKey: 'bisnis100',
+      aiTier: 'genius',
+      contextLimit: 40,
+      hasWatermark: false,
+      features: { inventory: true, invoice: true, ongkir: true, memory: true, handover: true, vision: true }
+    };
   }
   let baseK = getKnowledgeLimitForPlan(planName, role);
   let baseI = getImageLimitForPlan(planName, role);
+  let matchedKey = 'free';
+  const pLower = String(planName || '').toLowerCase();
+  if (pLower.includes('100k') || pLower.includes('bisnis')) matchedKey = 'bisnis100';
+  else if (pLower.includes('70k') || pLower.includes('pro')) matchedKey = 'pro70';
+  else if (pLower.includes('50k') || pLower.includes('starter')) matchedKey = 'starter50';
+  else if (pLower.includes('35k') || pLower.includes('plus')) matchedKey = 'plus35';
+  else if (pLower.includes('25k') || pLower.includes('hemat')) matchedKey = 'hemat25';
+
+  const defaults = getPlanDefaultFeatures(matchedKey);
+  let aiTier = defaults.ai_tier;
+  let contextLimit = defaults.context_limit;
+  let features = { ...defaults.features };
+  let hasWatermark = matchedKey === 'free' || matchedKey === 'hemat25';
+
   try {
     const plans = await dbGetAllPlans();
-    const pLower = String(planName || '').toLowerCase();
     const matched = plans.find(p =>
       pLower === String(p.name || '').toLowerCase() ||
       pLower.includes(String(p.plan_key || '').toLowerCase()) ||
-      (p.plan_key === 'hemat25' && (pLower.includes('25k') || pLower.includes('hemat'))) ||
-      (p.plan_key === 'plus35' && (pLower.includes('35k') || pLower.includes('plus'))) ||
-      (p.plan_key === 'starter50' && (pLower.includes('50k') || pLower.includes('starter'))) ||
-      (p.plan_key === 'pro70' && (pLower.includes('70k') || pLower.includes('pro'))) ||
-      (p.plan_key === 'bisnis100' && (pLower.includes('100k') || pLower.includes('bisnis'))) ||
-      (p.plan_key === 'free' && (pLower.includes('gratis') || pLower.includes('free')))
+      p.plan_key === matchedKey
     );
     if (matched) {
       baseK = Number(matched.max_knowledge || baseK);
       baseI = Number(matched.max_images ?? baseI);
+      matchedKey = matched.plan_key || matchedKey;
+      const fallback = getPlanDefaultFeatures(matchedKey);
+      aiTier = matched.ai_tier || fallback.ai_tier;
+      contextLimit = Number(matched.context_limit ?? fallback.context_limit);
+      hasWatermark = Boolean(matched.has_watermark);
+      if (matched.features_json) {
+        try {
+          features = { ...fallback.features, ...JSON.parse(matched.features_json) };
+        } catch (_) {}
+      }
     }
   } catch (e) {}
 
   return {
     knowledgeLimit: baseK + Math.max(0, Number(extraKnowledge || 0)),
-    imageLimit: baseI + Math.max(0, Number(extraImages || 0))
+    imageLimit: baseI + Math.max(0, Number(extraImages || 0)),
+    planKey: matchedKey,
+    aiTier,
+    contextLimit,
+    hasWatermark,
+    features
   };
+}
+
+// ==========================================
+// INVENTORY PRODUK, ORDER/INVOICE & MEMORI PELANGGAN
+// ==========================================
+export async function dbGetProducts(userId) {
+  try {
+    const [rows] = await pool.query(
+      'SELECT * FROM products WHERE user_id = ? ORDER BY id DESC',
+      [Number(userId)]
+    );
+    return rows || [];
+  } catch (e) {
+    console.error('dbGetProducts Error:', e.message);
+    return [];
+  }
+}
+
+export async function dbAddProduct(userId, data) {
+  const uid = Number(userId);
+  const name = String(data?.name || '').trim().slice(0, 180);
+  if (!name) throw new Error('Nama produk wajib diisi.');
+  const sku = String(data?.sku || '').trim().slice(0, 64);
+  const category = String(data?.category || 'Umum').trim().slice(0, 80);
+  const costPrice = Math.max(0, Number(data?.cost_price || 0));
+  const price = Math.max(0, Number(data?.price || 0));
+  const stock = Math.max(0, Number(data?.stock || 0));
+  const weightGram = Math.max(1, Number(data?.weight_gram || 500));
+  const imageUrl = data?.image_url ? String(data.image_url).trim().slice(0, 500) : null;
+  const description = String(data?.description || '').trim();
+
+  const [res] = await pool.query(
+    `INSERT INTO products (user_id, sku, name, category, cost_price, price, stock, weight_gram, image_url, description)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [uid, sku, name, category, costPrice, price, stock, weightGram, imageUrl, description]
+  );
+  return { id: res.insertId, user_id: uid, sku, name, category, cost_price: costPrice, price, stock, weight_gram: weightGram, image_url: imageUrl, description };
+}
+
+export async function dbUpdateProduct(userId, id, data) {
+  const uid = Number(userId);
+  const pid = Number(id);
+  const name = String(data?.name || '').trim().slice(0, 180);
+  if (!name) throw new Error('Nama produk wajib diisi.');
+  const sku = String(data?.sku || '').trim().slice(0, 64);
+  const category = String(data?.category || 'Umum').trim().slice(0, 80);
+  const costPrice = Math.max(0, Number(data?.cost_price || 0));
+  const price = Math.max(0, Number(data?.price || 0));
+  const stock = Math.max(0, Number(data?.stock || 0));
+  const weightGram = Math.max(1, Number(data?.weight_gram || 500));
+  const imageUrl = data?.image_url ? String(data.image_url).trim().slice(0, 500) : null;
+  const description = String(data?.description || '').trim();
+
+  await pool.query(
+    `UPDATE products
+     SET sku = ?, name = ?, category = ?, cost_price = ?, price = ?, stock = ?, weight_gram = ?, image_url = ?, description = ?
+     WHERE id = ? AND user_id = ?`,
+    [sku, name, category, costPrice, price, stock, weightGram, imageUrl, description, pid, uid]
+  );
+  return true;
+}
+
+export async function dbDeleteProduct(userId, id) {
+  await pool.query('DELETE FROM products WHERE id = ? AND user_id = ?', [Number(id), Number(userId)]);
+  return true;
+}
+
+export async function dbGetStoreOrders(userId) {
+  try {
+    const [rows] = await pool.query(
+      'SELECT * FROM store_orders WHERE user_id = ? ORDER BY id DESC LIMIT 200',
+      [Number(userId)]
+    );
+    return (rows || []).map(r => {
+      let items = [];
+      try { items = JSON.parse(r.items_json || '[]'); } catch (_) {}
+      return { ...r, items };
+    });
+  } catch (e) {
+    console.error('dbGetStoreOrders Error:', e.message);
+    return [];
+  }
+}
+
+export async function dbCreateStoreOrder(userId, data) {
+  const uid = Number(userId);
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const items = Array.isArray(data?.items) ? data.items : [];
+    let subtotal = 0;
+    const finalItems = [];
+
+    for (const item of items) {
+      const qty = Math.max(1, Number(item.qty || 1));
+      if (item.product_id) {
+        const [[prod]] = await conn.query(
+          'SELECT id, name, price, cost_price, stock, weight_gram FROM products WHERE id = ? AND user_id = ? LIMIT 1',
+          [Number(item.product_id), uid]
+        );
+        if (!prod) throw new Error(`Produk #${item.product_id} tidak ditemukan.`);
+        if (Number(prod.stock) < qty) throw new Error(`Stok "${prod.name}" tersisa ${prod.stock}, tidak cukup untuk ${qty} pcs.`);
+        await conn.query('UPDATE products SET stock = stock - ? WHERE id = ? AND user_id = ?', [qty, prod.id, uid]);
+        const lineTotal = Number(prod.price) * qty;
+        subtotal += lineTotal;
+        finalItems.push({
+          product_id: prod.id,
+          name: prod.name,
+          qty,
+          price: Number(prod.price),
+          cost_price: Number(prod.cost_price || 0),
+          weight_gram: Number(prod.weight_gram || 500)
+        });
+      } else {
+        const unitPrice = Math.max(0, Number(item.price || 0));
+        subtotal += unitPrice * qty;
+        finalItems.push({
+          product_id: null,
+          name: String(item.name || 'Produk').slice(0, 150),
+          qty,
+          price: unitPrice,
+          cost_price: 0,
+          weight_gram: Number(item.weight_gram || 500)
+        });
+      }
+    }
+
+    const shippingCost = Math.max(0, Number(data?.shipping_cost || 0));
+    const totalAmount = subtotal + shippingCost;
+    const invoiceNo = `INV-${uid}-${Date.now().toString().slice(-6)}`;
+    const status = ['pending', 'paid', 'shipped', 'cancelled'].includes(data?.status) ? data.status : 'pending';
+
+    const [ins] = await conn.query(
+      `INSERT INTO store_orders (user_id, invoice_no, customer_name, customer_phone, customer_address, courier, shipping_cost, subtotal, total_amount, status, tracking_no, items_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        uid,
+        invoiceNo,
+        String(data?.customer_name || 'Pelanggan WhatsApp').slice(0, 150),
+        String(data?.customer_phone || '').slice(0, 80),
+        String(data?.customer_address || ''),
+        String(data?.courier || 'Reguler').slice(0, 80),
+        shippingCost,
+        subtotal,
+        totalAmount,
+        status,
+        String(data?.tracking_no || '').slice(0, 100),
+        JSON.stringify(finalItems)
+      ]
+    );
+    await conn.commit();
+    return {
+      id: ins.insertId,
+      user_id: uid,
+      invoice_no: invoiceNo,
+      customer_name: String(data?.customer_name || 'Pelanggan WhatsApp'),
+      customer_phone: String(data?.customer_phone || ''),
+      customer_address: String(data?.customer_address || ''),
+      courier: String(data?.courier || 'Reguler'),
+      shipping_cost: shippingCost,
+      subtotal,
+      total_amount: totalAmount,
+      status,
+      items: finalItems
+    };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+export async function dbUpdateStoreOrderStatus(userId, orderId, newStatus, trackingNo = '') {
+  const uid = Number(userId);
+  const oid = Number(orderId);
+  const cleanStatus = ['pending', 'paid', 'shipped', 'cancelled'].includes(newStatus) ? newStatus : 'pending';
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [[ord]] = await conn.query('SELECT * FROM store_orders WHERE id = ? AND user_id = ? LIMIT 1', [oid, uid]);
+    if (!ord) throw new Error('Order tidak ditemukan.');
+
+    // Kembalikan stok jika dibatalkan dari status aktif
+    if (cleanStatus === 'cancelled' && ord.status !== 'cancelled') {
+      let items = [];
+      try { items = JSON.parse(ord.items_json || '[]'); } catch (_) {}
+      for (const it of items) {
+        if (it.product_id && Number(it.qty) > 0) {
+          await conn.query('UPDATE products SET stock = stock + ? WHERE id = ? AND user_id = ?', [Number(it.qty), Number(it.product_id), uid]);
+        }
+      }
+    }
+
+    await conn.query(
+      'UPDATE store_orders SET status = ?, tracking_no = COALESCE(NULLIF(?, ""), tracking_no) WHERE id = ? AND user_id = ?',
+      [cleanStatus, String(trackingNo || '').trim(), oid, uid]
+    );
+    await conn.commit();
+    return true;
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+export async function dbGetCustomerMemory(userId, jid) {
+  try {
+    const [rows] = await pool.query(
+      'SELECT * FROM customer_memories WHERE user_id = ? AND customer_jid = ? LIMIT 1',
+      [Number(userId), String(jid || '').slice(0, 120)]
+    );
+    return rows[0] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function dbUpsertCustomerMemory(userId, jid, patch = {}) {
+  try {
+    const uid = Number(userId);
+    const cleanJid = String(jid || '').slice(0, 120);
+    if (!cleanJid) return false;
+    await pool.query(
+      `INSERT INTO customer_memories (user_id, customer_jid, customer_name, last_city, last_product, notes, label)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         customer_name = COALESCE(NULLIF(VALUES(customer_name), ''), customer_name),
+         last_city = COALESCE(NULLIF(VALUES(last_city), ''), last_city),
+         last_product = COALESCE(NULLIF(VALUES(last_product), ''), last_product),
+         notes = COALESCE(NULLIF(VALUES(notes), ''), notes),
+         label = COALESCE(NULLIF(VALUES(label), ''), label)`,
+      [
+        uid,
+        cleanJid,
+        String(patch.customer_name || '').slice(0, 150),
+        String(patch.last_city || '').slice(0, 120),
+        String(patch.last_product || '').slice(0, 180),
+        String(patch.notes || ''),
+        String(patch.label || '').slice(0, 50)
+      ]
+    );
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 export { pool };
