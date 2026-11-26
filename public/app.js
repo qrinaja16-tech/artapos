@@ -1303,8 +1303,13 @@ async function loadData(showToastMsg = false) {
 
     const badge = document.getElementById('navKnowledgeBadge');
     const totalCount = document.getElementById('totalKnowledgeCount');
+    const kQuotaBadge = document.getElementById('knowledgeQuotaBadge');
     if (badge) badge.textContent = knowledgeData.length;
     if (totalCount) totalCount.textContent = knowledgeData.length;
+    if (kQuotaBadge && currentUser) {
+      const kLim = Number(currentUser.knowledge_limit || 10);
+      kQuotaBadge.textContent = kLim >= 9999 ? `${knowledgeData.length} / Unlimited` : `${knowledgeData.length}/${kLim} Slot`;
+    }
 
     // Muat Konfigurasi Toko milik akun ini
     const cfg = await apiCall('/api/config', 'GET');
@@ -3211,7 +3216,7 @@ async function executeFreeRegistration(email, storeName) {
       title: '🎉 Berhasil Didaftarkan!',
       html: `
         <div style="text-align:left; font-size:0.93rem; line-height:1.6; color:#334155;">
-          <p style="margin-bottom:10px;">Akun gratis (<b>75 Token Chat AI</b> + <b>7 Template Bot</b>) untuk <b>${cleanEmail}</b> telah aktif!</p>
+          <p style="margin-bottom:10px;">Akun baru dengan <b>10 Template Bot</b> untuk <b>${cleanEmail}</b> telah aktif!</p>
           <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px 14px; margin-bottom:10px;">
             📩 <b>Cek Email Masuk / Folder Spam:</b><br>
             Kami telah mengirimkan <b>Password Login</b> Anda melalui email resmi <code>artapos26@gmail.com</code>.

@@ -40,6 +40,8 @@ import {
   dbGetUserActivityLogs,
   getImageLimitForPlan,
   dbCountUserKnowledgeImages,
+  getKnowledgeLimitForPlan,
+  dbCountUserKnowledge,
   dbRegisterOrUpdatePaidUser,
   dbUpdateUserAccount,
   dbDeductQuota,
@@ -618,6 +620,12 @@ export function createHttpHandler(waHooks = {}) {
             if (containsMaliciousPayload(f) || /\.(php|html?|js|exe|sh)\b/i.test(f) || /[<>]/.test(f)) {
               throw new Error('⛔ Input mengandung skrip/ekstensi file terlarang (.php, .html, <, >).');
             }
+          }
+
+          const kLimit = getKnowledgeLimitForPlan(session.plan, session.role);
+          const kUsed = await dbCountUserKnowledge(session.user_id);
+          if (kUsed >= kLimit) {
+            throw new Error(`Batas maksimal ${kLimit} Knowledge untuk ${session.plan} sudah tercapai. Upgrade paket agar kapasitas AI makin pintar!`);
           }
 
           if (body.image_url) {
@@ -1624,6 +1632,8 @@ export function createHttpHandler(waHooks = {}) {
               bot_enabled: String(cfg?.bot_enabled) !== '0' && cfg?.bot_enabled !== false,
               image_limit: getImageLimitForPlan(quota?.plan || session.plan, session.role),
               image_used: await dbCountUserKnowledgeImages(session.user_id),
+              knowledge_limit: getKnowledgeLimitForPlan(quota?.plan || session.plan, session.role),
+              knowledge_used: await dbCountUserKnowledge(session.user_id),
               role: session.role || 'user',
               active_until: quota?.active_until || session.active_until
             }

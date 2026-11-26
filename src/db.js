@@ -474,6 +474,30 @@ export async function dbCountUserKnowledgeImages(userId) {
   }
 }
 
+export function getKnowledgeLimitForPlan(planName = '', role = 'user') {
+  if (role === 'superadmin') return 9999;
+  const p = String(planName || '').toLowerCase();
+  if (p.includes('gratis') || p.includes('free') || p.includes('belum klaim') || p.includes('bonus')) return 10;
+  if (p.includes('25k') || p.includes('hemat')) return 25;
+  if (p.includes('35k') || p.includes('plus')) return 50;
+  if (p.includes('50k') || p.includes('starter')) return 100;
+  if (p.includes('70k') || p.includes('pro')) return 200;
+  if (p.includes('100k') || p.includes('bisnis') || p.includes('enterprise') || p.includes('unlimited')) return 500;
+  return 10;
+}
+
+export async function dbCountUserKnowledge(userId) {
+  try {
+    const [[row]] = await pool.query(
+      'SELECT COUNT(*) AS total FROM knowledge WHERE user_id = ?',
+      [Number(userId)]
+    );
+    return Number(row?.total || 0);
+  } catch (e) {
+    return 0;
+  }
+}
+
 export async function dbDeleteKnowledge(arg1, arg2) {
   let userId = 1;
   let id = arg1;
@@ -644,8 +668,26 @@ export async function seedUserDefaultKnowledgeAndConfig(userId, storeName = 'Tok
       {
         questions: ["apakah ada garansi", "bisa retur kalau rusak", "barang cacat gimana", "komplain barang", "garansi resmi"],
         keywords: ["garansi", "retur", "rusak", "cacat", "komplain", "tukar", "retur"],
-        answer: `Tenang kak, semua produk kami bergaransi toko *100% aman*! Jika barang yang diterima cacat/salah kirim, sertakan video unboxing dan kami kirimkan pengganti baru tanpa biaya tambahan. Kepuasan kakak adalah komitmen kami! 🙏✨`,
+        answer: `Tenang kak, semua produk kami bergaransi toko *100% aman*! Jika barang yang diterima cacat/salah kirim, sertakan video unboxing dan kami kirimkan pengganti baru tanpa biaya tambahan. 🙏✨`,
         category: "garansi"
+      },
+      {
+        questions: ["ada promo apa hari ini", "ada diskon", "voucher promo", "potongan harga"],
+        keywords: ["promo", "diskon", "voucher", "potongan", "cashback"],
+        answer: `Ada promo spesial hari ini di *${sName}*! 🎉 Langsung sebutkan produk yang kakak incar biar kami cekkan diskon & bonus terbarunya ya kak!`,
+        category: "produk"
+      },
+      {
+        questions: ["lokasi toko dimana", "alamat toko", "bisa ambil di tempat", "cabang dimana"],
+        keywords: ["lokasi", "alamat", "cabang", "maps", "ambil"],
+        answer: `Kami melayani pengiriman ke seluruh Indonesia setiap hari! 📦 Untuk info alamat pickup/toko *${sName}*, silakan ketik kota kakak ya!`,
+        category: "informasi_toko"
+      },
+      {
+        questions: ["apakah stok masih ada", "ready stok", "barang masih tersedia", "kapan restock"],
+        keywords: ["stok", "ready", "tersedia", "habis", "restock"],
+        answer: `Stok produk unggulan *${sName}* ready & siap kirim hari ini kak! ✅ Sebutkan varian/ukuran yang kakak mau supaya langsung kami keep.`,
+        category: "produk"
       }
     ];
 
@@ -662,7 +704,7 @@ export async function seedUserDefaultKnowledgeAndConfig(userId, storeName = 'Tok
       );
     }
 
-    console.log(`✅ [AUTO-SEED] Berhasil mengisi 7 template Q&A default untuk User #${userId} (${sName})!`);
+    console.log(`✅ [AUTO-SEED] Berhasil mengisi 10 template Q&A default untuk User #${userId} (${sName})!`);
     return true;
   } catch (err) {
     console.error('seedUserDefaultKnowledgeAndConfig Error:', err.message);
