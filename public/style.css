@@ -7892,6 +7892,113 @@ div.swal2-container,
 }
 
 /* ============================================================== */
+/* MOBILE SIDEBAR & LANDING NAV FIXES (ALL ROLES LOGOUT/LANDING)  */
+/* ============================================================== */
+.saas-sidebar {
+  height: 100vh;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden;
+}
+
+.sidebar-nav {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 18px !important;
+}
+
+.sidebar-footer {
+  flex-shrink: 0 !important;
+  background: #080e1a;
+  padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.sidebar-footer-quick-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-sidebar-landing,
+.btn-sidebar-logout-full {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-sidebar-landing {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.btn-sidebar-landing:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+.btn-sidebar-logout-full {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.btn-sidebar-logout-full:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.nav-btn-landing-jump {
+  color: #38bdf8 !important;
+}
+
+.nav-btn-logout-jump {
+  color: #f87171 !important;
+}
+
+.nav-btn-logout-jump:hover {
+  background: rgba(239, 68, 68, 0.16) !important;
+  color: #fecaca !important;
+}
+
+.btn-nav-dashboard-active {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
+  color: #ffffff !important;
+  border-color: #16a34a !important;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.28) !important;
+  font-weight: 800 !important;
+}
+
+@media (max-width: 768px) {
+  .hide-on-mobile-logged-in {
+    display: none !important;
+  }
+
+  .btn-nav-dashboard-active {
+    padding: 9px 15px !important;
+    font-size: 0.85rem !important;
+    border-radius: 10px !important;
+  }
+
+  .btn-topbar-landing span {
+    display: none;
+  }
+}
+
+/* ============================================================== */
 /* SUPER ADMIN: DYNAMIC PLANS & PRICING MANAGER                   */
 /* ============================================================== */
 .admin-plans-grid {

@@ -26,7 +26,7 @@
     content="Balas chat pelanggan otomatis tanpa sewa server mahal. Gratis 75 Token untuk pendaftar pertama!">
   <meta name="twitter:image" content="https://www.artapos.id/og-preview.jpg?v=2">
   <link rel="icon" type="image/jpeg" href="logo.jpg?v=2">
-  <link rel="stylesheet" href="style.css?v=52.0">
+  <link rel="stylesheet" href="style.css?v=53.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -64,7 +64,7 @@
 
         <div class="landing-nav-actions">
           <button class="btn-nav-login" id="btnNavAuth" onclick="switchView('login')">Masuk</button>
-          <button class="btn-nav-primary" onclick="openFreeRegisterModal()">Daftar Gratis</button>
+          <button class="btn-nav-primary" id="btnNavRegister" onclick="openFreeRegisterModal()">Daftar Gratis</button>
         </div>
       </div>
     </header>
@@ -87,8 +87,8 @@
           </p>
 
           <div class="hero-cta-group">
-            <button class="btn-cta-main" onclick="openFreeRegisterModal()">
-              <span>Daftar Gratis</span>
+            <button class="btn-cta-main" id="btnHeroMainCta" onclick="openFreeRegisterModal()">
+              <span id="btnHeroMainCtaText">Daftar Gratis</span>
             </button>
             <a href="#harga" class="btn-cta-secondary">
               <span>Lihat Pilihan Paket</span>
@@ -1150,15 +1150,37 @@
               </div>
             </button>
           </div>
+
+          <!-- Navigasi Umum Semua Role: Lihat Landing Page & Keluar Akun -->
+          <div class="nav-label" style="margin-top: 16px;">Navigasi &amp; Sesi</div>
+          <button type="button" class="nav-btn nav-btn-landing-jump" onclick="goToLandingFromDashboard()">
+            <div class="nav-icon-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+              <span>Lihat Landing Page</span>
+            </div>
+          </button>
+          <button type="button" class="nav-btn nav-btn-logout-jump" onclick="handleLogout()">
+            <div class="nav-icon-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+              <span>Keluar Akun (Logout)</span>
+            </div>
+          </button>
         </nav>
 
-        <!-- Sidebar Footer: Session Info & Logout -->
+        <!-- Sidebar Footer: Session Info, Landing Page & Logout (All Roles) -->
         <div class="sidebar-footer">
           <div class="user-session-widget">
             <div class="user-avatar-circle" id="sidebarAvatar">G</div>
             <div class="user-meta-info">
               <div class="user-email-text text-truncate" id="sidebarUserEmail">user@gmail.com</div>
-              <div class="user-role-text">Pelanggan Aktif</div>
+              <div class="user-role-text" id="sidebarUserRoleText">Pelanggan Aktif</div>
             </div>
             <button class="btn-logout-icon" onclick="handleLogout()" title="Keluar Akun">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1166,6 +1188,14 @@
                 <polyline points="16 17 21 12 16 7"></polyline>
                 <line x1="21" y1="12" x2="9" y2="12"></line>
               </svg>
+            </button>
+          </div>
+          <div class="sidebar-footer-quick-actions">
+            <button type="button" class="btn-sidebar-landing" onclick="goToLandingFromDashboard()">
+              🏠 Landing Page
+            </button>
+            <button type="button" class="btn-sidebar-logout-full" onclick="handleLogout()">
+              🚪 Keluar
             </button>
           </div>
         </div>
@@ -1209,6 +1239,15 @@
               <span class="dot-indicator yellow" id="topbarDotStatus"></span>
               <span id="topbarStatusText">Menunggu Scan QR</span>
             </div>
+
+            <!-- Lihat Landing Page Button -->
+            <button class="btn-action-refresh btn-topbar-landing" onclick="goToLandingFromDashboard()" title="Lihat Landing Page">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+              <span>Landing</span>
+            </button>
 
             <!-- Sync Button -->
             <button class="btn-action-refresh" onclick="loadData(true)" title="Sinkronkan Data Cloud">
@@ -3047,7 +3086,7 @@
   </div>
 
   <!-- Main JavaScript Controller -->
-  <script src="app.js?v=52.0"></script>
+  <script src="app.js?v=53.0"></script>
 </body>
 
 </html>

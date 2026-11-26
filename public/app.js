@@ -578,6 +578,47 @@ function formatRupiah(num) {
 // ==============================================================
 // 1. VIEW ROUTER (LOCK DASHBOARD ON REFRESH)
 // ==============================================================
+function syncLandingAuthButtons() {
+  const isLogged = Boolean(currentUser || localStorage.getItem('artapos_token'));
+  const btnNavAuth = document.getElementById('btnNavAuth');
+  const btnNavRegister = document.getElementById('btnNavRegister');
+  const btnHeroMainCta = document.getElementById('btnHeroMainCta');
+  const btnHeroMainCtaText = document.getElementById('btnHeroMainCtaText');
+
+  if (btnNavAuth) {
+    if (isLogged) {
+      btnNavAuth.textContent = '🚀 Dashboard';
+      btnNavAuth.classList.add('btn-nav-dashboard-active');
+      btnNavAuth.onclick = () => switchView('dashboard');
+    } else {
+      btnNavAuth.textContent = 'Masuk';
+      btnNavAuth.classList.remove('btn-nav-dashboard-active');
+      btnNavAuth.onclick = () => switchView('login');
+    }
+  }
+
+  if (btnNavRegister) {
+    btnNavRegister.classList.toggle('hide-on-mobile-logged-in', isLogged);
+  }
+
+  if (btnHeroMainCta) {
+    if (isLogged) {
+      if (btnHeroMainCtaText) btnHeroMainCtaText.textContent = '🚀 Buka Dashboard Saya';
+      else btnHeroMainCta.textContent = '🚀 Buka Dashboard Saya';
+      btnHeroMainCta.onclick = () => switchView('dashboard');
+    } else {
+      if (btnHeroMainCtaText) btnHeroMainCtaText.textContent = 'Daftar Gratis';
+      else btnHeroMainCta.textContent = 'Daftar Gratis';
+      btnHeroMainCta.onclick = () => openFreeRegisterModal();
+    }
+  }
+}
+
+function goToLandingFromDashboard() {
+  toggleMobileSidebar(false);
+  switchView('landing');
+}
+
 function switchView(viewName) {
   currentActiveView = viewName;
 
@@ -604,26 +645,20 @@ function switchView(viewName) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // Update Navbar
-  const btnNavAuth = document.getElementById('btnNavAuth');
-  if (btnNavAuth) {
-    if (currentUser || localStorage.getItem('artapos_token')) {
-      btnNavAuth.textContent = 'Dashboard';
-      btnNavAuth.onclick = () => switchView('dashboard');
-    } else {
-      btnNavAuth.textContent = 'Masuk';
-      btnNavAuth.onclick = () => switchView('login');
-    }
-  }
+  syncLandingAuthButtons();
 
   // Jika masuk ke dashboard, aktifkan live listeners & sinkronisasi data
   if (viewName === 'dashboard') {
-    switchTab('whatsapp'); // Pastikan tab pertama yang aktif selalu Tab Koneksi WhatsApp!
+    try { history.replaceState(null, '', '#dashboard'); } catch (_) {}
+    switchTab(currentActiveTab || 'whatsapp');
     loadUserData();
     loadData();
     pollWhatsAppStatus();
     startLiveQuotaPolling();
   } else {
+    if (viewName === 'landing' && ['#dashboard', '#login', '#checkout'].includes(window.location.hash.toLowerCase())) {
+      try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
+    }
     stopLiveQuotaPolling();
   }
 }
@@ -1099,7 +1134,12 @@ function updateUserDashboardUI(user) {
 
   const sidebarPlanBadge = document.getElementById('sidebarPlanBadge');
   const sidebarUserEmail = document.getElementById('sidebarUserEmail');
+  const sidebarUserRoleText = document.getElementById('sidebarUserRoleText');
   const sidebarAvatar = document.getElementById('sidebarAvatar');
+  if (sidebarUserRoleText) {
+    sidebarUserRoleText.textContent = user.role === 'superadmin' ? '👑 Super Admin' : 'Pelanggan Aktif';
+  }
+  syncLandingAuthButtons();
 
   const topbarQuotaCount = document.getElementById('topbarQuotaCount');
   const topbarQuotaTotal = document.getElementById('topbarQuotaTotal');
@@ -4009,16 +4049,20 @@ async function initApp() {
     return;
   }
 
-  // KUNCI PERSISTENCE: Jika ada session token tersimpan, TETAP DI DASHBOARD saat di-refresh!
-  if (token) {
+  // Saat klik link utama (tanpa #dashboard), biarkan di Landing Page dulu & ubah tombol "Masuk" jadi "🚀 Dashboard"
+  syncLandingAuthButtons();
+  if (token && hash === 'dashboard') {
     switchView('dashboard');
     await loadUserData();
-  } else if (hash === 'login') {
+  } else if (hash === 'login' && !token) {
     switchView('login');
   } else if (hash === 'checkout') {
     switchView('checkout');
   } else {
     switchView('landing');
+    if (token) {
+      loadUserData().then(() => syncLandingAuthButtons()).catch(() => {});
+    }
   }
 
   // Catat +1 Kunjungan Website secara Real-Time setiap halaman dibuka
