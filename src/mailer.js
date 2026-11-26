@@ -61,8 +61,9 @@ export async function sendFreeRegistrationEmail(toEmail, rawPassword, storeName 
     <body>
       <div class="card">
         <div class="header">
+          <img src="${appBaseUrl}/logo.jpg?v=2" alt="artapos.id" width="44" height="44" style="display:block;margin:0 auto 10px;border-radius:10px;background:#ffffff;padding:3px;">
           <div class="logo">arta<span>pos</span>.id</div>
-          <div class="badge">Paket Uji Coba Gratis (75 Token)</div>
+          <div class="badge">Akun artapos.id Aktif</div>
         </div>
         <div class="body">
           <h2 class="h2">Selamat Datang di artapos.id! 🎉</h2>
@@ -145,6 +146,7 @@ export async function sendPasswordResetCodeEmail(toEmail, code) {
     <body style="font-family:'Segoe UI',Arial,sans-serif;background:#f8fafc;padding:24px;color:#1e293b;">
       <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:14px;border:1px solid #e2e8f0;overflow:hidden;">
         <div style="background:#0b1220;padding:24px;text-align:center;">
+          <img src="https://www.artapos.id/logo.jpg?v=2" alt="artapos.id" width="44" height="44" style="display:block;margin:0 auto 10px;border-radius:10px;background:#ffffff;padding:3px;">
           <div style="font-size:22px;font-weight:800;color:#ffffff;">arta<span style="color:#16a34a;">pos</span>.id</div>
           <div style="color:#94a3b8;font-size:12px;margin-top:4px;">Kode Verifikasi Reset Password</div>
         </div>
