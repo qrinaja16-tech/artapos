@@ -345,6 +345,11 @@ export async function initTiDB() {
       console.warn('⚠️ Auto-seed check error:', e.message);
     }
 
+    // Auto-cleanup log notifikasi lebih dari 5 hari agar DB tetap bersih
+    try {
+      await conn.query('DELETE FROM notifications_log WHERE created_at < DATE_SUB(NOW(), INTERVAL 5 DAY)');
+    } catch (e) {}
+
     conn.release();
     console.log('☁️ TiDB Cloud Multi-Tenant Database Terhubung & Siap Digunakan!');
   } catch (err) {
@@ -1351,6 +1356,19 @@ export async function dbAdminDeleteUser(userId) {
   }
 }
 
+let lastNotifPruneAt = 0;
+
+export async function dbPruneOldNotifications(days = 5) {
+  try {
+    const safeDays = Math.max(1, Number(days) || 5);
+    await pool.query('DELETE FROM notifications_log WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)', [safeDays]);
+    return true;
+  } catch (err) {
+    console.error('dbPruneOldNotifications Error:', err.message);
+    return false;
+  }
+}
+
 export async function dbAddNotificationLog({ category = 'EMAIL', recipient = '-', title = '', message = '', status = 'success' }) {
   try {
     await pool.query(
@@ -1364,6 +1382,12 @@ export async function dbAddNotificationLog({ category = 'EMAIL', recipient = '-'
         String(status || 'success').slice(0, 40)
       ]
     );
+    // Auto-prune berkala tiap 6 jam sekali agar log > 5 hari bersih dari DB
+    const now = Date.now();
+    if (now - lastNotifPruneAt > 6 * 60 * 60 * 1000) {
+      lastNotifPruneAt = now;
+      dbPruneOldNotifications(5).catch(() => {});
+    }
     return true;
   } catch (err) {
     console.error('dbAddNotificationLog Error:', err.message);
