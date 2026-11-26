@@ -7234,6 +7234,45 @@ div.swal2-container,
   display: block;
 }
 
+.btn-forgot-pwd-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #16a34a;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-forgot-pwd-link:hover {
+  text-decoration: underline;
+}
+.forgot-rules-list {
+  margin-top: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fp-rule-item {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #64748b;
+}
+.fp-rule-item.ok {
+  color: #16a34a;
+}
+.fp-rule-item.bad {
+  color: #dc2626;
+}
+.btn-submit-free-reg:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @media (max-width: 400px) {
   #tabSuperAdmin .admin-stats-grid,
   .analytics-kpi-grid-4 {

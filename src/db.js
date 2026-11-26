@@ -104,6 +104,17 @@ export async function initTiDB() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    // Tabel Lupa Password (OTP Verifikasi Email)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS password_resets (
+        email VARCHAR(255) PRIMARY KEY,
+        code VARCHAR(16) NOT NULL,
+        verified TINYINT(1) DEFAULT 0,
+        expires_at DATETIME NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
     // 2. Tabel Sessions (Autentikasi Aman & Anti-Session Hijacking)
     await conn.query(`
       CREATE TABLE IF NOT EXISTS sessions (
@@ -1656,6 +1667,63 @@ export async function dbGetUserReferralStats(userId) {
     totalBonusEarned: Number(invStats?.total_earned || 0),
     redeemedCodes: redeemedRows || []
   };
+}
+
+export async function dbCreatePasswordResetCode(email, code, ttlMinutes = 10) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  const cleanCode = String(code || '').trim();
+  const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
+  await pool.query(
+    `INSERT INTO password_resets (email, code, verified, expires_at)
+     VALUES (?, ?, 0, ?)
+     ON DUPLICATE KEY UPDATE code = ?, verified = 0, expires_at = ?, created_at = CURRENT_TIMESTAMP`,
+    [cleanEmail, cleanCode, expiresAt, cleanCode, expiresAt]
+  );
+  return true;
+}
+
+export async function dbVerifyPasswordResetCode(email, code) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  const cleanCode = String(code || '').trim();
+  const [rows] = await pool.query(
+    'SELECT code, expires_at FROM password_resets WHERE LOWER(email) = ? LIMIT 1',
+    [cleanEmail]
+  );
+  if (!rows || rows.length === 0) {
+    return { valid: false, reason: 'Kode verifikasi belum diminta atau sudah kadaluarsa.' };
+  }
+  const row = rows[0];
+  if (new Date(row.expires_at) < new Date()) {
+    return { valid: false, reason: 'Kode verifikasi sudah kadaluarsa. Silakan minta kode baru.' };
+  }
+  if (String(row.code) !== cleanCode) {
+    return { valid: false, reason: 'Kode verifikasi salah. Silakan cek kembali email Anda.' };
+  }
+  await pool.query('UPDATE password_resets SET verified = 1 WHERE LOWER(email) = ?', [cleanEmail]);
+  return { valid: true };
+}
+
+export async function dbConsumePasswordResetAndSetPassword(email, code, newPassword) {
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  const cleanCode = String(code || '').trim();
+  const [rows] = await pool.query(
+    'SELECT code, verified, expires_at FROM password_resets WHERE LOWER(email) = ? LIMIT 1',
+    [cleanEmail]
+  );
+  if (!rows || rows.length === 0) {
+    throw new Error('Sesi reset password tidak ditemukan. Silakan ulangi dari langkah 1.');
+  }
+  const row = rows[0];
+  if (new Date(row.expires_at) < new Date()) {
+    throw new Error('Kode verifikasi sudah kadaluarsa. Silakan minta kode baru.');
+  }
+  if (String(row.code) !== cleanCode || Number(row.verified) !== 1) {
+    throw new Error('Kode verifikasi belum tervalidasi.');
+  }
+  const hashed = hashPassword(String(newPassword));
+  await pool.query('UPDATE users SET password = ? WHERE LOWER(email) = ?', [hashed, cleanEmail]);
+  await pool.query('DELETE FROM password_resets WHERE LOWER(email) = ?', [cleanEmail]);
+  return true;
 }
 
 export { pool };

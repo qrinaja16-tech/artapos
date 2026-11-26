@@ -133,3 +133,53 @@ export async function sendFreeRegistrationEmail(toEmail, rawPassword, storeName 
     return { success: false, error: err.message };
   }
 }
+
+export async function sendPasswordResetCodeEmail(toEmail, code) {
+  const mailTransporter = getTransporter();
+  const gmailUser = process.env.GMAIL_USER || 'no-reply@artapos.id';
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="id">
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family:'Segoe UI',Arial,sans-serif;background:#f8fafc;padding:24px;color:#1e293b;">
+      <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:14px;border:1px solid #e2e8f0;overflow:hidden;">
+        <div style="background:#0b1220;padding:24px;text-align:center;">
+          <div style="font-size:22px;font-weight:800;color:#ffffff;">arta<span style="color:#16a34a;">pos</span>.id</div>
+          <div style="color:#94a3b8;font-size:12px;margin-top:4px;">Kode Verifikasi Reset Password</div>
+        </div>
+        <div style="padding:28px;">
+          <h2 style="margin:0 0 10px;font-size:18px;color:#0f172a;">Reset Password Akun Anda</h2>
+          <p style="font-size:14px;line-height:1.6;margin:0 0 16px;">Gunakan kode verifikasi berikut untuk membuat password baru pada akun <strong>${toEmail}</strong>. Kode berlaku selama <strong>10 menit</strong>:</p>
+          <div style="background:#f0fdf4;border:2px dashed #16a34a;border-radius:10px;padding:16px;text-align:center;font-size:28px;font-weight:800;letter-spacing:6px;color:#15803d;">${code}</div>
+          <p style="font-size:12px;color:#64748b;margin:18px 0 0;">Jika Anda tidak merasa meminta reset password, abaikan email ini.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  if (!mailTransporter) {
+    console.log(`🔑 [SIMULASI OTP RESET] Email: ${toEmail} | Kode: ${code}`);
+    return { success: true, simulated: true };
+  }
+
+  try {
+    const info = await mailTransporter.sendMail({
+      from: `"artapos.id Security" <${gmailUser}>`,
+      to: toEmail,
+      subject: `[artapos.id] Kode Verifikasi Lupa Password: ${code}`,
+      html: htmlContent
+    });
+    await dbAddNotificationLog({
+      category: 'EMAIL',
+      recipient: toEmail,
+      title: 'Kode Reset Password Terkirim',
+      message: `Kode OTP reset password dikirim ke ${toEmail}. Message ID: ${info.messageId}`,
+      status: 'success'
+    }).catch(() => {});
+    return { success: true, messageId: info.messageId };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}

@@ -3653,6 +3653,212 @@ window.handleRedeemReferralCode = handleRedeemReferralCode;
 window.copyReferralLink = copyReferralLink;
 window.shareReferralWhatsApp = shareReferralWhatsApp;
 
+// ==============================================================
+// LUPA PASSWORD (3 STEP: EMAIL REALTIME -> OTP -> PW BARU KUAT)
+// ==============================================================
+let forgotEmailTimer = null;
+let forgotVerifiedEmail = '';
+let forgotVerifiedCode = '';
+
+function openForgotPasswordModal() {
+  const modal = document.getElementById('modalForgotPassword');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  goToForgotStep(1);
+  const loginEmail = (document.getElementById('loginEmail')?.value || '').trim();
+  const fEmail = document.getElementById('forgotEmail');
+  if (fEmail) {
+    fEmail.value = loginEmail;
+    checkForgotEmailLive(loginEmail);
+    setTimeout(() => fEmail.focus(), 100);
+  }
+}
+
+function closeForgotPasswordModal() {
+  const modal = document.getElementById('modalForgotPassword');
+  if (modal) modal.classList.add('hidden');
+}
+
+function goToForgotStep(step) {
+  [1, 2, 3].forEach(n => {
+    const el = document.getElementById(`forgotStep${n}`);
+    if (el) el.classList.toggle('hidden', n !== step);
+  });
+}
+
+function hasForbiddenFilePattern(val) {
+  const s = String(val || '');
+  return isMaliciousClientInput(s) || /\.(php|html?|js|exe|sh)\b/i.test(s) || /[<>]/.test(s);
+}
+
+function checkForgotEmailLive(val) {
+  const statusEl = document.getElementById('forgotEmailStatus');
+  const btn = document.getElementById('btnForgotSendCode');
+  const email = String(val || '').trim().toLowerCase();
+
+  if (btn) btn.disabled = true;
+  if (!statusEl) return;
+
+  if (!email) {
+    statusEl.textContent = '';
+    statusEl.className = 'referral-check-msg';
+    return;
+  }
+  if (email.length > 100) {
+    statusEl.textContent = 'Maksimal 100 karakter.';
+    statusEl.className = 'referral-check-msg err';
+    return;
+  }
+  if (hasForbiddenFilePattern(email)) {
+    statusEl.textContent = '⛔ Format/file terlarang (.php, .html, skrip) ditolak!';
+    statusEl.className = 'referral-check-msg err';
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    statusEl.textContent = 'Ketik alamat email yang lengkap...';
+    statusEl.className = 'referral-check-msg warn';
+    return;
+  }
+
+  statusEl.textContent = '⏳ Memeriksa email di database...';
+  statusEl.className = 'referral-check-msg checking';
+
+  if (forgotEmailTimer) clearTimeout(forgotEmailTimer);
+  forgotEmailTimer = setTimeout(async () => {
+    const res = await apiCall(`/api/auth/forgot/check-email?email=${encodeURIComponent(email)}`, 'GET');
+    if (!res) return;
+    if (res.valid && res.registered) {
+      statusEl.textContent = res.message || '✅ Email terdaftar! Silakan klik Minta Kode.';
+      statusEl.className = 'referral-check-msg ok';
+      if (btn) btn.disabled = false;
+    } else {
+      statusEl.textContent = res.message || '❌ Email tidak terdaftar.';
+      statusEl.className = 'referral-check-msg err';
+      if (btn) btn.disabled = true;
+    }
+  }, 280);
+}
+
+async function handleForgotSendCode() {
+  const email = (document.getElementById('forgotEmail')?.value || '').trim().toLowerCase();
+  const btn = document.getElementById('btnForgotSendCode');
+  if (!email || hasForbiddenFilePattern(email) || email.length > 100) {
+    showAlert('Masukkan email terdaftar yang valid.', 'warning');
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span>Mengirim Kode ke Email...</span>'; }
+  try {
+    const res = await apiCall('/api/auth/forgot/send-code', 'POST', { email });
+    if (res && res.success) {
+      forgotVerifiedEmail = email;
+      const lbl = document.getElementById('forgotTargetEmailLabel');
+      if (lbl) lbl.textContent = `(${email})`;
+      const otpInput = document.getElementById('forgotOtpCode');
+      if (otpInput) otpInput.value = '';
+      goToForgotStep(2);
+      showToast(res.message || 'Kode 6 digit terkirim ke email Anda!', 'success');
+    } else {
+      showAlert(res?.error || 'Gagal mengirim kode.', 'error');
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span>Minta Kode</span>'; }
+  }
+}
+
+async function handleForgotVerifyCode() {
+  const code = (document.getElementById('forgotOtpCode')?.value || '').trim();
+  const statusEl = document.getElementById('forgotOtpStatus');
+  if (!code || code.length < 4 || hasForbiddenFilePattern(code)) {
+    if (statusEl) { statusEl.textContent = 'Masukkan 6 digit kode dari email.'; statusEl.className = 'referral-check-msg err'; }
+    return;
+  }
+  const btn = document.getElementById('btnForgotVerifyCode');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span>Memeriksa Kode...</span>'; }
+  try {
+    const res = await apiCall('/api/auth/forgot/verify-code', 'POST', { email: forgotVerifiedEmail, code });
+    if (res && res.success) {
+      forgotVerifiedCode = code;
+      const np = document.getElementById('forgotNewPwd');
+      const cp = document.getElementById('forgotConfirmPwd');
+      if (np) np.value = '';
+      if (cp) cp.value = '';
+      validateForgotPwdLive();
+      goToForgotStep(3);
+      showToast('Kode benar! Silakan buat password baru.', 'success');
+    } else {
+      if (statusEl) { statusEl.textContent = res?.error || 'Kode salah.'; statusEl.className = 'referral-check-msg err'; }
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span>Verifikasi Kode</span>'; }
+  }
+}
+
+function validateForgotPwdLive() {
+  const pw = document.getElementById('forgotNewPwd')?.value || '';
+  const cpw = document.getElementById('forgotConfirmPwd')?.value || '';
+  const btn = document.getElementById('btnForgotResetSave');
+
+  const okLen = pw.length >= 8 && pw.length <= 20;
+  const okUpper = /[A-Z]/.test(pw);
+  const okLower = /[a-z]/.test(pw);
+  const okSymbol = /[^A-Za-z0-9\s]/.test(pw);
+  const okSafe = !hasForbiddenFilePattern(pw);
+  const okMatch = pw.length > 0 && pw === cpw;
+
+  const setRule = (id, pass) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'fp-rule-item ' + (pass ? 'ok' : (pw.length > 0 ? 'bad' : ''));
+  };
+  setRule('fpRuleLen', okLen);
+  setRule('fpRuleUpper', okUpper);
+  setRule('fpRuleLower', okLower);
+  setRule('fpRuleSymbol', okSymbol);
+  setRule('fpRuleSafe', okSafe);
+  setRule('fpRuleMatch', okMatch);
+
+  if (btn) btn.disabled = !(okLen && okUpper && okLower && okSymbol && okSafe && okMatch);
+}
+
+async function handleForgotResetSubmit(e) {
+  e.preventDefault();
+  const newPassword = document.getElementById('forgotNewPwd')?.value || '';
+  const btn = document.getElementById('btnForgotResetSave');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span>Menyimpan Password...</span>'; }
+  try {
+    const res = await apiCall('/api/auth/forgot/reset-password', 'POST', {
+      email: forgotVerifiedEmail,
+      code: forgotVerifiedCode,
+      newPassword
+    });
+    if (res && res.success) {
+      closeForgotPasswordModal();
+      const loginEmail = document.getElementById('loginEmail');
+      if (loginEmail) loginEmail.value = forgotVerifiedEmail;
+      await Swal.fire({
+        icon: 'success',
+        title: 'Password Diperbarui!',
+        text: res.message || 'Silakan login menggunakan password baru Anda.',
+        confirmButtonColor: '#16a34a',
+        didOpen: () => { const c = Swal.getContainer(); if (c) c.style.zIndex = '9999999'; }
+      });
+    } else {
+      showAlert(res?.error || 'Gagal menyimpan password baru.', 'error');
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<span>Simpan Password Baru</span>'; }
+  }
+}
+
+window.openForgotPasswordModal = openForgotPasswordModal;
+window.closeForgotPasswordModal = closeForgotPasswordModal;
+window.goToForgotStep = goToForgotStep;
+window.checkForgotEmailLive = checkForgotEmailLive;
+window.handleForgotSendCode = handleForgotSendCode;
+window.handleForgotVerifyCode = handleForgotVerifyCode;
+window.validateForgotPwdLive = validateForgotPwdLive;
+window.handleForgotResetSubmit = handleForgotResetSubmit;
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp);
 } else {

@@ -33,6 +33,9 @@ import {
   dbCreateUserReferralCode,
   dbRedeemReferralCode,
   dbGetUserReferralStats,
+  dbCreatePasswordResetCode,
+  dbVerifyPasswordResetCode,
+  dbConsumePasswordResetAndSetPassword,
   dbRegisterOrUpdatePaidUser,
   dbUpdateUserAccount,
   dbDeductQuota,
@@ -65,7 +68,7 @@ import {
   dbRecordVisit,
   dbGetVisitStats
 } from './db.js';
-import { sendFreeRegistrationEmail } from './mailer.js';
+import { sendFreeRegistrationEmail, sendPasswordResetCodeEmail } from './mailer.js';
 
 dotenv.config();
 
@@ -1208,6 +1211,159 @@ export function createHttpHandler(waHooks = {}) {
         }));
       } catch (err) {
         res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    // ----------------------------------------
+    // LUPA PASSWORD (3 STEP: CEK EMAIL -> OTP -> RESET PW KUAT)
+    // ----------------------------------------
+    if (cleanUrl === '/api/auth/forgot/check-email' && req.method === 'GET') {
+      try {
+        const qIndex = req.url.indexOf('?');
+        const params = new URLSearchParams(qIndex >= 0 ? req.url.slice(qIndex + 1) : '');
+        const email = String(params.get('email') || '').trim().toLowerCase();
+
+        if (!email || email.length > 100) {
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ valid: false, registered: false, message: 'Email wajib diisi (maksimal 100 karakter).' }));
+          return;
+        }
+        if (containsMaliciousPayload(email) || /\.(php|html?|js|exe|sh)\b/i.test(email)) {
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ valid: false, registered: false, message: '⛔ Format/karakter berbahaya (.php/.html/skrip) ditolak.' }));
+          return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ valid: false, registered: false, message: 'Format email belum lengkap.' }));
+          return;
+        }
+
+        const user = await dbGetUser(email);
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          valid: true,
+          registered: Boolean(user),
+          message: user ? '✅ Email terdaftar! Silakan klik Minta Kode.' : '❌ Email belum terdaftar di artapos.id.'
+        }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    if (cleanUrl === '/api/auth/forgot/send-code' && req.method === 'POST') {
+      if (!checkRateLimit(req, res, 5, 60000)) return;
+      try {
+        const body = await readJsonBody(req);
+        const email = String(body.email || '').trim().toLowerCase();
+        if (!email || email.length > 100 || containsMaliciousPayload(email) || /\.(php|html?|js|exe|sh)\b/i.test(email)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Email tidak valid atau mengandung karakter terlarang.' }));
+          return;
+        }
+        const user = await dbGetUser(email);
+        if (!user) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Email belum terdaftar di artapos.id.' }));
+          return;
+        }
+
+        const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+        await dbCreatePasswordResetCode(email, otpCode, 10);
+        const mailRes = await sendPasswordResetCodeEmail(email, otpCode);
+        if (!mailRes || !mailRes.success) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Gagal mengirim kode ke email: ' + (mailRes?.error || 'SMTP error') }));
+          return;
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          success: true,
+          message: `📩 Kode verifikasi 6 digit telah dikirim ke ${email}.`
+        }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    if (cleanUrl === '/api/auth/forgot/verify-code' && req.method === 'POST') {
+      if (!checkRateLimit(req, res, 10, 60000)) return;
+      try {
+        const body = await readJsonBody(req);
+        const email = String(body.email || '').trim().toLowerCase();
+        const code = String(body.code || '').trim();
+        if (!email || !code || code.length > 16 || containsMaliciousPayload(code)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Email dan kode verifikasi wajib diisi dengan benar.' }));
+          return;
+        }
+        const check = await dbVerifyPasswordResetCode(email, code);
+        if (!check.valid) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: check.reason }));
+          return;
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ success: true, message: '✅ Kode benar! Silakan buat password baru.' }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    if (cleanUrl === '/api/auth/forgot/reset-password' && req.method === 'POST') {
+      if (!checkRateLimit(req, res, 5, 60000)) return;
+      try {
+        const body = await readJsonBody(req);
+        const email = String(body.email || '').trim().toLowerCase();
+        const code = String(body.code || '').trim();
+        const newPassword = String(body.newPassword || '').trim();
+
+        if (!email || !code || !newPassword) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Data tidak lengkap.' }));
+          return;
+        }
+        if (containsMaliciousPayload(newPassword) || /\.(php|html?|js|exe|sh)\b/i.test(newPassword) || /[<>]/.test(newPassword)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: '⛔ Password mengandung karakter/file terlarang (.php/.html/skrip).' }));
+          return;
+        }
+        if (newPassword.length < 8 || newPassword.length > 20) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Password baru wajib 8–20 karakter.' }));
+          return;
+        }
+        if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[^A-Za-z0-9\s]/.test(newPassword)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Password wajib mengandung huruf besar, huruf kecil, dan simbol.' }));
+          return;
+        }
+
+        await dbConsumePasswordResetAndSetPassword(email, code, newPassword);
+        await dbAddNotificationLog({
+          category: 'AUTH',
+          recipient: email,
+          title: '🔐 Reset Password Berhasil (Lupa Password)',
+          message: `Password akun ${email} berhasil diperbarui via verifikasi kode OTP email.`,
+          status: 'success'
+        }).catch(() => {});
+
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({
+          success: true,
+          message: '🎉 Password baru berhasil disimpan! Silakan login menggunakan password baru Anda.'
+        }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
       }
       return;
