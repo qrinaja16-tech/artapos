@@ -26,7 +26,7 @@
     content="Balas chat pelanggan otomatis tanpa sewa server mahal. Gratis 75 Token untuk pendaftar pertama!">
   <meta name="twitter:image" content="https://www.artapos.id/og-preview.jpg?v=2">
   <link rel="icon" type="image/jpeg" href="logo.jpg?v=2">
-  <link rel="stylesheet" href="style.css?v=49.0">
+  <link rel="stylesheet" href="style.css?v=51.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -231,7 +231,7 @@
             Tanpa komitmen jangka panjang, perpanjang setiap 30 hari.</p>
         </div>
 
-        <div class="pricing-cards-grid">
+        <div class="pricing-cards-grid" id="landingPricingGrid">
           <!-- 1. Free Trial (75 Token) -->
           <div class="pricing-card" data-plan="free">
             <div class="pricing-badge-wrapper"></div>
@@ -1105,6 +1105,16 @@
               </div>
             </button>
 
+            <button class="nav-btn" id="navSaPlansBtn" onclick="openSuperAdminPage('plans')">
+              <div class="nav-icon-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                <span>Atur Paket & Harga</span>
+              </div>
+            </button>
+
             <button class="nav-btn" id="navSaPwdBtn" onclick="openSuperAdminPage('pwd')">
               <div class="nav-icon-label">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1555,7 +1565,8 @@
             <div class="card-pro list-knowledge-card">
               <div class="card-head-bar">
                 <div>
-                  <h3>📚 Database Pengetahuan Aktif (<span id="totalKnowledgeCount">0</span>) <span class="char-counter-pill" id="knowledgeQuotaBadge" style="margin-left:6px;">0/10 Slot</span></h3>
+                  <h3>📚 Database Pengetahuan Aktif (<span id="totalKnowledgeCount">0</span>) <span
+                      class="char-counter-pill" id="knowledgeQuotaBadge" style="margin-left:6px;">0/10 Slot</span></h3>
                   <p>Semua item tersimpan aman dan siap dijawab otomatis oleh bot.</p>
                 </div>
                 <div class="search-box-knowledge">
@@ -1936,6 +1947,10 @@
               <button type="button" class="admin-subnav-btn" id="subnavBtnOrders"
                 onclick="switchAdminSection('orders')">
                 💳 Transaksi Pembayaran (<span id="subnavOrdersCount">0</span>)
+              </button>
+              <button type="button" class="admin-subnav-btn" id="subnavBtnPlans"
+                onclick="switchAdminSection('plans')">
+                ⚙️ Atur Paket & Harga
               </button>
               <button type="button" class="admin-subnav-btn" id="subnavBtnPwd" onclick="switchAdminSection('pwd')">
                 🔐 Sandi Super Admin
@@ -2483,6 +2498,24 @@
               </div>
             </div>
 
+            <!-- Kelola Paket, Harga, Token & Kuota Knowledge (100% Dinamis) -->
+            <div class="card-pro admin-table-card hidden" id="adminPlansSection">
+              <div class="admin-table-header">
+                <div>
+                  <h3>⚙️ Atur Paket, Harga, Token &amp; Kuota Knowledge</h3>
+                  <p style="font-size:0.82rem; color:#64748b; margin-top:4px;">
+                    Perubahan di sini otomatis mengubah <strong>Landing Page</strong>, <strong>Halaman Pembelian</strong>, dan <strong>Batas Kuota Sistem</strong> secara real-time.
+                  </p>
+                </div>
+                <div class="admin-table-actions">
+                  <button type="button" class="btn-admin-refresh" onclick="loadDynamicPlans(true)">🔄 Muat Ulang Paket</button>
+                </div>
+              </div>
+              <div id="adminPlansManagerGrid" class="admin-plans-grid">
+                <div style="padding:24px; text-align:center; color:#64748b;">Memuat konfigurasi paket...</div>
+              </div>
+            </div>
+
           </section>
 
         </div>
@@ -2561,6 +2594,17 @@
               </div>
             </div>
 
+            <div class="form-row-2">
+              <div class="field-group">
+                <label for="editUserExtraKnowledge">➕ Tambahan Kuota Knowledge (Item):</label>
+                <input type="number" id="editUserExtraKnowledge" min="0" value="0">
+              </div>
+              <div class="field-group">
+                <label for="editUserExtraImages">➕ Tambahan Kuota Foto Produk:</label>
+                <input type="number" id="editUserExtraImages" min="0" value="0">
+              </div>
+            </div>
+
             <div class="field-group">
               <label for="editUserDaysAdd">Tambah Masa Aktif (Hari):</label>
               <input type="number" id="editUserDaysAdd" placeholder="Contoh: 30" min="0">
@@ -2621,7 +2665,8 @@
           <button type="button" class="btn-close-free-modal" onclick="closeFreeRegisterModal()" title="Tutup">✕</button>
         </div>
         <h2>Daftar Akun artapos.id</h2>
-        <p>Aktifkan asisten WhatsApp AI dengan <strong>75 Token Gratis</strong> &amp; 10 template soal-jawaban siap pakai.
+        <p>Aktifkan asisten WhatsApp AI dengan <strong>75 Token Gratis</strong> &amp; 10 template soal-jawaban siap
+          pakai.
         </p>
       </div>
 
@@ -2853,7 +2898,7 @@
   </div>
 
   <!-- Main JavaScript Controller -->
-  <script src="app.js?v=50.0"></script>
+  <script src="app.js?v=51.0"></script>
 </body>
 
 </html>

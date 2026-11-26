@@ -85,9 +85,48 @@ export async function initTiDB() {
           await conn.query("ALTER TABLE users ADD UNIQUE INDEX idx_user_referral_code (referral_code)");
         } catch (_) { }
       }
+      const [colsExK] = await conn.query("SHOW COLUMNS FROM users LIKE 'extra_knowledge'");
+      if (!colsExK || colsExK.length === 0) {
+        await conn.query("ALTER TABLE users ADD COLUMN extra_knowledge INT DEFAULT 0");
+      }
+      const [colsExI] = await conn.query("SHOW COLUMNS FROM users LIKE 'extra_images'");
+      if (!colsExI || colsExI.length === 0) {
+        await conn.query("ALTER TABLE users ADD COLUMN extra_images INT DEFAULT 0");
+      }
     } catch (e) {
       console.warn('⚠️ Users column migration notice:', e.message);
     }
+
+    // Tabel Plans Config (Harga, Token, Knowledge, Gambar, Watermark Dinamis dari Super Admin)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS plans_config (
+        plan_key VARCHAR(40) PRIMARY KEY,
+        name VARCHAR(120) NOT NULL,
+        price INT NOT NULL DEFAULT 0,
+        quota_tokens INT NOT NULL DEFAULT 75,
+        days_active INT NOT NULL DEFAULT 30,
+        max_knowledge INT NOT NULL DEFAULT 10,
+        max_images INT NOT NULL DEFAULT 0,
+        has_watermark TINYINT(1) DEFAULT 1,
+        is_popular TINYINT(1) DEFAULT 0,
+        sort_order INT DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+    try {
+      const [[pCount]] = await conn.query('SELECT COUNT(*) AS total FROM plans_config');
+      if (Number(pCount?.total || 0) === 0) {
+        await conn.query(`
+          INSERT INTO plans_config (plan_key, name, price, quota_tokens, days_active, max_knowledge, max_images, has_watermark, is_popular, sort_order) VALUES
+          ('free', 'Paket Gratis (Free)', 0, 75, 30, 10, 0, 1, 0, 1),
+          ('hemat25', 'Paket Hemat 25K', 25000, 300, 30, 25, 1, 1, 0, 2),
+          ('plus35', 'Paket Plus 35K', 35000, 500, 30, 50, 5, 0, 1, 3),
+          ('starter50', 'Paket Starter 50K', 50000, 1000, 30, 100, 10, 0, 0, 4),
+          ('pro70', 'Paket Pro 70K', 70000, 1500, 30, 200, 15, 0, 0, 5),
+          ('bisnis100', 'Paket Bisnis 100K', 100000, 2500, 30, 500, 25, 0, 0, 6)
+        `);
+      }
+    } catch (e) {}
 
     // Tabel Referral Redemptions (1 User bisa redeem banyak kode berbeda, tapi tidak bisa kode yang sama >1x)
     await conn.query(`
@@ -578,7 +617,7 @@ export async function dbGetUser(email) {
 
 export async function dbGetUserById(id) {
   try {
-    const [rows] = await pool.query('SELECT id, email, store_name, plan, quota_total, quota_used, active_until, role, device_id, free_claimed, free_claim_device_id, referral_code FROM users WHERE id = ? LIMIT 1', [Number(id)]);
+    const [rows] = await pool.query('SELECT id, email, store_name, plan, quota_total, quota_used, active_until, role, device_id, free_claimed, free_claim_device_id, referral_code, COALESCE(extra_knowledge, 0) AS extra_knowledge, COALESCE(extra_images, 0) AS extra_images FROM users WHERE id = ? LIMIT 1', [Number(id)]);
     return rows[0] || null;
   } catch (err) {
     return null;
@@ -1123,6 +1162,8 @@ export async function dbGetUserDetailsForAdmin(userId) {
     const [userRows] = await pool.query(
       `SELECT id, email, store_name, plan, quota_total, quota_used, 
               (quota_total - quota_used) AS quota_remaining, 
+              COALESCE(extra_knowledge, 0) AS extra_knowledge,
+              COALESCE(extra_images, 0) AS extra_images,
               role, active_until, created_at, updated_at 
        FROM users WHERE id = ? LIMIT 1`,
       [Number(userId)]
@@ -1198,6 +1239,14 @@ export async function dbAdminFullUpdateUser(userId, data) {
     if (data.plan !== undefined) {
       updates.push('plan = ?');
       params.push(String(data.plan).slice(0, 100));
+    }
+    if (data.extra_knowledge !== undefined && !isNaN(data.extra_knowledge)) {
+      updates.push('extra_knowledge = ?');
+      params.push(Math.max(0, Number(data.extra_knowledge)));
+    }
+    if (data.extra_images !== undefined && !isNaN(data.extra_images)) {
+      updates.push('extra_images = ?');
+      params.push(Math.max(0, Number(data.extra_images)));
     }
     if (data.quota_total !== undefined && !isNaN(data.quota_total)) {
       updates.push('quota_total = ?');
@@ -1855,6 +1904,80 @@ export async function dbGetUserActivityLogs(userId, email) {
 
   logs.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
   return logs.slice(0, 50);
+}
+
+export async function dbGetAllPlans() {
+  try {
+    const [rows] = await pool.query('SELECT * FROM plans_config ORDER BY sort_order ASC');
+    return rows || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function dbGetPlanByKey(planKey) {
+  try {
+    const [rows] = await pool.query('SELECT * FROM plans_config WHERE plan_key = ? LIMIT 1', [String(planKey || '').toLowerCase()]);
+    return rows[0] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function dbUpdatePlanConfig(planKey, data) {
+  const key = String(planKey || '').trim().toLowerCase();
+  if (!key) throw new Error('plan_key wajib diisi.');
+  const name = String(data.name || '').trim().slice(0, 100);
+  const price = Math.max(0, Number(data.price || 0));
+  const quotaTokens = Math.max(1, Number(data.quota_tokens || 75));
+  const daysActive = Math.max(1, Number(data.days_active || 30));
+  const maxKnowledge = Math.max(1, Number(data.max_knowledge || 10));
+  const maxImages = Math.max(0, Number(data.max_images || 0));
+  const hasWatermark = data.has_watermark ? 1 : 0;
+  const isPopular = data.is_popular ? 1 : 0;
+
+  if (isPopular) {
+    await pool.query('UPDATE plans_config SET is_popular = 0 WHERE plan_key != ?', [key]);
+  }
+
+  await pool.query(
+    `UPDATE plans_config
+     SET name = ?, price = ?, quota_tokens = ?, days_active = ?, max_knowledge = ?, max_images = ?, has_watermark = ?, is_popular = ?
+     WHERE plan_key = ?`,
+    [name, price, quotaTokens, daysActive, maxKnowledge, maxImages, hasWatermark, isPopular, key]
+  );
+  return await dbGetPlanByKey(key);
+}
+
+export async function dbGetEffectiveUserLimits(planName = '', role = 'user', extraKnowledge = 0, extraImages = 0) {
+  if (role === 'superadmin') {
+    return { knowledgeLimit: 9999, imageLimit: 999 };
+  }
+  let baseK = getKnowledgeLimitForPlan(planName, role);
+  let baseI = getImageLimitForPlan(planName, role);
+  try {
+    const plans = await dbGetAllPlans();
+    const pLower = String(planName || '').toLowerCase();
+    const matched = plans.find(p =>
+      pLower === String(p.name || '').toLowerCase() ||
+      pLower.includes(String(p.plan_key || '').toLowerCase()) ||
+      (p.plan_key === 'hemat25' && (pLower.includes('25k') || pLower.includes('hemat'))) ||
+      (p.plan_key === 'plus35' && (pLower.includes('35k') || pLower.includes('plus'))) ||
+      (p.plan_key === 'starter50' && (pLower.includes('50k') || pLower.includes('starter'))) ||
+      (p.plan_key === 'pro70' && (pLower.includes('70k') || pLower.includes('pro'))) ||
+      (p.plan_key === 'bisnis100' && (pLower.includes('100k') || pLower.includes('bisnis'))) ||
+      (p.plan_key === 'free' && (pLower.includes('gratis') || pLower.includes('free')))
+    );
+    if (matched) {
+      baseK = Number(matched.max_knowledge || baseK);
+      baseI = Number(matched.max_images ?? baseI);
+    }
+  } catch (e) {}
+
+  return {
+    knowledgeLimit: baseK + Math.max(0, Number(extraKnowledge || 0)),
+    imageLimit: baseI + Math.max(0, Number(extraImages || 0))
+  };
 }
 
 export { pool };

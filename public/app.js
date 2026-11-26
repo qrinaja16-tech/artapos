@@ -3,13 +3,18 @@
 // Multi-Tenant Isolation, Real-Time Quota Stream & Session Security
 // ==============================================================
 
-// Daftar Paket Resmi artapos.id
+// Daftar Paket Resmi artapos.id (Fallback default, diperbarui dinamis via GET /api/plans)
 const ARTAPOS_PLANS = {
   hemat25: {
     id: 'hemat25',
     name: 'Paket Hemat 25K',
     price: 25000,
     quota: 300,
+    days_active: 30,
+    max_knowledge: 7,
+    max_images: 7,
+    has_watermark: true,
+    popular: false,
     desc: '300 token/bulan • 30 hari (Masih ada watermark)'
   },
   plus35: {
@@ -17,6 +22,11 @@ const ARTAPOS_PLANS = {
     name: 'Paket Plus 35K',
     price: 35000,
     quota: 500,
+    days_active: 30,
+    max_knowledge: 15,
+    max_images: 15,
+    has_watermark: false,
+    popular: true,
     desc: '500 token/bulan • 30 hari (Tanpa Watermark)'
   },
   starter50: {
@@ -24,6 +34,11 @@ const ARTAPOS_PLANS = {
     name: 'Paket Starter 50K',
     price: 50000,
     quota: 1000,
+    days_active: 30,
+    max_knowledge: 25,
+    max_images: 25,
+    has_watermark: false,
+    popular: false,
     desc: '1.000 token/bulan • 30 hari (Tanpa Watermark)'
   },
   pro70: {
@@ -31,6 +46,11 @@ const ARTAPOS_PLANS = {
     name: 'Paket Pro 70K',
     price: 70000,
     quota: 1500,
+    days_active: 30,
+    max_knowledge: 40,
+    max_images: 40,
+    has_watermark: false,
+    popular: false,
     desc: '1.500 token/bulan • 30 hari (Tanpa Watermark)'
   },
   bisnis100: {
@@ -38,10 +58,272 @@ const ARTAPOS_PLANS = {
     name: 'Paket Bisnis 100K',
     price: 100000,
     quota: 2500,
-    popular: true,
-    desc: '2.500 token/bulan • 30 hari (Paling Laris • Tanpa Watermark)'
+    days_active: 30,
+    max_knowledge: 9999,
+    max_images: 9999,
+    has_watermark: false,
+    popular: false,
+    desc: '2.500 token/bulan • 30 hari (Tanpa Watermark)'
   }
 };
+
+let DYNAMIC_PLANS_LIST = [];
+
+async function loadDynamicPlans(showSuccessToast = false) {
+  try {
+    const res = await fetch('/api/plans');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.success && Array.isArray(data.plans) && data.plans.length > 0) {
+      DYNAMIC_PLANS_LIST = data.plans;
+      applyDynamicPlansToUI(data.plans);
+      if (showSuccessToast) {
+        showToast('Konfigurasi paket berhasil dimuat ulang!', 'success');
+      }
+    }
+  } catch (e) {
+    console.warn('[PLANS] Gagal memuat paket dinamis, pakai default:', e.message);
+  }
+}
+
+function applyDynamicPlansToUI(plans) {
+  if (!Array.isArray(plans) || plans.length === 0) return;
+
+  plans.forEach(p => {
+    const key = p.plan_key || p.id;
+    if (!key || key === 'free') return;
+    const days = Number(p.days_active || 30);
+    const quotaVal = Number(p.quota_tokens ?? p.quota ?? 0);
+    const wmText = p.has_watermark ? 'Ada watermark' : 'Tanpa Watermark';
+    ARTAPOS_PLANS[key] = {
+      id: key,
+      name: p.name,
+      price: Number(p.price || 0),
+      quota: quotaVal,
+      days_active: days,
+      max_knowledge: Number(p.max_knowledge ?? 7),
+      max_images: Number(p.max_images ?? 0),
+      has_watermark: Boolean(p.has_watermark),
+      popular: Boolean(p.is_popular),
+      desc: `${quotaVal.toLocaleString('id-ID')} token / ${days} hari (${wmText})`
+    };
+  });
+
+  renderLandingPricingGrid(plans);
+  renderCheckoutPlanSelector(plans);
+  renderAdminPlansManager(plans);
+}
+
+function renderLandingPricingGrid(plans) {
+  const grid = document.getElementById('landingPricingGrid');
+  if (!grid || !Array.isArray(plans) || plans.length === 0) return;
+
+  const checkSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+  const infoSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+
+  grid.innerHTML = plans.map(p => {
+    const key = p.plan_key || p.id;
+    const isFree = key === 'free' || Number(p.price) === 0;
+    const isPopular = Boolean(p.is_popular);
+    const priceNum = Number(p.price || 0);
+    const quotaNum = Number(p.quota_tokens ?? p.quota ?? 0);
+    const daysNum = Number(p.days_active || 30);
+    const maxKnowledge = Number(p.max_knowledge ?? 7);
+    const maxImages = Number(p.max_images ?? 0);
+    const hasWatermark = Boolean(p.has_watermark);
+
+    const kText = maxKnowledge >= 9999
+      ? 'Knowledge Base Tanpa Batas'
+      : `Maksimal ${maxKnowledge.toLocaleString('id-ID')} Knowledge Base`;
+    const imgText = maxImages >= 9999
+      ? 'Foto Produk Tanpa Batas'
+      : `Maksimal ${maxImages.toLocaleString('id-ID')} Foto Produk`;
+
+    const descText = p.description
+      ? escapeHtml(p.description)
+      : (isFree
+        ? 'Uji coba langsung tanpa biaya & tanpa kartu kredit.'
+        : `Kuota ${quotaNum.toLocaleString('id-ID')} balasan AI selama ${daysNum} hari aktif.`);
+
+    const wmItem = hasWatermark
+      ? `<li style="color: #64748b;">${infoSvg}Ada Watermark <code>&gt; sent via artapos.id</code></li>`
+      : `<li>${checkSvg}<strong>Tanpa Watermark</strong> (Branding Toko Sendiri)</li>`;
+
+    const actionBtn = isFree
+      ? `<button class="btn-select-plan" onclick="openFreeRegisterModal()">Daftar Gratis</button>`
+      : `<button class="btn-select-plan${isPopular ? ' primary' : ''}" onclick="openCheckout('${escapeHtml(key)}')">Pilih ${escapeHtml(p.name)}</button>`;
+
+    return `
+      <div class="pricing-card${isPopular ? ' featured' : ''}" data-plan="${escapeHtml(key)}">
+        <div class="pricing-badge-wrapper">${isPopular ? '<span class="popular-ribbon">🔥 PALING LARIS</span>' : ''}</div>
+        <div class="pricing-tier-name">${escapeHtml(p.name)}</div>
+        <div class="pricing-tier-desc">${descText}</div>
+        <div class="pricing-price-box">
+          <span class="price-currency">Rp</span>
+          <span class="price-value">${priceNum.toLocaleString('id-ID')}</span>
+          <span class="price-period">/${daysNum} hari</span>
+        </div>
+        <div class="pricing-quota-highlight">
+          <strong>${quotaNum.toLocaleString('id-ID')}</strong> Token Chat AI / ${daysNum} Hari
+        </div>
+        <ul class="pricing-features-list">
+          <li>${checkSvg}Koneksi WhatsApp Perangkat Tertaut</li>
+          <li>${checkSvg}${kText}</li>
+          <li>${checkSvg}${imgText}</li>
+          ${wmItem}
+        </ul>
+        ${actionBtn}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderCheckoutPlanSelector(plans) {
+  const container = document.getElementById('checkoutPlanSelector');
+  if (!container || !Array.isArray(plans) || plans.length === 0) return;
+
+  const paidPlans = plans.filter(p => (p.plan_key || p.id) !== 'free' && Number(p.price || 0) > 0);
+  if (paidPlans.length === 0) return;
+
+  const selectedKey = ARTAPOS_PLANS[currentSelectedPlan] ? currentSelectedPlan : (paidPlans[0].plan_key || paidPlans[0].id);
+
+  container.innerHTML = paidPlans.map(p => {
+    const key = p.plan_key || p.id;
+    const isSelected = key === selectedKey;
+    const priceNum = Number(p.price || 0);
+    const quotaNum = Number(p.quota_tokens ?? p.quota ?? 0);
+    const daysNum = Number(p.days_active || 30);
+    const maxK = Number(p.max_knowledge || 7);
+    const kLabel = maxK >= 9999 ? 'Unlimited Knowledge' : `${maxK} Knowledge`;
+    const wmBadge = p.has_watermark
+      ? 'Ada watermark'
+      : '<strong style="color:#16a34a;">✨ Tanpa watermark</strong>';
+    const popBadge = p.is_popular
+      ? `<span class="badge-best-seller">🔥 Paling Laris</span>`
+      : '';
+
+    return `
+      <label class="plan-option${isSelected ? ' selected' : ''}" onclick="selectCheckoutPlan('${escapeHtml(key)}')">
+        <input type="radio" name="checkoutPlanRadio" value="${escapeHtml(key)}"${isSelected ? ' checked' : ''}>
+        <div class="plan-option-content">
+          <div class="plan-option-header">
+            <div>
+              <strong>${escapeHtml(p.name)}</strong>
+              ${popBadge}
+            </div>
+            <span class="plan-option-price">Rp ${priceNum.toLocaleString('id-ID')} / ${daysNum} hr</span>
+          </div>
+          <div class="plan-option-quota">${quotaNum.toLocaleString('id-ID')} token / ${daysNum} hari • ${kLabel} • ${wmBadge}</div>
+        </div>
+      </label>
+    `;
+  }).join('');
+}
+
+function renderAdminPlansManager(plans) {
+  const grid = document.getElementById('adminPlansManagerGrid');
+  if (!grid || !Array.isArray(plans) || plans.length === 0) return;
+
+  grid.innerHTML = plans.map(p => {
+    const key = p.plan_key || p.id;
+    const safeKey = escapeHtml(key);
+    const isPopular = Boolean(p.is_popular);
+    const hasWatermark = Boolean(p.has_watermark);
+
+    return `
+      <div class="admin-plan-edit-card${isPopular ? ' is-popular' : ''}" data-plan-key="${safeKey}">
+        <div class="admin-plan-card-top">
+          <strong style="font-size:0.95rem; color:#0f172a;">${escapeHtml(p.name)}</strong>
+          <span class="admin-plan-key-badge">${safeKey}</span>
+        </div>
+
+        <div class="admin-plan-fields-grid">
+          <div class="admin-plan-field full-span">
+            <label>Nama Paket</label>
+            <input type="text" id="planEditName_${safeKey}" value="${escapeHtml(p.name || '')}">
+          </div>
+          <div class="admin-plan-field">
+            <label>Harga (Rp)</label>
+            <input type="number" min="0" id="planEditPrice_${safeKey}" value="${Number(p.price || 0)}">
+          </div>
+          <div class="admin-plan-field">
+            <label>Jumlah Token</label>
+            <input type="number" min="0" id="planEditQuota_${safeKey}" value="${Number(p.quota_tokens ?? p.quota ?? 0)}">
+          </div>
+          <div class="admin-plan-field">
+            <label>Masa Aktif (Hari)</label>
+            <input type="number" min="1" id="planEditDays_${safeKey}" value="${Number(p.days_active || 30)}">
+          </div>
+          <div class="admin-plan-field">
+            <label>Maks. Knowledge</label>
+            <input type="number" min="1" id="planEditKnowledge_${safeKey}" value="${Number(p.max_knowledge ?? 7)}">
+          </div>
+          <div class="admin-plan-field">
+            <label>Maks. Foto Produk</label>
+            <input type="number" min="0" id="planEditImages_${safeKey}" value="${Number(p.max_images ?? 0)}">
+          </div>
+          <div class="admin-plan-field full-span">
+            <label>Deskripsi Singkat (Landing Page)</label>
+            <input type="text" id="planEditDesc_${safeKey}" value="${escapeHtml(p.description || '')}" placeholder="Opsional...">
+          </div>
+        </div>
+
+        <div class="admin-plan-toggles">
+          <label class="admin-plan-toggle-label">
+            <input type="checkbox" id="planEditWatermark_${safeKey}"${hasWatermark ? ' checked' : ''}>
+            Ada Watermark
+          </label>
+          <label class="admin-plan-toggle-label">
+            <input type="checkbox" id="planEditPopular_${safeKey}"${isPopular ? ' checked' : ''}>
+            Badge Paling Laris
+          </label>
+        </div>
+
+        <button type="button" class="btn-save-plan-card" onclick="handleAdminSavePlan('${safeKey}')">
+          💾 Simpan Perubahan Paket
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+async function handleAdminSavePlan(planKey) {
+  const name = document.getElementById(`planEditName_${planKey}`)?.value?.trim();
+  const price = Number(document.getElementById(`planEditPrice_${planKey}`)?.value || 0);
+  const quota = Number(document.getElementById(`planEditQuota_${planKey}`)?.value || 0);
+  const days_active = Number(document.getElementById(`planEditDays_${planKey}`)?.value || 30);
+  const max_knowledge = Number(document.getElementById(`planEditKnowledge_${planKey}`)?.value || 7);
+  const max_images = Number(document.getElementById(`planEditImages_${planKey}`)?.value || 7);
+  const description = document.getElementById(`planEditDesc_${planKey}`)?.value?.trim() || '';
+  const has_watermark = Boolean(document.getElementById(`planEditWatermark_${planKey}`)?.checked);
+  const is_popular = Boolean(document.getElementById(`planEditPopular_${planKey}`)?.checked);
+
+  if (!name) {
+    showAlert('Nama paket tidak boleh kosong.', 'error');
+    return;
+  }
+
+  const res = await apiCall('/api/admin/plans', 'POST', {
+    plan_key: planKey,
+    name,
+    price,
+    quota_tokens: quota,
+    quota,
+    days_active,
+    max_knowledge,
+    max_images,
+    description,
+    has_watermark,
+    is_popular
+  });
+
+  if (res && res.success) {
+    showToast(`Paket "${name}" berhasil disimpan & disinkronkan ke Landing Page dan Checkout!`, 'success');
+    await loadDynamicPlans(false);
+  } else {
+    showAlert('Gagal menyimpan paket: ' + (res?.error || 'Kesalahan sistem'), 'error');
+  }
+}
 
 // Kamus Singkatan Bahasa Indonesia
 const ABBREVIATIONS = {
@@ -1084,7 +1366,7 @@ function switchTab(tabName) {
   });
 
   if (tabName !== 'superadmin') {
-    ['navSaTrafficBtn', 'navSaUsersBtn', 'navSaNotifBtn', 'navSaKnowledgeBtn', 'navSaOrdersBtn', 'navSaPwdBtn'].forEach(id => {
+    ['navSaTrafficBtn', 'navSaUsersBtn', 'navSaNotifBtn', 'navSaKnowledgeBtn', 'navSaOrdersBtn', 'navSaPlansBtn', 'navSaPwdBtn'].forEach(id => {
       document.getElementById(id)?.classList.remove('active');
     });
   }
@@ -2315,6 +2597,7 @@ function switchAdminSection(sectionKey) {
     'notifications': document.getElementById('subnavBtnNotif'),
     'knowledge': document.getElementById('subnavBtnKnowledge'),
     'orders': document.getElementById('subnavBtnOrders'),
+    'plans': document.getElementById('subnavBtnPlans'),
     'pwd': document.getElementById('subnavBtnPwd')
   };
 
@@ -2324,6 +2607,7 @@ function switchAdminSection(sectionKey) {
     'notifications': document.getElementById('navSaNotifBtn'),
     'knowledge': document.getElementById('navSaKnowledgeBtn'),
     'orders': document.getElementById('navSaOrdersBtn'),
+    'plans': document.getElementById('navSaPlansBtn'),
     'pwd': document.getElementById('navSaPwdBtn')
   };
 
@@ -2339,6 +2623,7 @@ function switchAdminSection(sectionKey) {
     'notifications': document.getElementById('adminNotificationsSection'),
     'knowledge': document.getElementById('adminKnowledgeSection'),
     'orders': document.getElementById('adminOrdersSection'),
+    'plans': document.getElementById('adminPlansSection'),
     'pwd': document.getElementById('adminPwdSection')
   };
 
@@ -2349,12 +2634,21 @@ function switchAdminSection(sectionKey) {
     }
   });
 
+  if (sectionKey === 'plans') {
+    if (DYNAMIC_PLANS_LIST.length > 0) {
+      renderAdminPlansManager(DYNAMIC_PLANS_LIST);
+    } else {
+      loadDynamicPlans(false);
+    }
+  }
+
   const sectionTitles = {
     'traffic': 'Grafik Kunjungan Website Real-Time',
     'users': 'CRUD Akun Email & Token Toko',
     'notifications': 'Log Aktivitas (Daftar, Login, Logout) & Notifikasi',
     'knowledge': 'Bank Soal & Jawaban Seluruh Akun',
     'orders': 'Riwayat Transaksi Pembayaran',
+    'plans': 'Atur Paket, Harga, Token & Kuota Knowledge',
     'pwd': 'Pengaturan Sandi Super Admin'
   };
   const topTitle = document.getElementById('topbarTitle');
@@ -2640,6 +2934,8 @@ async function openAdminUserDetail(userId) {
   const editPlan = document.getElementById('editUserPlan');
   const editQuotaTotal = document.getElementById('editUserQuotaTotal');
   const editQuotaUsed = document.getElementById('editUserQuotaUsed');
+  const editExtraKnowledge = document.getElementById('editUserExtraKnowledge');
+  const editExtraImages = document.getElementById('editUserExtraImages');
   const editCurrentActive = document.getElementById('editUserCurrentActive');
   const editDaysAdd = document.getElementById('editUserDaysAdd');
   const editNewPwd = document.getElementById('editUserNewPassword');
@@ -2650,6 +2946,8 @@ async function openAdminUserDetail(userId) {
   if (editPlan) editPlan.value = user.plan || 'Paket Bisnis';
   if (editQuotaTotal) editQuotaTotal.value = user.quota_total || 2500;
   if (editQuotaUsed) editQuotaUsed.value = user.quota_used || 0;
+  if (editExtraKnowledge) editExtraKnowledge.value = user.extra_knowledge ?? 0;
+  if (editExtraImages) editExtraImages.value = user.extra_images ?? 0;
   if (editDaysAdd) editDaysAdd.value = '';
   if (editNewPwd) editNewPwd.value = '';
 
@@ -2769,6 +3067,8 @@ async function handleAdminSaveUserChanges(e) {
   const plan = document.getElementById('editUserPlan')?.value;
   const quota_total = document.getElementById('editUserQuotaTotal')?.value;
   const quota_used = document.getElementById('editUserQuotaUsed')?.value;
+  const extra_knowledge = document.getElementById('editUserExtraKnowledge')?.value;
+  const extra_images = document.getElementById('editUserExtraImages')?.value;
   const daysToAdd = document.getElementById('editUserDaysAdd')?.value;
   const newPassword = document.getElementById('editUserNewPassword')?.value;
   const btn = document.getElementById('btnAdminSaveUser');
@@ -2795,6 +3095,8 @@ async function handleAdminSaveUserChanges(e) {
     plan,
     quota_total: quota_total !== '' ? Number(quota_total) : undefined,
     quota_used: quota_used !== '' ? Number(quota_used) : undefined,
+    extra_knowledge: extra_knowledge !== '' ? Number(extra_knowledge) : undefined,
+    extra_images: extra_images !== '' ? Number(extra_images) : undefined,
     daysToAdd: daysToAdd ? Number(daysToAdd) : undefined,
     newPassword: newPassword ? newPassword.trim() : undefined
   };
@@ -3441,6 +3743,7 @@ function trackCtaEvent(eventType) {
 // ==============================================================
 async function initApp() {
   console.log('🚀 [INIT] Memuat artapos.id Security Engine...');
+  loadDynamicPlans(false);
 
   if (!navigator.onLine) {
     setNetworkOfflineState(true);

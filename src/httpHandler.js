@@ -42,6 +42,10 @@ import {
   dbCountUserKnowledgeImages,
   getKnowledgeLimitForPlan,
   dbCountUserKnowledge,
+  dbGetAllPlans,
+  dbGetPlanByKey,
+  dbUpdatePlanConfig,
+  dbGetEffectiveUserLimits,
   dbRegisterOrUpdatePaidUser,
   dbUpdateUserAccount,
   dbDeductQuota,
@@ -622,14 +626,16 @@ export function createHttpHandler(waHooks = {}) {
             }
           }
 
-          const kLimit = getKnowledgeLimitForPlan(session.plan, session.role);
+          const freshUserForK = await dbGetUserById(session.user_id);
+          const effLimitsK = await dbGetEffectiveUserLimits(session.plan, session.role, freshUserForK?.extra_knowledge, freshUserForK?.extra_images);
+          const kLimit = effLimitsK.knowledgeLimit;
           const kUsed = await dbCountUserKnowledge(session.user_id);
           if (kUsed >= kLimit) {
             throw new Error(`Batas maksimal ${kLimit} Knowledge untuk ${session.plan} sudah tercapai. Upgrade paket agar kapasitas AI makin pintar!`);
           }
 
           if (body.image_url) {
-            const imgLimit = getImageLimitForPlan(session.plan, session.role);
+            const imgLimit = effLimitsK.imageLimit;
             if (imgLimit <= 0) {
               throw new Error('Paket Gratis tidak mendukung upload gambar. Upgrade minimal Paket 25K.');
             }
@@ -670,7 +676,9 @@ export function createHttpHandler(waHooks = {}) {
           }
 
           if (body.image_url) {
-            const imgLimit = getImageLimitForPlan(session.plan, session.role);
+            const freshUserImg = await dbGetUserById(session.user_id);
+        const effImgLimits = await dbGetEffectiveUserLimits(session.plan, session.role, freshUserImg?.extra_knowledge, freshUserImg?.extra_images);
+        const imgLimit = effImgLimits.imageLimit;
             if (imgLimit <= 0) {
               throw new Error('Paket Gratis tidak mendukung upload gambar. Upgrade minimal Paket 25K.');
             }
@@ -716,7 +724,9 @@ export function createHttpHandler(waHooks = {}) {
           return;
         }
 
-        const imgLimit = getImageLimitForPlan(session.plan, session.role);
+        const freshUserImg = await dbGetUserById(session.user_id);
+        const effImgLimits = await dbGetEffectiveUserLimits(session.plan, session.role, freshUserImg?.extra_knowledge, freshUserImg?.extra_images);
+        const imgLimit = effImgLimits.imageLimit;
         if (imgLimit <= 0) {
           res.writeHead(403, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Paket Gratis tidak mendukung upload gambar. Upgrade minimal Paket 25K.' }));
@@ -792,6 +802,48 @@ export function createHttpHandler(waHooks = {}) {
     }
 
     // ----------------------------------------
+    // DYNAMIC PLANS CONFIG (PUBLIC READ & SUPER ADMIN UPDATE)
+    // ----------------------------------------
+    if (cleanUrl === '/api/plans' && req.method === 'GET') {
+      try {
+        const plans = await dbGetAllPlans();
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache, no-store' });
+        res.end(JSON.stringify({ success: true, plans }));
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    if (cleanUrl === '/api/admin/plans' && req.method === 'POST') {
+      try {
+        const session = await getAuthUser(req);
+        if (!session || session.role !== 'superadmin') {
+          res.writeHead(403, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Akses ditolak. Khusus Super Admin.' }));
+          return;
+        }
+        const body = await readJsonBody(req);
+        const updated = await dbUpdatePlanConfig(body.plan_key, body);
+        const allPlans = await dbGetAllPlans();
+        await dbAddNotificationLog({
+          category: 'ADMIN',
+          recipient: session.email,
+          title: `⚙️ Super Admin Mengubah Paket "${updated?.name || body.plan_key}"`,
+          message: `Harga: Rp ${Number(updated?.price || 0).toLocaleString('id-ID')}, Token: ${updated?.quota_tokens}, Knowledge: ${updated?.max_knowledge}, Gambar: ${updated?.max_images}.`,
+          status: 'success'
+        }).catch(() => {});
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ success: true, plan: updated, plans: allPlans }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+      return;
+    }
+
+    // ----------------------------------------
     // 3. API CONFIG TOKO (SCOPED BY USER_ID & WAJIB LOGIN)
     // ----------------------------------------
     if (cleanUrl === '/api/config') {
@@ -855,7 +907,15 @@ export function createHttpHandler(waHooks = {}) {
       try {
         const body = await readJsonBody(req);
         const planKey = (body.planId || 'bisnis100').toLowerCase();
-        const plan = ARTAPOS_PLANS[planKey] || ARTAPOS_PLANS.bisnis100;
+        const dbPlan = await dbGetPlanByKey(planKey);
+        const fallbackPlan = ARTAPOS_PLANS[planKey] || ARTAPOS_PLANS.bisnis100;
+        const plan = dbPlan ? {
+          id: dbPlan.plan_key,
+          name: dbPlan.name,
+          price: Number(dbPlan.price),
+          quota: Number(dbPlan.quota_tokens),
+          days: Number(dbPlan.days_active || 30)
+        } : fallbackPlan;
         const email = (body.email || '').trim().toLowerCase();
         const storeName = (body.storeName || 'Toko AI Assistant').trim().slice(0, 50);
 
@@ -1494,7 +1554,7 @@ export function createHttpHandler(waHooks = {}) {
           title: '🔐 Reset Password Berhasil (Lupa Password)',
           message: `Password akun ${email} berhasil diperbarui via verifikasi kode OTP email.`,
           status: 'success'
-        }).catch(() => {});
+        }).catch(() => { });
 
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({
@@ -1615,6 +1675,12 @@ export function createHttpHandler(waHooks = {}) {
           const quota = await dbGetUserQuota(session.user_id);
           const freshUser = await dbGetUserById(session.user_id);
           const cfg = await dbGetConfig(session.user_id);
+          const effLimitsMe = await dbGetEffectiveUserLimits(
+            quota?.plan || session.plan,
+            session.role,
+            freshUser?.extra_knowledge,
+            freshUser?.extra_images
+          );
           res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
           res.end(JSON.stringify({
             authenticated: true,
@@ -1630,10 +1696,12 @@ export function createHttpHandler(waHooks = {}) {
               free_claimed: Boolean(freshUser?.free_claimed),
               referral_code: freshUser?.referral_code || null,
               bot_enabled: String(cfg?.bot_enabled) !== '0' && cfg?.bot_enabled !== false,
-              image_limit: getImageLimitForPlan(quota?.plan || session.plan, session.role),
+              image_limit: effLimitsMe.imageLimit,
               image_used: await dbCountUserKnowledgeImages(session.user_id),
-              knowledge_limit: getKnowledgeLimitForPlan(quota?.plan || session.plan, session.role),
+              knowledge_limit: effLimitsMe.knowledgeLimit,
               knowledge_used: await dbCountUserKnowledge(session.user_id),
+              extra_knowledge: Number(freshUser?.extra_knowledge || 0),
+              extra_images: Number(freshUser?.extra_images || 0),
               role: session.role || 'user',
               active_until: quota?.active_until || session.active_until
             }
