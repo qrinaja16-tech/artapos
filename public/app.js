@@ -86,6 +86,16 @@ async function loadDynamicPlans(showSuccessToast = false) {
   }
 }
 
+function getAiTierDisplayLabel(aiTier = 'basic', contextLimit = 0) {
+  const t = String(aiTier || 'basic').toLowerCase();
+  if (t === 'genius') return `Otak AI Genius (${contextLimit || 40} Chat + Smart Upsell)`;
+  if (t === 'pro') return `Otak AI Pro Closer (${contextLimit || 20} Chat + Handover)`;
+  if (t === 'smart') return `Otak AI Smart CS (${contextLimit || 12} Chat + Ingat Pelanggan)`;
+  if (t === 'sales') return `Otak AI Sales (${contextLimit || 6} Chat + Auto-Invoice)`;
+  if (t === 'basic_inventory') return 'Basic + Cek Inventory (Belum Otak AI)';
+  return 'Basic Matcher (Belum Otak AI)';
+}
+
 function applyDynamicPlansToUI(plans) {
   if (!Array.isArray(plans) || plans.length === 0) return;
 
@@ -101,8 +111,11 @@ function applyDynamicPlansToUI(plans) {
       price: Number(p.price || 0),
       quota: quotaVal,
       days_active: days,
-      max_knowledge: Number(p.max_knowledge ?? 7),
+      max_knowledge: Number(p.max_knowledge ?? 25),
+      max_inventory: Number(p.max_inventory ?? 10),
       max_images: Number(p.max_images ?? 0),
+      ai_tier: p.ai_tier || 'basic_inventory',
+      context_limit: Number(p.context_limit ?? 0),
       has_watermark: Boolean(p.has_watermark),
       popular: Boolean(p.is_popular),
       desc: `${quotaVal.toLocaleString('id-ID')} token / ${days} hari (${wmText})`
@@ -121,6 +134,10 @@ function renderLandingPricingGrid(plans) {
   const checkSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
   const infoSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
 
+  const defaultInvMap = { free: 0, hemat25: 10, plus35: 25, starter50: 40, pro70: 50, bisnis100: 80 };
+  const defaultTierMap = { free: 'basic', hemat25: 'basic_inventory', plus35: 'sales', starter50: 'smart', pro70: 'pro', bisnis100: 'genius' };
+  const defaultCtxMap = { free: 0, hemat25: 0, plus35: 6, starter50: 12, pro70: 20, bisnis100: 40 };
+
   grid.innerHTML = plans.map(p => {
     const key = p.plan_key || p.id;
     const isFree = key === 'free' || Number(p.price) === 0;
@@ -128,22 +145,33 @@ function renderLandingPricingGrid(plans) {
     const priceNum = Number(p.price || 0);
     const quotaNum = Number(p.quota_tokens ?? p.quota ?? 0);
     const daysNum = Number(p.days_active || 30);
-    const maxKnowledge = Number(p.max_knowledge ?? 7);
+    const maxKnowledge = Number(p.max_knowledge ?? 10);
+    const maxInventory = Number(p.max_inventory ?? defaultInvMap[key] ?? 0);
     const maxImages = Number(p.max_images ?? 0);
+    const aiTier = p.ai_tier || defaultTierMap[key] || 'basic';
+    const ctxLimit = Number(p.context_limit ?? defaultCtxMap[key] ?? 0);
     const hasWatermark = Boolean(p.has_watermark);
 
     const kText = maxKnowledge >= 9999
       ? 'Knowledge Base Tanpa Batas'
-      : `Maksimal ${maxKnowledge.toLocaleString('id-ID')} Knowledge Base`;
-    const imgText = maxImages >= 9999
-      ? 'Foto Produk Tanpa Batas'
-      : `Maksimal ${maxImages.toLocaleString('id-ID')} Foto Produk`;
+      : `Maksimal <strong>${maxKnowledge.toLocaleString('id-ID')}</strong> Knowledge Base`;
+    const invItem = maxInventory > 0
+      ? `<li>${checkSvg}Maksimal <strong>${maxInventory.toLocaleString('id-ID')} Produk Inventory</strong></li>`
+      : `<li style="color: #64748b;">${infoSvg}Belum Termasuk Inventory Produk</li>`;
+    const imgItem = maxImages > 0
+      ? `<li>${checkSvg}Maksimal <strong>${maxImages.toLocaleString('id-ID')} Foto</strong> Knowledge</li>`
+      : `<li style="color: #64748b;">${infoSvg}Belum Mendukung Upload Foto</li>`;
+
+    const hasAiBrain = aiTier !== 'basic' && aiTier !== 'basic_inventory';
+    const aiItem = hasAiBrain
+      ? `<li>${checkSvg}<strong>${escapeHtml(getAiTierDisplayLabel(aiTier, ctxLimit))}</strong></li>`
+      : `<li style="color: #64748b;">${infoSvg}${escapeHtml(getAiTierDisplayLabel(aiTier, ctxLimit))}</li>`;
 
     const descText = p.description
       ? escapeHtml(p.description)
       : (isFree
         ? 'Uji coba langsung tanpa biaya & tanpa kartu kredit.'
-        : `Kuota ${quotaNum.toLocaleString('id-ID')} balasan AI selama ${daysNum} hari aktif.`);
+        : `Kuota ${quotaNum.toLocaleString('id-ID')} balasan selama ${daysNum} hari aktif.`);
 
     const wmItem = hasWatermark
       ? `<li style="color: #64748b;">${infoSvg}Ada Watermark <code>&gt; sent via artapos.id</code></li>`
@@ -164,12 +192,13 @@ function renderLandingPricingGrid(plans) {
           <span class="price-period">/${daysNum} hari</span>
         </div>
         <div class="pricing-quota-highlight">
-          <strong>${quotaNum.toLocaleString('id-ID')}</strong> Token Chat AI / ${daysNum} Hari
+          <strong>${quotaNum.toLocaleString('id-ID')}</strong> Token Chat / ${daysNum} Hari
         </div>
         <ul class="pricing-features-list">
-          <li>${checkSvg}Koneksi WhatsApp Perangkat Tertaut</li>
+          ${aiItem}
           <li>${checkSvg}${kText}</li>
-          <li>${checkSvg}${imgText}</li>
+          ${invItem}
+          ${imgItem}
           ${wmItem}
         </ul>
         ${actionBtn}
@@ -186,6 +215,8 @@ function renderCheckoutPlanSelector(plans) {
   if (paidPlans.length === 0) return;
 
   const selectedKey = ARTAPOS_PLANS[currentSelectedPlan] ? currentSelectedPlan : (paidPlans[0].plan_key || paidPlans[0].id);
+  const defaultInvMap = { hemat25: 10, plus35: 25, starter50: 40, pro70: 50, bisnis100: 80 };
+  const defaultTierMap = { hemat25: 'basic_inventory', plus35: 'sales', starter50: 'smart', pro70: 'pro', bisnis100: 'genius' };
 
   container.innerHTML = paidPlans.map(p => {
     const key = p.plan_key || p.id;
@@ -193,8 +224,11 @@ function renderCheckoutPlanSelector(plans) {
     const priceNum = Number(p.price || 0);
     const quotaNum = Number(p.quota_tokens ?? p.quota ?? 0);
     const daysNum = Number(p.days_active || 30);
-    const maxK = Number(p.max_knowledge || 7);
-    const kLabel = maxK >= 9999 ? 'Unlimited Knowledge' : `${maxK} Knowledge`;
+    const maxK = Number(p.max_knowledge || 25);
+    const maxInv = Number(p.max_inventory ?? defaultInvMap[key] ?? 10);
+    const aiTier = p.ai_tier || defaultTierMap[key] || 'basic_inventory';
+    const hasAi = aiTier !== 'basic' && aiTier !== 'basic_inventory';
+    const aiLabel = hasAi ? `<strong style="color:#0284c7;">🧠 ${escapeHtml(getAiTierDisplayLabel(aiTier, p.context_limit))}</strong>` : 'Belum Otak AI';
     const wmBadge = p.has_watermark
       ? 'Ada watermark'
       : '<strong style="color:#16a34a;">✨ Tanpa watermark</strong>';
@@ -213,7 +247,7 @@ function renderCheckoutPlanSelector(plans) {
             </div>
             <span class="plan-option-price">Rp ${priceNum.toLocaleString('id-ID')} / ${daysNum} hr</span>
           </div>
-          <div class="plan-option-quota">${quotaNum.toLocaleString('id-ID')} token / ${daysNum} hari • ${kLabel} • ${wmBadge}</div>
+          <div class="plan-option-quota">${quotaNum.toLocaleString('id-ID')} token • ${maxK} Knowledge • <strong>${maxInv} Inventory</strong> • ${aiLabel} • ${wmBadge}</div>
         </div>
       </label>
     `;
@@ -224,11 +258,18 @@ function renderAdminPlansManager(plans) {
   const grid = document.getElementById('adminPlansManagerGrid');
   if (!grid || !Array.isArray(plans) || plans.length === 0) return;
 
+  const defaultInvMap = { free: 0, hemat25: 10, plus35: 25, starter50: 40, pro70: 50, bisnis100: 80 };
+  const defaultTierMap = { free: 'basic', hemat25: 'basic_inventory', plus35: 'sales', starter50: 'smart', pro70: 'pro', bisnis100: 'genius' };
+  const defaultCtxMap = { free: 0, hemat25: 0, plus35: 6, starter50: 12, pro70: 20, bisnis100: 40 };
+
   grid.innerHTML = plans.map(p => {
     const key = p.plan_key || p.id;
     const safeKey = escapeHtml(key);
     const isPopular = Boolean(p.is_popular);
     const hasWatermark = Boolean(p.has_watermark);
+    const curInv = Number(p.max_inventory ?? defaultInvMap[key] ?? 0);
+    const curTier = p.ai_tier || defaultTierMap[key] || 'basic';
+    const curCtx = Number(p.context_limit ?? defaultCtxMap[key] ?? 0);
 
     return `
       <div class="admin-plan-edit-card${isPopular ? ' is-popular' : ''}" data-plan-key="${safeKey}">
@@ -256,15 +297,30 @@ function renderAdminPlansManager(plans) {
           </div>
           <div class="admin-plan-field">
             <label>Maks. Knowledge</label>
-            <input type="number" min="1" id="planEditKnowledge_${safeKey}" value="${Number(p.max_knowledge ?? 7)}">
+            <input type="number" min="1" id="planEditKnowledge_${safeKey}" value="${Number(p.max_knowledge ?? 10)}">
           </div>
           <div class="admin-plan-field">
-            <label>Maks. Foto Produk</label>
+            <label>Maks. Inventory (Produk)</label>
+            <input type="number" min="0" id="planEditInventory_${safeKey}" value="${curInv}">
+          </div>
+          <div class="admin-plan-field">
+            <label>Maks. Foto Knowledge</label>
             <input type="number" min="0" id="planEditImages_${safeKey}" value="${Number(p.max_images ?? 0)}">
           </div>
-          <div class="admin-plan-field full-span">
-            <label>Deskripsi Singkat (Landing Page)</label>
-            <input type="text" id="planEditDesc_${safeKey}" value="${escapeHtml(p.description || '')}" placeholder="Opsional...">
+          <div class="admin-plan-field">
+            <label>Level Otak AI</label>
+            <select id="planEditAiTier_${safeKey}" style="width:100%;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.84rem;background:#f8fafc;">
+              <option value="basic"${curTier === 'basic' ? ' selected' : ''}>Basic Matcher (Non-AI)</option>
+              <option value="basic_inventory"${curTier === 'basic_inventory' ? ' selected' : ''}>Basic + Inventory (Non-AI)</option>
+              <option value="sales"${curTier === 'sales' ? ' selected' : ''}>Otak AI Sales (Mulai Aktif)</option>
+              <option value="smart"${curTier === 'smart' ? ' selected' : ''}>Otak AI Smart CS</option>
+              <option value="pro"${curTier === 'pro' ? ' selected' : ''}>Otak AI Pro Closer</option>
+              <option value="genius"${curTier === 'genius' ? ' selected' : ''}>Otak AI Genius</option>
+            </select>
+          </div>
+          <div class="admin-plan-field">
+            <label>Ingatan Konteks Chat</label>
+            <input type="number" min="0" id="planEditContext_${safeKey}" value="${curCtx}">
           </div>
         </div>
 
@@ -292,9 +348,11 @@ async function handleAdminSavePlan(planKey) {
   const price = Number(document.getElementById(`planEditPrice_${planKey}`)?.value || 0);
   const quota = Number(document.getElementById(`planEditQuota_${planKey}`)?.value || 0);
   const days_active = Number(document.getElementById(`planEditDays_${planKey}`)?.value || 30);
-  const max_knowledge = Number(document.getElementById(`planEditKnowledge_${planKey}`)?.value || 7);
-  const max_images = Number(document.getElementById(`planEditImages_${planKey}`)?.value || 7);
-  const description = document.getElementById(`planEditDesc_${planKey}`)?.value?.trim() || '';
+  const max_knowledge = Number(document.getElementById(`planEditKnowledge_${planKey}`)?.value || 10);
+  const max_inventory = Number(document.getElementById(`planEditInventory_${planKey}`)?.value || 0);
+  const max_images = Number(document.getElementById(`planEditImages_${planKey}`)?.value || 0);
+  const ai_tier = document.getElementById(`planEditAiTier_${planKey}`)?.value || 'basic';
+  const context_limit = Number(document.getElementById(`planEditContext_${planKey}`)?.value || 0);
   const has_watermark = Boolean(document.getElementById(`planEditWatermark_${planKey}`)?.checked);
   const is_popular = Boolean(document.getElementById(`planEditPopular_${planKey}`)?.checked);
 
@@ -311,14 +369,16 @@ async function handleAdminSavePlan(planKey) {
     quota,
     days_active,
     max_knowledge,
+    max_inventory,
     max_images,
-    description,
+    ai_tier,
+    context_limit,
     has_watermark,
     is_popular
   });
 
   if (res && res.success) {
-    showToast(`Paket "${name}" berhasil disimpan & disinkronkan ke Landing Page dan Checkout!`, 'success');
+    showToast(`Paket "${name}" berhasil disimpan & disinkronkan!`, 'success');
     await loadDynamicPlans(false);
   } else {
     showAlert('Gagal menyimpan paket: ' + (res?.error || 'Kesalahan sistem'), 'error');
@@ -1990,15 +2050,22 @@ function askQuick(text) {
 let inventoryProductsCache = [];
 let storeOrdersCache = [];
 
+const CLIENT_FORBIDDEN_INV_PATTERN = /(<[^>]*>|<\?php|<\?=|\.(php|phtml|html|htm|js|jsx|ts|tsx|sh|bash|exe|bat|cmd|py|pl|cgi|asp|aspx|jsp|env|sql|htaccess)\b|javascript:|vbscript:|data:text\/html|on(load|error|click|mouseover|submit|focus)=|\.\.\/|\.\.\\|\b(union\s+select|drop\s+table|delete\s+from|insert\s+into)\b)/i;
+
 async function loadInventoryProducts() {
   const locked = document.getElementById('inventoryLockedBanner');
   const content = document.getElementById('inventoryContentArea');
   const badge = document.getElementById('inventoryAiTierBadge');
+  const quotaBadge = document.getElementById('inventoryQuotaBadge');
   const res = await apiCall('/api/products', 'GET');
   if (!res || !res.success) return;
 
-  if (badge) badge.textContent = `AI Tier: ${(res.aiTier || 'basic').toUpperCase()}`;
-  if (!res.unlocked) {
+  const used = Number(res.inventoryUsed ?? (res.products || []).length);
+  const limit = Number(res.inventoryLimit ?? 0);
+  if (quotaBadge) quotaBadge.textContent = `${used}/${limit} Produk`;
+  if (badge) badge.textContent = getAiTierDisplayLabel(res.aiTier);
+
+  if (!res.unlocked || limit <= 0) {
     if (locked) locked.classList.remove('hidden');
     if (content) content.classList.add('hidden');
     return;
@@ -2017,7 +2084,7 @@ function renderInventoryProducts(products) {
   if (!list) return;
 
   if (products.length === 0) {
-    list.innerHTML = `<div class="loading-state-box">Belum ada produk di Inventory. Tambahkan produk pertama Anda di atas agar AI bisa menjawab stok &amp; harga secara live!</div>`;
+    list.innerHTML = `<div class="loading-state-box">Belum ada produk di Inventory. Tambahkan produk pertama Anda di atas (murni teks &amp; angka, tanpa foto/file).</div>`;
     return;
   }
 
@@ -2042,7 +2109,7 @@ function renderInventoryProducts(products) {
           </div>
         </div>
         <div class="knowledge-item-answer" style="margin-top:6px;">
-          💰 Harga Jual: <strong>Rp ${Number(p.price || 0).toLocaleString('id-ID')}</strong> • Modal: Rp ${Number(p.cost_price || 0).toLocaleString('id-ID')} • ⚖️ Berat: ${Number(p.weight_gram || 500)} gr
+          💰 Harga Jual: <strong>Rp ${Number(p.price || 0).toLocaleString('id-ID')}</strong> • Harga Modal: Rp ${Number(p.cost_price || 0).toLocaleString('id-ID')}
           ${p.description ? `<div style="color:#475569;margin-top:4px;">${escapeHtml(p.description)}</div>` : ''}
         </div>
       </div>
@@ -2053,15 +2120,29 @@ function renderInventoryProducts(products) {
 async function handleSaveProduct(e) {
   e.preventDefault();
   const id = document.getElementById('editProductId')?.value;
+  const name = (document.getElementById('prodName')?.value || '').trim();
+  const sku = (document.getElementById('prodSku')?.value || '').trim();
+  const description = (document.getElementById('prodDesc')?.value || '').trim();
+
+  if (sku && !/^[A-Za-z0-9_-]{1,40}$/.test(sku)) {
+    showAlert('SKU / Kode Barang hanya boleh berisi huruf, angka, tanda hubung (-), atau garis bawah (_).', 'warning');
+    return;
+  }
+
+  const combinedText = `${name} ${sku} ${description}`;
+  if (CLIENT_FORBIDDEN_INV_PATTERN.test(combinedText) || /[<>]/.test(combinedText) || isMaliciousClientInput(combinedText)) {
+    showAlert('🛡️ Proteksi Keamanan: Input Inventory hanya boleh berisi teks & angka produk (dilarang memasukkan kode HTML, script, atau ekstensi file seperti .php / .html / .js)!', 'error');
+    return;
+  }
+
   const payload = {
     id: id ? Number(id) : undefined,
-    name: document.getElementById('prodName')?.value?.trim(),
-    sku: document.getElementById('prodSku')?.value?.trim(),
+    name,
+    sku,
     cost_price: Number(document.getElementById('prodCostPrice')?.value || 0),
     price: Number(document.getElementById('prodPrice')?.value || 0),
     stock: Number(document.getElementById('prodStock')?.value || 0),
-    weight_gram: Number(document.getElementById('prodWeight')?.value || 500),
-    description: document.getElementById('prodDesc')?.value?.trim()
+    description
   };
 
   const res = await apiCall('/api/products', id ? 'PUT' : 'POST', payload);
@@ -2083,7 +2164,6 @@ function editInventoryProduct(id) {
   document.getElementById('prodCostPrice').value = p.cost_price || 0;
   document.getElementById('prodPrice').value = p.price || 0;
   document.getElementById('prodStock').value = p.stock || 0;
-  document.getElementById('prodWeight').value = p.weight_gram || 500;
   document.getElementById('prodDesc').value = p.description || '';
   document.getElementById('btnSaveProduct').textContent = '💾 Simpan Perubahan Produk';
   document.getElementById('btnCancelEditProduct')?.classList.remove('hidden');
@@ -2172,7 +2252,7 @@ function renderStoreOrders(orders) {
         </div>
         <div class="knowledge-item-answer" style="margin-top:6px;">
           <div>🛍️ Item: ${itemsText || '-'}</div>
-          <div>🚚 Kurir: ${escapeHtml(o.courier || '-')} (Ongkir Rp ${Number(o.shipping_cost || 0).toLocaleString('id-ID')}) ${o.tracking_no ? `• Resi: <strong>${escapeHtml(o.tracking_no)}</strong>` : ''}</div>
+          <div>📦 Pengiriman: ${o.tracking_no ? `Resi: <strong>${escapeHtml(o.tracking_no)}</strong>` : 'Ongkir &amp; pengiriman dikonfirmasi Admin'}</div>
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
             <button type="button" class="btn-edit-sm" onclick="updateStoreOrderStatus(${o.id}, 'paid')">✅ Tandai Lunas</button>
             <button type="button" class="btn-edit-sm" onclick="updateStoreOrderStatus(${o.id}, 'shipped')">🚚 Kirim + Resi</button>
@@ -3208,6 +3288,7 @@ async function openAdminUserDetail(userId) {
   const editQuotaTotal = document.getElementById('editUserQuotaTotal');
   const editQuotaUsed = document.getElementById('editUserQuotaUsed');
   const editExtraKnowledge = document.getElementById('editUserExtraKnowledge');
+  const editExtraInventory = document.getElementById('editUserExtraInventory');
   const editExtraImages = document.getElementById('editUserExtraImages');
   const editCurrentActive = document.getElementById('editUserCurrentActive');
   const editDaysAdd = document.getElementById('editUserDaysAdd');
@@ -3220,6 +3301,7 @@ async function openAdminUserDetail(userId) {
   if (editQuotaTotal) editQuotaTotal.value = user.quota_total || 2500;
   if (editQuotaUsed) editQuotaUsed.value = user.quota_used || 0;
   if (editExtraKnowledge) editExtraKnowledge.value = user.extra_knowledge ?? 0;
+  if (editExtraInventory) editExtraInventory.value = user.extra_inventory ?? 0;
   if (editExtraImages) editExtraImages.value = user.extra_images ?? 0;
   if (editDaysAdd) editDaysAdd.value = '';
   if (editNewPwd) editNewPwd.value = '';
@@ -3341,6 +3423,7 @@ async function handleAdminSaveUserChanges(e) {
   const quota_total = document.getElementById('editUserQuotaTotal')?.value;
   const quota_used = document.getElementById('editUserQuotaUsed')?.value;
   const extra_knowledge = document.getElementById('editUserExtraKnowledge')?.value;
+  const extra_inventory = document.getElementById('editUserExtraInventory')?.value;
   const extra_images = document.getElementById('editUserExtraImages')?.value;
   const daysToAdd = document.getElementById('editUserDaysAdd')?.value;
   const newPassword = document.getElementById('editUserNewPassword')?.value;
@@ -3369,6 +3452,7 @@ async function handleAdminSaveUserChanges(e) {
     quota_total: quota_total !== '' ? Number(quota_total) : undefined,
     quota_used: quota_used !== '' ? Number(quota_used) : undefined,
     extra_knowledge: extra_knowledge !== '' ? Number(extra_knowledge) : undefined,
+    extra_inventory: extra_inventory !== '' ? Number(extra_inventory) : undefined,
     extra_images: extra_images !== '' ? Number(extra_images) : undefined,
     daysToAdd: daysToAdd ? Number(daysToAdd) : undefined,
     newPassword: newPassword ? newPassword.trim() : undefined

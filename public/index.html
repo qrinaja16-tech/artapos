@@ -26,7 +26,7 @@
     content="Balas chat pelanggan otomatis tanpa sewa server mahal. Gratis 75 Token untuk pendaftar pertama!">
   <meta name="twitter:image" content="https://www.artapos.id/og-preview.jpg?v=2">
   <link rel="icon" type="image/jpeg" href="logo.jpg?v=2">
-  <link rel="stylesheet" href="style.css?v=55.0">
+  <link rel="stylesheet" href="style.css?v=56.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -1702,31 +1702,31 @@
           <!-- ============================================================ -->
           <section id="tabInventory" class="page-tab hidden">
             <div id="inventoryLockedBanner" class="card-pro hidden" style="text-align:center; padding:32px 20px; border:1.5px dashed #f59e0b; background:#fffbeb;">
-              <h3 style="margin-bottom:8px;">🔒 Fitur Inventory &amp; AI Baca Stok Live</h3>
+              <h3 style="margin-bottom:8px;">🔒 Fitur Inventory Produk Terkunci</h3>
               <p style="color:#64748b; max-width:540px; margin:0 auto 16px;">
-                Fitur ini tersedia mulai <strong>Paket Hemat 25K</strong> ke atas. Bot AI akan otomatis membaca harga, stok, dan berat produk secara real-time saat pelanggan bertanya!
+                Fitur Inventory tersedia mulai <strong>Paket Hemat 25K (10 Produk)</strong>, dan <strong>Otak AI Pintar + Auto-Invoice</strong> dimulai dari <strong>Paket Plus 35K (25 Produk)</strong> ke atas!
               </p>
-              <button type="button" class="btn-primary-pro" onclick="openCheckout('hemat25')">⚡ Upgrade ke Paket Hemat 25K</button>
+              <button type="button" class="btn-primary-pro" onclick="openCheckout('plus35')">⚡ Upgrade Paket Sekarang</button>
             </div>
 
             <div id="inventoryContentArea">
               <div class="card-pro form-knowledge-card">
                 <div class="card-head-bar">
                   <div>
-                    <h3>📦 Tambah / Edit Produk Inventory <span id="inventoryAiTierBadge" class="char-counter-pill" style="margin-left:6px;">AI Starter</span></h3>
-                    <p>Data harga, stok, dan berat di sini dibaca langsung oleh AI WhatsApp secara real-time.</p>
+                    <h3>📦 Tambah / Edit Produk Inventory <span id="inventoryQuotaBadge" class="char-counter-pill" style="margin-left:6px;">0/10 Produk</span> <span id="inventoryAiTierBadge" class="char-counter-pill" style="margin-left:4px;">Basic + Inventory</span></h3>
+                    <p>Murni teks &amp; angka produk (tanpa upload foto/file, dilarang kode HTML / .php / script). Data harga &amp; stok dibaca langsung oleh bot WhatsApp.</p>
                   </div>
                 </div>
                 <form id="productInventoryForm" onsubmit="handleSaveProduct(event)">
                   <input type="hidden" id="editProductId" value="">
                   <div class="form-row-2">
                     <div class="field-group">
-                      <label for="prodName">Nama Produk <span class="req">*</span></label>
-                      <input type="text" id="prodName" placeholder="Contoh: Kemeja Flanel Hitam L" required maxlength="180">
+                      <label for="prodName">Nama Produk (Teks Bersih, Maks 120 Karakter) <span class="req">*</span></label>
+                      <input type="text" id="prodName" placeholder="Contoh: Kemeja Flanel Hitam L" required maxlength="120">
                     </div>
                     <div class="field-group">
-                      <label for="prodSku">SKU / Kode Barang</label>
-                      <input type="text" id="prodSku" placeholder="Contoh: KMH-01" maxlength="64">
+                      <label for="prodSku">SKU / Kode Barang (Huruf/Angka/-/_)</label>
+                      <input type="text" id="prodSku" placeholder="Contoh: KMH-01" maxlength="40">
                     </div>
                   </div>
                   <div class="form-row-2">
@@ -1745,13 +1745,9 @@
                       <input type="number" id="prodStock" min="0" required value="10">
                     </div>
                     <div class="field-group">
-                      <label for="prodWeight">Berat (Gram — untuk Ongkir)</label>
-                      <input type="number" id="prodWeight" min="1" value="500">
+                      <label for="prodDesc">Deskripsi Singkat Produk (Teks Biasa, Maks 250 Karakter)</label>
+                      <input type="text" id="prodDesc" placeholder="Bahan katun adem, tersedia size M/L/XL..." maxlength="250">
                     </div>
-                  </div>
-                  <div class="field-group">
-                    <label for="prodDesc">Deskripsi / Catatan Produk (untuk AI)</label>
-                    <input type="text" id="prodDesc" placeholder="Bahan katun adem, tersedia size M/L/XL..." maxlength="300">
                   </div>
                   <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button type="submit" class="btn-primary-pro" id="btnSaveProduct">💾 Simpan Produk ke Inventory</button>
@@ -1764,7 +1760,7 @@
                 <div class="card-head-bar">
                   <div>
                     <h3>📋 Daftar Stok Produk (<span id="totalProductsCount">0</span>)</h3>
-                    <p>Stok otomatis berkurang saat ada order masuk dari WhatsApp atau manual.</p>
+                    <p>Stok otomatis berkurang saat ada order masuk dari WhatsApp (mulai Paket Plus 35K+).</p>
                   </div>
                 </div>
                 <div id="inventoryListContainer" class="knowledge-cards-list">
@@ -1779,9 +1775,9 @@
           <!-- ============================================================ -->
           <section id="tabStoreOrders" class="page-tab hidden">
             <div id="ordersLockedBanner" class="card-pro hidden" style="text-align:center; padding:32px 20px; border:1.5px dashed #16a34a; background:#f0fdf4;">
-              <h3 style="margin-bottom:8px;">🔒 Fitur Auto-Order &amp; Invoice WhatsApp</h3>
+              <h3 style="margin-bottom:8px;">🔒 Fitur Otak AI &amp; Auto-Order Invoice WhatsApp</h3>
               <p style="color:#64748b; max-width:560px; margin:0 auto 16px;">
-                Fitur ini aktif mulai <strong>Paket Plus 35K</strong> (Invoice Otomatis) dan <strong>Starter 50K+</strong> (Hitung Ongkir Otomatis). Pesanan dari chat WhatsApp langsung tercatat rapi &amp; memotong stok Inventory!
+                Otak AI Pintar &amp; Pembuatan Invoice Otomatis dimulai dari <strong>Paket Plus 35K</strong> ke atas. Pesanan dari chat WhatsApp langsung tercatat rapi &amp; memotong stok Inventory secara otomatis!
               </p>
               <button type="button" class="btn-primary-pro" onclick="openCheckout('plus35')">⚡ Upgrade ke Paket Plus 35K</button>
             </div>
@@ -2788,15 +2784,21 @@
                 <input type="number" id="editUserExtraKnowledge" min="0" value="0">
               </div>
               <div class="field-group">
-                <label for="editUserExtraImages">➕ Tambahan Kuota Foto Produk:</label>
-                <input type="number" id="editUserExtraImages" min="0" value="0">
+                <label for="editUserExtraInventory">➕ Tambahan Kuota Inventory (Produk):</label>
+                <input type="number" id="editUserExtraInventory" min="0" value="0">
               </div>
             </div>
 
-            <div class="field-group">
-              <label for="editUserDaysAdd">Tambah Masa Aktif (Hari):</label>
-              <input type="number" id="editUserDaysAdd" placeholder="Contoh: 30" min="0">
-              <span class="field-hint">Masa aktif saat ini: <strong id="editUserCurrentActive">-</strong></span>
+            <div class="form-row-2">
+              <div class="field-group">
+                <label for="editUserExtraImages">➕ Tambahan Kuota Foto Knowledge:</label>
+                <input type="number" id="editUserExtraImages" min="0" value="0">
+              </div>
+              <div class="field-group">
+                <label for="editUserDaysAdd">Tambah Masa Aktif (Hari):</label>
+                <input type="number" id="editUserDaysAdd" placeholder="Contoh: 30" min="0">
+                <span class="field-hint">Masa aktif saat ini: <strong id="editUserCurrentActive">-</strong></span>
+              </div>
             </div>
 
             <div class="modal-actions-footer" style="justify-content: space-between;">
@@ -3086,7 +3088,7 @@
   </div>
 
   <!-- Main JavaScript Controller -->
-  <script src="app.js?v=55.0"></script>
+  <script src="app.js?v=56.0"></script>
 </body>
 
 </html>

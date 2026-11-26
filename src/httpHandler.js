@@ -48,9 +48,11 @@ import {
   dbUpdatePlanConfig,
   dbGetEffectiveUserLimits,
   dbGetProducts,
+  dbCountUserProducts,
   dbAddProduct,
   dbUpdateProduct,
   dbDeleteProduct,
+  validateSafeInventoryProductInput,
   dbGetStoreOrders,
   dbCreateStoreOrder,
   dbUpdateStoreOrderStatus,
@@ -1688,7 +1690,8 @@ export function createHttpHandler(waHooks = {}) {
             quota?.plan || session.plan,
             session.role,
             freshUser?.extra_knowledge,
-            freshUser?.extra_images
+            freshUser?.extra_images,
+            freshUser?.extra_inventory
           );
           res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
           res.end(JSON.stringify({
@@ -1709,8 +1712,12 @@ export function createHttpHandler(waHooks = {}) {
               image_used: await dbCountUserKnowledgeImages(session.user_id),
               knowledge_limit: effLimitsMe.knowledgeLimit,
               knowledge_used: await dbCountUserKnowledge(session.user_id),
+              inventory_limit: effLimitsMe.inventoryLimit,
+              inventory_used: await dbCountUserProducts(session.user_id),
               extra_knowledge: Number(freshUser?.extra_knowledge || 0),
               extra_images: Number(freshUser?.extra_images || 0),
+              extra_inventory: Number(freshUser?.extra_inventory || 0),
+              ai_tier: effLimitsMe.aiTier,
               role: session.role || 'user',
               active_until: quota?.active_until || session.active_until
             }
@@ -1805,7 +1812,7 @@ export function createHttpHandler(waHooks = {}) {
     }
 
     // ----------------------------------------
-    // API INVENTORY PRODUK (MINIMAL PAKET HEMAT 25K)
+    // API INVENTORY PRODUK (MINIMAL PAKET HEMAT 25K • MURNI TEKS/ANGKA TANPA FOTO/SCRIPT)
     // ----------------------------------------
     if (cleanUrl === '/api/products') {
       const session = await getAuthUser(req);
@@ -1815,24 +1822,52 @@ export function createHttpHandler(waHooks = {}) {
         return;
       }
       const userObj = await dbGetUserById(session.user_id);
-      const limits = await dbGetEffectiveUserLimits(userObj?.plan || '', userObj?.role || 'user', userObj?.extra_knowledge, userObj?.extra_images);
+      const limits = await dbGetEffectiveUserLimits(
+        userObj?.plan || '',
+        userObj?.role || 'user',
+        userObj?.extra_knowledge,
+        userObj?.extra_images,
+        userObj?.extra_inventory
+      );
 
       if (req.method === 'GET') {
         const products = limits.features?.inventory ? await dbGetProducts(session.user_id) : [];
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify({ success: true, unlocked: Boolean(limits.features?.inventory), aiTier: limits.aiTier, features: limits.features, products }));
+        res.end(JSON.stringify({
+          success: true,
+          unlocked: Boolean(limits.features?.inventory && limits.inventoryLimit > 0),
+          aiTier: limits.aiTier,
+          inventoryLimit: limits.inventoryLimit,
+          inventoryUsed: products.length,
+          features: limits.features,
+          products
+        }));
         return;
       }
 
-      if (!limits.features?.inventory) {
+      if (!limits.features?.inventory || limits.inventoryLimit <= 0) {
         res.writeHead(403, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Fitur Inventory Produk & AI Cerdas hanya tersedia mulai Paket Hemat 25K ke atas.' }));
+        res.end(JSON.stringify({ error: 'Fitur Inventory Produk hanya tersedia mulai Paket Hemat 25K (10 Produk) ke atas.' }));
         return;
       }
 
       try {
         if (req.method === 'POST') {
           const body = await readJsonBody(req);
+          if (containsMaliciousPayload(body)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: '🛡️ Proteksi Keamanan: Input Inventory mengandung skrip/file berbahaya (.php / .html / XSS / SQLi) dan telah diblokir!' }));
+            return;
+          }
+          validateSafeInventoryProductInput(body);
+          const currentUsed = await dbCountUserProducts(session.user_id);
+          if (currentUsed >= limits.inventoryLimit) {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              error: `Kuota Inventory paket Anda sudah penuh (${currentUsed}/${limits.inventoryLimit} Produk). Silakan upgrade paket untuk menambah kapasitas Inventory!`
+            }));
+            return;
+          }
           const created = await dbAddProduct(session.user_id, body);
           res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
           res.end(JSON.stringify({ success: true, product: created }));
@@ -1840,6 +1875,12 @@ export function createHttpHandler(waHooks = {}) {
         }
         if (req.method === 'PUT') {
           const body = await readJsonBody(req);
+          if (containsMaliciousPayload(body)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: '🛡️ Proteksi Keamanan: Input Inventory mengandung skrip/file berbahaya (.php / .html / XSS / SQLi) dan telah diblokir!' }));
+            return;
+          }
+          validateSafeInventoryProductInput(body);
           await dbUpdateProduct(session.user_id, body.id, body);
           res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
           res.end(JSON.stringify({ success: true }));

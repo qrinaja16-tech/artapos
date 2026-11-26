@@ -93,6 +93,10 @@ export async function initTiDB() {
       if (!colsExI || colsExI.length === 0) {
         await conn.query("ALTER TABLE users ADD COLUMN extra_images INT DEFAULT 0");
       }
+      const [colsExInv] = await conn.query("SHOW COLUMNS FROM users LIKE 'extra_inventory'");
+      if (!colsExInv || colsExInv.length === 0) {
+        await conn.query("ALTER TABLE users ADD COLUMN extra_inventory INT DEFAULT 0");
+      }
     } catch (e) {
       console.warn('⚠️ Users column migration notice:', e.message);
     }
@@ -129,31 +133,39 @@ export async function initTiDB() {
       if (!colsFeat || colsFeat.length === 0) {
         await conn.query("ALTER TABLE plans_config ADD COLUMN features_json TEXT");
       }
+      const [colsMaxInv] = await conn.query("SHOW COLUMNS FROM plans_config LIKE 'max_inventory'");
+      if (!colsMaxInv || colsMaxInv.length === 0) {
+        await conn.query("ALTER TABLE plans_config ADD COLUMN max_inventory INT NOT NULL DEFAULT 0");
+      }
       const [[pCount]] = await conn.query('SELECT COUNT(*) AS total FROM plans_config');
       if (Number(pCount?.total || 0) === 0) {
         await conn.query(`
-          INSERT INTO plans_config (plan_key, name, price, quota_tokens, days_active, max_knowledge, max_images, has_watermark, is_popular, ai_tier, context_limit, features_json, sort_order) VALUES
-          ('free', 'Paket Gratis (Free)', 0, 75, 30, 10, 0, 1, 0, 'basic', 0, '{"inventory":false,"invoice":false,"ongkir":false,"memory":false,"handover":false,"vision":false}', 1),
-          ('hemat25', 'Paket Hemat 25K', 25000, 300, 30, 25, 1, 1, 0, 'starter', 3, '{"inventory":true,"invoice":false,"ongkir":false,"memory":false,"handover":false,"vision":false}', 2),
-          ('plus35', 'Paket Plus 35K', 35000, 500, 30, 50, 5, 0, 1, 'sales', 6, '{"inventory":true,"invoice":true,"ongkir":false,"memory":false,"handover":false,"vision":false}', 3),
-          ('starter50', 'Paket Starter 50K', 50000, 1000, 30, 100, 10, 0, 0, 'smart', 12, '{"inventory":true,"invoice":true,"ongkir":true,"memory":true,"handover":false,"vision":false}', 4),
-          ('pro70', 'Paket Pro 70K', 70000, 1500, 30, 200, 15, 0, 0, 'pro', 20, '{"inventory":true,"invoice":true,"ongkir":true,"memory":true,"handover":true,"vision":false}', 5),
-          ('bisnis100', 'Paket Bisnis 100K', 100000, 2500, 30, 500, 25, 0, 0, 'genius', 40, '{"inventory":true,"invoice":true,"ongkir":true,"memory":true,"handover":true,"vision":true}', 6)
+          INSERT INTO plans_config (plan_key, name, price, quota_tokens, days_active, max_knowledge, max_inventory, max_images, has_watermark, is_popular, ai_tier, context_limit, features_json, sort_order) VALUES
+          ('free', 'Paket Gratis (Free)', 0, 75, 30, 10, 0, 0, 1, 0, 'basic', 0, '{"inventory":false,"ai_brain":false,"invoice":false,"memory":false,"handover":false,"upsell":false}', 1),
+          ('hemat25', 'Paket Hemat 25K', 25000, 300, 30, 25, 10, 1, 1, 0, 'basic_inventory', 0, '{"inventory":true,"ai_brain":false,"invoice":false,"memory":false,"handover":false,"upsell":false}', 2),
+          ('plus35', 'Paket Plus 35K', 35000, 500, 30, 50, 25, 5, 0, 1, 'sales', 6, '{"inventory":true,"ai_brain":true,"invoice":true,"memory":false,"handover":false,"upsell":false}', 3),
+          ('starter50', 'Paket Starter 50K', 50000, 1000, 30, 100, 40, 10, 0, 0, 'smart', 12, '{"inventory":true,"ai_brain":true,"invoice":true,"memory":true,"handover":false,"upsell":false}', 4),
+          ('pro70', 'Paket Pro 70K', 70000, 1500, 30, 200, 50, 15, 0, 0, 'pro', 20, '{"inventory":true,"ai_brain":true,"invoice":true,"memory":true,"handover":true,"upsell":false}', 5),
+          ('bisnis100', 'Paket Bisnis 100K', 100000, 2500, 30, 500, 80, 25, 0, 0, 'genius', 40, '{"inventory":true,"ai_brain":true,"invoice":true,"memory":true,"handover":true,"upsell":true}', 6)
         `);
       } else {
-        // Pastikan baris lama yang baru ditambah kolomnya terisi default tier
         const tierSeeds = [
-          ['free', 'basic', 0, '{"inventory":false,"invoice":false,"ongkir":false,"memory":false,"handover":false,"vision":false}'],
-          ['hemat25', 'starter', 3, '{"inventory":true,"invoice":false,"ongkir":false,"memory":false,"handover":false,"vision":false}'],
-          ['plus35', 'sales', 6, '{"inventory":true,"invoice":true,"ongkir":false,"memory":false,"handover":false,"vision":false}'],
-          ['starter50', 'smart', 12, '{"inventory":true,"invoice":true,"ongkir":true,"memory":true,"handover":false,"vision":false}'],
-          ['pro70', 'pro', 20, '{"inventory":true,"invoice":true,"ongkir":true,"memory":true,"handover":true,"vision":false}'],
-          ['bisnis100', 'genius', 40, '{"inventory":true,"invoice":true,"ongkir":true,"memory":true,"handover":true,"vision":true}']
+          ['free', 0, 'basic', 0, '{"inventory":false,"ai_brain":false,"invoice":false,"memory":false,"handover":false,"upsell":false}'],
+          ['hemat25', 10, 'basic_inventory', 0, '{"inventory":true,"ai_brain":false,"invoice":false,"memory":false,"handover":false,"upsell":false}'],
+          ['plus35', 25, 'sales', 6, '{"inventory":true,"ai_brain":true,"invoice":true,"memory":false,"handover":false,"upsell":false}'],
+          ['starter50', 40, 'smart', 12, '{"inventory":true,"ai_brain":true,"invoice":true,"memory":true,"handover":false,"upsell":false}'],
+          ['pro70', 50, 'pro', 20, '{"inventory":true,"ai_brain":true,"invoice":true,"memory":true,"handover":true,"upsell":false}'],
+          ['bisnis100', 80, 'genius', 40, '{"inventory":true,"ai_brain":true,"invoice":true,"memory":true,"handover":true,"upsell":true}']
         ];
-        for (const [k, tier, ctx, feat] of tierSeeds) {
+        for (const [k, maxInv, tier, ctx, feat] of tierSeeds) {
           await conn.query(
-            `UPDATE plans_config SET ai_tier = COALESCE(NULLIF(ai_tier, ''), ?), context_limit = CASE WHEN context_limit IS NULL OR (plan_key != 'free' AND context_limit = 0) THEN ? ELSE context_limit END, features_json = COALESCE(NULLIF(features_json, ''), ?) WHERE plan_key = ?`,
-            [tier, ctx, feat, k]
+            `UPDATE plans_config
+             SET max_inventory = CASE WHEN max_inventory IS NULL OR (plan_key != 'free' AND max_inventory = 0) THEN ? ELSE max_inventory END,
+                 ai_tier = ?,
+                 context_limit = ?,
+                 features_json = ?
+             WHERE plan_key = ?`,
+            [maxInv, tier, ctx, feat, k]
           );
         }
       }
@@ -752,7 +764,7 @@ export async function dbGetUser(email) {
 
 export async function dbGetUserById(id) {
   try {
-    const [rows] = await pool.query('SELECT id, email, store_name, plan, quota_total, quota_used, active_until, role, device_id, free_claimed, free_claim_device_id, referral_code, COALESCE(extra_knowledge, 0) AS extra_knowledge, COALESCE(extra_images, 0) AS extra_images FROM users WHERE id = ? LIMIT 1', [Number(id)]);
+    const [rows] = await pool.query('SELECT id, email, store_name, plan, quota_total, quota_used, active_until, role, device_id, free_claimed, free_claim_device_id, referral_code, COALESCE(extra_knowledge, 0) AS extra_knowledge, COALESCE(extra_images, 0) AS extra_images, COALESCE(extra_inventory, 0) AS extra_inventory FROM users WHERE id = ? LIMIT 1', [Number(id)]);
     return rows[0] || null;
   } catch (err) {
     return null;
@@ -1299,6 +1311,7 @@ export async function dbGetUserDetailsForAdmin(userId) {
               (quota_total - quota_used) AS quota_remaining, 
               COALESCE(extra_knowledge, 0) AS extra_knowledge,
               COALESCE(extra_images, 0) AS extra_images,
+              COALESCE(extra_inventory, 0) AS extra_inventory,
               role, active_until, created_at, updated_at 
        FROM users WHERE id = ? LIMIT 1`,
       [Number(userId)]
@@ -1382,6 +1395,10 @@ export async function dbAdminFullUpdateUser(userId, data) {
     if (data.extra_images !== undefined && !isNaN(data.extra_images)) {
       updates.push('extra_images = ?');
       params.push(Math.max(0, Number(data.extra_images)));
+    }
+    if (data.extra_inventory !== undefined && !isNaN(data.extra_inventory)) {
+      updates.push('extra_inventory = ?');
+      params.push(Math.max(0, Number(data.extra_inventory)));
     }
     if (data.quota_total !== undefined && !isNaN(data.quota_total)) {
       updates.push('quota_total = ?');
@@ -2224,12 +2241,12 @@ export async function dbGetPlanByKey(planKey) {
 
 export function getPlanDefaultFeatures(planKey = 'free') {
   const map = {
-    free: { ai_tier: 'basic', context_limit: 0, features: { inventory: false, invoice: false, ongkir: false, memory: false, handover: false, vision: false } },
-    hemat25: { ai_tier: 'starter', context_limit: 3, features: { inventory: true, invoice: false, ongkir: false, memory: false, handover: false, vision: false } },
-    plus35: { ai_tier: 'sales', context_limit: 6, features: { inventory: true, invoice: true, ongkir: false, memory: false, handover: false, vision: false } },
-    starter50: { ai_tier: 'smart', context_limit: 12, features: { inventory: true, invoice: true, ongkir: true, memory: true, handover: false, vision: false } },
-    pro70: { ai_tier: 'pro', context_limit: 20, features: { inventory: true, invoice: true, ongkir: true, memory: true, handover: true, vision: false } },
-    bisnis100: { ai_tier: 'genius', context_limit: 40, features: { inventory: true, invoice: true, ongkir: true, memory: true, handover: true, vision: true } }
+    free: { max_inventory: 0, ai_tier: 'basic', context_limit: 0, features: { inventory: false, ai_brain: false, invoice: false, memory: false, handover: false, upsell: false } },
+    hemat25: { max_inventory: 10, ai_tier: 'basic_inventory', context_limit: 0, features: { inventory: true, ai_brain: false, invoice: false, memory: false, handover: false, upsell: false } },
+    plus35: { max_inventory: 25, ai_tier: 'sales', context_limit: 6, features: { inventory: true, ai_brain: true, invoice: true, memory: false, handover: false, upsell: false } },
+    starter50: { max_inventory: 40, ai_tier: 'smart', context_limit: 12, features: { inventory: true, ai_brain: true, invoice: true, memory: true, handover: false, upsell: false } },
+    pro70: { max_inventory: 50, ai_tier: 'pro', context_limit: 20, features: { inventory: true, ai_brain: true, invoice: true, memory: true, handover: true, upsell: false } },
+    bisnis100: { max_inventory: 80, ai_tier: 'genius', context_limit: 40, features: { inventory: true, ai_brain: true, invoice: true, memory: true, handover: true, upsell: true } }
   };
   return map[String(planKey || 'free').toLowerCase()] || map.free;
 }
@@ -2243,47 +2260,45 @@ export async function dbUpdatePlanConfig(planKey, data) {
   const quotaTokens = Math.max(1, Number(data.quota_tokens ?? data.quota ?? 75));
   const daysActive = Math.max(1, Number(data.days_active || 30));
   const maxKnowledge = Math.max(1, Number(data.max_knowledge || 10));
+  const maxInventory = Math.max(0, Number(data.max_inventory ?? defaults.max_inventory));
   const maxImages = Math.max(0, Number(data.max_images || 0));
   const hasWatermark = data.has_watermark ? 1 : 0;
   const isPopular = data.is_popular ? 1 : 0;
   const aiTier = String(data.ai_tier || defaults.ai_tier).trim().slice(0, 30);
   const contextLimit = Math.max(0, Number(data.context_limit ?? defaults.context_limit));
-  const featuresJson = data.features_json
-    ? (typeof data.features_json === 'string' ? data.features_json : JSON.stringify(data.features_json))
-    : undefined;
+  const featuresObj = data.features_json
+    ? (typeof data.features_json === 'string' ? JSON.parse(data.features_json) : data.features_json)
+    : {
+        ...defaults.features,
+        inventory: maxInventory > 0,
+        ai_brain: aiTier !== 'basic' && aiTier !== 'basic_inventory'
+      };
+  const featuresJson = JSON.stringify(featuresObj);
 
   if (isPopular) {
     await pool.query('UPDATE plans_config SET is_popular = 0 WHERE plan_key != ?', [key]);
   }
 
-  if (featuresJson) {
-    await pool.query(
-      `UPDATE plans_config
-       SET name = ?, price = ?, quota_tokens = ?, days_active = ?, max_knowledge = ?, max_images = ?, has_watermark = ?, is_popular = ?, ai_tier = ?, context_limit = ?, features_json = ?
-       WHERE plan_key = ?`,
-      [name, price, quotaTokens, daysActive, maxKnowledge, maxImages, hasWatermark, isPopular, aiTier, contextLimit, featuresJson, key]
-    );
-  } else {
-    await pool.query(
-      `UPDATE plans_config
-       SET name = ?, price = ?, quota_tokens = ?, days_active = ?, max_knowledge = ?, max_images = ?, has_watermark = ?, is_popular = ?, ai_tier = ?, context_limit = ?
-       WHERE plan_key = ?`,
-      [name, price, quotaTokens, daysActive, maxKnowledge, maxImages, hasWatermark, isPopular, aiTier, contextLimit, key]
-    );
-  }
+  await pool.query(
+    `UPDATE plans_config
+     SET name = ?, price = ?, quota_tokens = ?, days_active = ?, max_knowledge = ?, max_inventory = ?, max_images = ?, has_watermark = ?, is_popular = ?, ai_tier = ?, context_limit = ?, features_json = ?
+     WHERE plan_key = ?`,
+    [name, price, quotaTokens, daysActive, maxKnowledge, maxInventory, maxImages, hasWatermark, isPopular, aiTier, contextLimit, featuresJson, key]
+  );
   return await dbGetPlanByKey(key);
 }
 
-export async function dbGetEffectiveUserLimits(planName = '', role = 'user', extraKnowledge = 0, extraImages = 0) {
+export async function dbGetEffectiveUserLimits(planName = '', role = 'user', extraKnowledge = 0, extraImages = 0, extraInventory = 0) {
   if (role === 'superadmin') {
     return {
       knowledgeLimit: 9999,
+      inventoryLimit: 9999,
       imageLimit: 999,
       planKey: 'bisnis100',
       aiTier: 'genius',
       contextLimit: 40,
       hasWatermark: false,
-      features: { inventory: true, invoice: true, ongkir: true, memory: true, handover: true, vision: true }
+      features: { inventory: true, ai_brain: true, invoice: true, memory: true, handover: true, upsell: true }
     };
   }
   let baseK = getKnowledgeLimitForPlan(planName, role);
@@ -2297,6 +2312,7 @@ export async function dbGetEffectiveUserLimits(planName = '', role = 'user', ext
   else if (pLower.includes('25k') || pLower.includes('hemat')) matchedKey = 'hemat25';
 
   const defaults = getPlanDefaultFeatures(matchedKey);
+  let baseInv = defaults.max_inventory;
   let aiTier = defaults.ai_tier;
   let contextLimit = defaults.context_limit;
   let features = { ...defaults.features };
@@ -2311,6 +2327,7 @@ export async function dbGetEffectiveUserLimits(planName = '', role = 'user', ext
     );
     if (matched) {
       baseK = Number(matched.max_knowledge || baseK);
+      baseInv = Number(matched.max_inventory ?? baseInv);
       baseI = Number(matched.max_images ?? baseI);
       matchedKey = matched.plan_key || matchedKey;
       const fallback = getPlanDefaultFeatures(matchedKey);
@@ -2322,11 +2339,17 @@ export async function dbGetEffectiveUserLimits(planName = '', role = 'user', ext
           features = { ...fallback.features, ...JSON.parse(matched.features_json) };
         } catch (_) {}
       }
+      features.inventory = baseInv > 0;
+      features.ai_brain = aiTier !== 'basic' && aiTier !== 'basic_inventory';
     }
   } catch (e) {}
 
+  const totalInvLimit = baseInv + Math.max(0, Number(extraInventory || 0));
+  if (totalInvLimit > 0) features.inventory = true;
+
   return {
     knowledgeLimit: baseK + Math.max(0, Number(extraKnowledge || 0)),
+    inventoryLimit: totalInvLimit,
     imageLimit: baseI + Math.max(0, Number(extraImages || 0)),
     planKey: matchedKey,
     aiTier,
@@ -2337,12 +2360,56 @@ export async function dbGetEffectiveUserLimits(planName = '', role = 'user', ext
 }
 
 // ==========================================
-// INVENTORY PRODUK, ORDER/INVOICE & MEMORI PELANGGAN
+// INVENTORY PRODUK (MURNI TEKS & ANGKA, TANPA FOTO, ANTI-PHP/HTML/SCRIPT)
 // ==========================================
+const FORBIDDEN_INVENTORY_PATTERN = /(<[^>]*>|<\?php|<\?=|\.(php|phtml|html|htm|js|jsx|ts|tsx|sh|bash|exe|bat|cmd|py|pl|cgi|asp|aspx|jsp|env|sql|htaccess)\b|javascript:|vbscript:|data:text\/html|on(load|error|click|mouseover|submit|focus)=|\.\.\/|\.\.\\|\b(union\s+select|drop\s+table|delete\s+from|insert\s+into|update\s+\w+\s+set)\b)/i;
+
+export function validateSafeInventoryProductInput(data = {}) {
+  const rawName = String(data?.name || '').trim();
+  const rawSku = String(data?.sku || '').trim();
+  const rawCat = String(data?.category || 'Umum').trim();
+  const rawDesc = String(data?.description || '').trim();
+
+  if (!rawName || rawName.length > 120) {
+    throw new Error('Nama produk wajib diisi (maksimal 120 karakter).');
+  }
+  if (rawSku && !/^[A-Za-z0-9_-]{1,40}$/.test(rawSku)) {
+    throw new Error('SKU / Kode Barang hanya boleh berisi huruf, angka, tanda hubung (-), atau garis bawah (_) maksimal 40 karakter.');
+  }
+  if (rawDesc.length > 250) {
+    throw new Error('Deskripsi produk maksimal 250 karakter.');
+  }
+  if (data?.image_url || data?.file || data?.attachment) {
+    throw new Error('🛡️ Proteksi Keamanan: Menu Inventory tidak mengizinkan upload foto atau file apa pun.');
+  }
+
+  const combined = `${rawName} ${rawSku} ${rawCat} ${rawDesc}`;
+  if (FORBIDDEN_INVENTORY_PATTERN.test(combined) || /[<>]/.test(combined)) {
+    throw new Error('🛡️ Proteksi Keamanan: Input Inventory hanya boleh berisi teks & angka produk (dilarang memasukkan kode HTML, script, atau ekstensi file seperti .php / .html / .js)!');
+  }
+
+  const costPrice = Math.max(0, Math.min(999999999, Math.floor(Number(data?.cost_price || 0))));
+  const price = Math.max(0, Math.min(999999999, Math.floor(Number(data?.price || 0))));
+  const stock = Math.max(0, Math.min(999999, Math.floor(Number(data?.stock || 0))));
+  if (isNaN(costPrice) || isNaN(price) || isNaN(stock)) {
+    throw new Error('Harga dan stok wajib berupa angka bulat yang valid.');
+  }
+
+  return {
+    name: rawName,
+    sku: rawSku,
+    category: rawCat.slice(0, 60) || 'Umum',
+    costPrice,
+    price,
+    stock,
+    description: rawDesc
+  };
+}
+
 export async function dbGetProducts(userId) {
   try {
     const [rows] = await pool.query(
-      'SELECT * FROM products WHERE user_id = ? ORDER BY id DESC',
+      'SELECT id, user_id, sku, name, category, cost_price, price, stock, description, created_at, updated_at FROM products WHERE user_id = ? ORDER BY id DESC',
       [Number(userId)]
     );
     return rows || [];
@@ -2352,46 +2419,37 @@ export async function dbGetProducts(userId) {
   }
 }
 
+export async function dbCountUserProducts(userId) {
+  try {
+    const [[row]] = await pool.query('SELECT COUNT(*) AS total FROM products WHERE user_id = ?', [Number(userId)]);
+    return Number(row?.total || 0);
+  } catch (e) {
+    return 0;
+  }
+}
+
 export async function dbAddProduct(userId, data) {
   const uid = Number(userId);
-  const name = String(data?.name || '').trim().slice(0, 180);
-  if (!name) throw new Error('Nama produk wajib diisi.');
-  const sku = String(data?.sku || '').trim().slice(0, 64);
-  const category = String(data?.category || 'Umum').trim().slice(0, 80);
-  const costPrice = Math.max(0, Number(data?.cost_price || 0));
-  const price = Math.max(0, Number(data?.price || 0));
-  const stock = Math.max(0, Number(data?.stock || 0));
-  const weightGram = Math.max(1, Number(data?.weight_gram || 500));
-  const imageUrl = data?.image_url ? String(data.image_url).trim().slice(0, 500) : null;
-  const description = String(data?.description || '').trim();
+  const clean = validateSafeInventoryProductInput(data);
 
   const [res] = await pool.query(
     `INSERT INTO products (user_id, sku, name, category, cost_price, price, stock, weight_gram, image_url, description)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [uid, sku, name, category, costPrice, price, stock, weightGram, imageUrl, description]
+     VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL, ?)`,
+    [uid, clean.sku, clean.name, clean.category, clean.costPrice, clean.price, clean.stock, clean.description]
   );
-  return { id: res.insertId, user_id: uid, sku, name, category, cost_price: costPrice, price, stock, weight_gram: weightGram, image_url: imageUrl, description };
+  return { id: res.insertId, user_id: uid, sku: clean.sku, name: clean.name, category: clean.category, cost_price: clean.costPrice, price: clean.price, stock: clean.stock, description: clean.description };
 }
 
 export async function dbUpdateProduct(userId, id, data) {
   const uid = Number(userId);
   const pid = Number(id);
-  const name = String(data?.name || '').trim().slice(0, 180);
-  if (!name) throw new Error('Nama produk wajib diisi.');
-  const sku = String(data?.sku || '').trim().slice(0, 64);
-  const category = String(data?.category || 'Umum').trim().slice(0, 80);
-  const costPrice = Math.max(0, Number(data?.cost_price || 0));
-  const price = Math.max(0, Number(data?.price || 0));
-  const stock = Math.max(0, Number(data?.stock || 0));
-  const weightGram = Math.max(1, Number(data?.weight_gram || 500));
-  const imageUrl = data?.image_url ? String(data.image_url).trim().slice(0, 500) : null;
-  const description = String(data?.description || '').trim();
+  const clean = validateSafeInventoryProductInput(data);
 
   await pool.query(
     `UPDATE products
-     SET sku = ?, name = ?, category = ?, cost_price = ?, price = ?, stock = ?, weight_gram = ?, image_url = ?, description = ?
+     SET sku = ?, name = ?, category = ?, cost_price = ?, price = ?, stock = ?, weight_gram = 0, image_url = NULL, description = ?
      WHERE id = ? AND user_id = ?`,
-    [sku, name, category, costPrice, price, stock, weightGram, imageUrl, description, pid, uid]
+    [clean.sku, clean.name, clean.category, clean.costPrice, clean.price, clean.stock, clean.description, pid, uid]
   );
   return true;
 }
