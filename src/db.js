@@ -435,9 +435,10 @@ export async function initTiDB() {
       console.warn('⚠️ Auto-seed check error:', e.message);
     }
 
-    // Auto-cleanup log notifikasi lebih dari 5 hari agar DB tetap bersih
+    // Auto-cleanup log notifikasi lebih dari 5 hari & bersihkan kunjungan bot HeadlessChrome/Vercel agar DB bersih
     try {
       await conn.query('DELETE FROM notifications_log WHERE created_at < DATE_SUB(NOW(), INTERVAL 5 DAY)');
+      await conn.query("DELETE FROM visits_log WHERE user_agent LIKE '%HeadlessChrome%' OR user_agent LIKE '%vercel%' OR user_agent LIKE '%bot%' OR user_agent LIKE '%crawler%' OR user_agent LIKE '%spider%'");
     } catch (e) {}
 
     conn.release();
@@ -1523,6 +1524,10 @@ export async function dbClearAllNotifications() {
 
 export async function dbRecordVisit({ ip = '127.0.0.1', pageView = 'landing', visitorEmail = 'Pengunjung', userAgent = '', eventType = 'visit', trafficSource = 'Direct' }) {
   try {
+    // Abaikan bot screenshot otomatis Vercel (HeadlessChrome), crawler, dan spider agar statistik murni manusia
+    if (/HeadlessChrome|vercel|bot|crawler|spider|lighthouse|puppeteer|playwright/i.test(String(userAgent || ''))) {
+      return false;
+    }
     await pool.query(
       `INSERT INTO visits_log (ip_address, page_view, visitor_email, user_agent, event_type, traffic_source) VALUES (?, ?, ?, ?, ?, ?)`,
       [

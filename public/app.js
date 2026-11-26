@@ -587,7 +587,7 @@ function syncLandingAuthButtons() {
 
   if (btnNavAuth) {
     if (isLogged) {
-      btnNavAuth.textContent = '🚀 Dashboard';
+      btnNavAuth.textContent = 'Dashboard';
       btnNavAuth.classList.add('btn-nav-dashboard-active');
       btnNavAuth.onclick = () => switchView('dashboard');
     } else {
@@ -603,8 +603,8 @@ function syncLandingAuthButtons() {
 
   if (btnHeroMainCta) {
     if (isLogged) {
-      if (btnHeroMainCtaText) btnHeroMainCtaText.textContent = '🚀 Buka Dashboard Saya';
-      else btnHeroMainCta.textContent = '🚀 Buka Dashboard Saya';
+      if (btnHeroMainCtaText) btnHeroMainCtaText.textContent = 'Buka Dashboard';
+      else btnHeroMainCta.textContent = 'Buka Dashboard';
       btnHeroMainCta.onclick = () => switchView('dashboard');
     } else {
       if (btnHeroMainCtaText) btnHeroMainCtaText.textContent = 'Daftar Gratis';
