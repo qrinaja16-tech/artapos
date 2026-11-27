@@ -1146,7 +1146,7 @@ async function handleLoginSubmit(e) {
     switchView('dashboard');
     switchTab('whatsapp');
 
-    const remQuota = Math.max(0, (Number(res.user.quota_total) || 100) - (Number(res.user.quota_used) || 0));
+    const remQuota = Math.max(0, Number(res.user.quota_total ?? 0) - Number(res.user.quota_used ?? 0));
     Swal.fire({
       icon: 'success',
       title: 'Berhasil Masuk Dashboard!',
@@ -1540,7 +1540,18 @@ async function pollWhatsAppStatus() {
 
     currentWaStatus = data.status;
 
-    if (data.status === 'connected') {
+    if (data.status === 'locked_unclaimed') {
+      const viewConnected = document.getElementById('viewWaConnected');
+      const viewScan = document.getElementById('viewWaScan');
+      const qrImg = document.getElementById('waQrImage');
+      const qrLoading = document.getElementById('qrLoadingState');
+      const qrStatusText = document.getElementById('qrStatusText');
+      if (viewConnected) viewConnected.classList.add('hidden');
+      if (viewScan) viewScan.classList.remove('hidden');
+      if (qrImg) qrImg.classList.add('hidden');
+      if (qrLoading) qrLoading.classList.add('hidden');
+      if (qrStatusText) qrStatusText.textContent = '🔒 Klaim 75 Token Gratis di banner atas (atau pilih paket) dulu untuk membuka QR WhatsApp!';
+    } else if (data.status === 'connected') {
       const cleanPhone = data.phone ? (String(data.phone).startsWith('+') ? String(data.phone) : `+${data.phone}`) : 'Terhubung';
       setWaConnectedView(cleanPhone);
       if (prevStatus && prevStatus !== 'connected') {
@@ -3298,9 +3309,19 @@ async function openAdminUserDetail(userId) {
   if (editId) editId.value = user.id;
   if (editEmail) editEmail.value = user.email || '';
   if (editStore) editStore.value = user.store_name || '';
-  if (editPlan) editPlan.value = user.plan || 'Paket Bisnis';
-  if (editQuotaTotal) editQuotaTotal.value = user.quota_total || 2500;
-  if (editQuotaUsed) editQuotaUsed.value = user.quota_used || 0;
+  if (editPlan) {
+    const planVal = user.plan || 'Akun Baru (Belum Klaim)';
+    const hasOpt = Array.from(editPlan.options).some(o => o.value === planVal);
+    if (!hasOpt) {
+      const opt = document.createElement('option');
+      opt.value = planVal;
+      opt.textContent = planVal;
+      editPlan.appendChild(opt);
+    }
+    editPlan.value = planVal;
+  }
+  if (editQuotaTotal) editQuotaTotal.value = user.quota_total ?? 0;
+  if (editQuotaUsed) editQuotaUsed.value = user.quota_used ?? 0;
   if (editExtraKnowledge) editExtraKnowledge.value = user.extra_knowledge ?? 0;
   if (editExtraInventory) editExtraInventory.value = user.extra_inventory ?? 0;
   if (editExtraImages) editExtraImages.value = user.extra_images ?? 0;

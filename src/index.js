@@ -452,6 +452,10 @@ async function bootArtaposServer() {
           console.log(`🔄 [CLOUD SYNC] Menerima perintah Reset QR untuk User #${cmd.userId} dari www.artapos.id`);
           resetTenantWhatsApp(cmd.userId).catch(() => { });
         } else if (cmd.command === 'ensure') {
+          const uQuota = await dbGetUserQuota(cmd.userId);
+          if (uQuota && uQuota.role !== 'superadmin' && Number(uQuota.quota_total || 0) <= 0) {
+            continue;
+          }
           const existing = tenantSessions.get(cmd.userId);
           if (!existing || (existing.status !== 'connected' && !existing.qr && !existing.isConnecting)) {
             console.log(`📲 [CLOUD SYNC] Menerima permintaan QR baru untuk User #${cmd.userId} dari www.artapos.id`);

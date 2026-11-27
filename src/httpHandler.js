@@ -508,8 +508,26 @@ export function createHttpHandler(waHooks = {}) {
         const userId = session.user_id;
         let userBotName = botName;
 
+        const freshWaUser = await dbGetUserById(userId);
+        const isUnclaimedWa = freshWaUser && freshWaUser.role !== 'superadmin' && (Number(freshWaUser.quota_total || 0) <= 0 || String(freshWaUser.plan || '').includes('Belum Klaim'));
         const cfg = await dbGetConfig(userId);
         if (cfg.store_name) userBotName = cfg.store_name;
+
+        if (isUnclaimedWa) {
+          res.writeHead(200, {
+            'Content-Type': 'application/json; charset=utf-8',
+            'Cache-Control': 'no-cache, no-store'
+          });
+          res.end(JSON.stringify({
+            status: 'locked_unclaimed',
+            qr: null,
+            phone: null,
+            botEnabled: false,
+            user: session.email,
+            botName: userBotName
+          }));
+          return;
+        }
 
         if (process.env.VERCEL === '1') {
           const isConnected = cfg.wa_status === 'connected';
@@ -578,6 +596,12 @@ export function createHttpHandler(waHooks = {}) {
           return;
         }
         const userId = session.user_id;
+        const freshWaLogoutUser = await dbGetUserById(userId);
+        if (freshWaLogoutUser && freshWaLogoutUser.role !== 'superadmin' && (Number(freshWaLogoutUser.quota_total || 0) <= 0 || String(freshWaLogoutUser.plan || '').includes('Belum Klaim'))) {
+          res.writeHead(403, { 'Content-Type': 'application/json; charset=utf-8' });
+          res.end(JSON.stringify({ error: '🔒 Akun belum memiliki token aktif. Klaim 75 Token Gratis atau upgrade paket dulu sebelum menautkan WhatsApp!' }));
+          return;
+        }
 
         if (process.env.VERCEL === '1') {
           await dbSetUserWaStatus(userId, 'scan_qr', '', '');
@@ -638,7 +662,10 @@ export function createHttpHandler(waHooks = {}) {
           }
 
           const freshUserForK = await dbGetUserById(session.user_id);
-          const effLimitsK = await dbGetEffectiveUserLimits(session.plan, session.role, freshUserForK?.extra_knowledge, freshUserForK?.extra_images);
+          if (freshUserForK && freshUserForK.role !== 'superadmin' && (Number(freshUserForK.quota_total || 0) <= 0 || String(freshUserForK.plan || '').includes('Belum Klaim'))) {
+            throw new Error('🔒 Akun belum aktif (0 Token). Silakan klik "Klaim 75 Token Gratis" atau beli paket terlebih dahulu sebelum menambah Knowledge!');
+          }
+          const effLimitsK = await dbGetEffectiveUserLimits(freshUserForK?.plan || session.plan, freshUserForK?.role || session.role, freshUserForK?.extra_knowledge, freshUserForK?.extra_images, freshUserForK?.extra_inventory);
           const kLimit = effLimitsK.knowledgeLimit;
           const kUsed = await dbCountUserKnowledge(session.user_id);
           if (kUsed >= kLimit) {
@@ -686,9 +713,12 @@ export function createHttpHandler(waHooks = {}) {
             }
           }
 
+          const freshUserImg = await dbGetUserById(session.user_id);
+          if (freshUserImg && freshUserImg.role !== 'superadmin' && (Number(freshUserImg.quota_total || 0) <= 0 || String(freshUserImg.plan || '').includes('Belum Klaim'))) {
+            throw new Error('🔒 Akun belum aktif (0 Token). Silakan klik "Klaim 75 Token Gratis" atau beli paket terlebih dahulu sebelum mengedit Knowledge!');
+          }
           if (body.image_url) {
-            const freshUserImg = await dbGetUserById(session.user_id);
-            const effImgLimits = await dbGetEffectiveUserLimits(session.plan, session.role, freshUserImg?.extra_knowledge, freshUserImg?.extra_images);
+            const effImgLimits = await dbGetEffectiveUserLimits(freshUserImg?.plan || session.plan, freshUserImg?.role || session.role, freshUserImg?.extra_knowledge, freshUserImg?.extra_images, freshUserImg?.extra_inventory);
             const imgLimit = effImgLimits.imageLimit;
             if (imgLimit <= 0) {
               throw new Error('Paket Gratis tidak mendukung upload gambar. Upgrade minimal Paket 25K.');
