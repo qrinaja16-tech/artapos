@@ -35,26 +35,62 @@ function formatRp(n) {
   return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 }
 
+function isInventoryListQuery(queryText = '') {
+  const q = String(queryText || '').trim().toLowerCase();
+  return /\b(daftar|list|menu|katalog|semua\s+produk|apa\s+aja|apa\s+saja|jual\s+apa|ready\s+apa|stok\s+(?:apa|sekarang|toko|barang)|cek\s+stok|cek\s+menu)\b/i.test(q) ||
+    /^(menu|list|katalog|produk|barang|stok)$/i.test(q);
+}
+
+function formatInventoryCatalogText(products = [], storeName = 'Toko Kami', withOrderHint = false) {
+  if (!products || products.length === 0) {
+    return `Maaf kak, daftar produk di Inventory ${storeName} saat ini masih kosong.`;
+  }
+  const lines = products.slice(0, 20).map((p, idx) => {
+    const stk = Number(p.stock || 0);
+    const stText = stk > 0 ? `Ready (${stk})` : 'Habis (0)';
+    return `${idx + 1}. *${p.name}* — ${formatRp(p.price)} [${stText}]`;
+  });
+  const footer = withOrderHint
+    ? `\n\nUntuk cek detail atau pesan, ketik nama produknya ya kak (contoh: *"pesan ${products[0].name} 1"*).`
+    : `\n\nKetik nama produk untuk cek detailnya ya kak.`;
+  return `📋 *Daftar Stok Produk — ${storeName}*\n\n${lines.join('\n')}${footer}`;
+}
+
 function scoreProductMatch(products, queryText) {
-  const q = String(queryText || '').toLowerCase();
+  const q = String(queryText || '').toLowerCase().trim();
+  const qNoSpace = q.replace(/[^a-z0-9]/g, '');
   const tokens = q.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length >= 2);
   let best = null;
   let bestScore = 0;
 
   for (const p of products) {
-    const hay = `${p.name || ''} ${p.sku || ''} ${p.category || ''} ${p.description || ''}`.toLowerCase();
+    const nameLower = String(p.name || '').toLowerCase().trim();
+    const nameNoSpace = nameLower.replace(/[^a-z0-9]/g, '');
+    const skuLower = String(p.sku || '').toLowerCase().trim();
+    const hay = `${nameLower} ${skuLower} ${p.category || ''} ${p.description || ''}`.toLowerCase();
+    const hayNoSpace = hay.replace(/[^a-z0-9]/g, '');
+
     let score = 0;
-    if (p.sku && q.includes(String(p.sku).toLowerCase())) score += 10;
-    if (p.name && q.includes(String(p.name).toLowerCase())) score += 8;
+    if (skuLower && (q.includes(skuLower) || qNoSpace.includes(skuLower.replace(/[^a-z0-9]/g, '')))) score += 12;
+    if (nameLower && q.includes(nameLower)) score += 10;
+    // Cocokkan versi tanpa spasi (misal Inventory "Es Teh" vs chat "esteh" atau sebaliknya)
+    if (nameNoSpace && nameNoSpace.length >= 3) {
+      if (qNoSpace === nameNoSpace) score += 14;
+      else if (qNoSpace.includes(nameNoSpace)) score += 9;
+      else if (qNoSpace.length >= 4 && nameNoSpace.includes(qNoSpace)) score += 7;
+    }
+
     for (const t of tokens) {
-      if (hay.includes(t)) score += 2;
+      if (hay.includes(t) || (t.length >= 3 && hayNoSpace.includes(t))) {
+        score += 3;
+      }
     }
     if (score > bestScore) {
       bestScore = score;
       best = p;
     }
   }
-  return bestScore >= 2 ? best : null;
+  return bestScore >= 3 ? best : null;
 }
 
 async function tryGeminiReply({ storeName, aiTier, userText, history, products, customerMem, extraSystemHint }) {
@@ -157,6 +193,14 @@ export async function generateTieredBotReply({ userId, jid = 'sim_user', senderN
         { source: 'inventory_basic' }
       );
     }
+    if (isInventoryListQuery(cleanText)) {
+      const cfgBasic = await dbGetConfig(uid);
+      return finalizeReply(
+        formatInventoryCatalogText(products, cfgBasic?.store_name || userObj?.store_name || 'Toko Kami', false),
+        null,
+        { source: 'inventory_list_basic' }
+      );
+    }
     if (kb.found) {
       return finalizeReply(kb.answer, kb.item?.image_url || null, { source: 'knowledge_hemat' });
     }
@@ -253,7 +297,15 @@ export async function generateTieredBotReply({ userId, jid = 'sim_user', senderN
     }
   }
 
-  // D. Cek Knowledge Base toko
+  // D. Cek pertanyaan daftar seluruh stok/menu Inventory atau Knowledge Base toko
+  if (!matchedProduct && isInventoryListQuery(cleanText)) {
+    return finalizeReply(
+      formatInventoryCatalogText(products, storeName, Boolean(features.invoice)),
+      null,
+      { source: 'inventory_list_ai' }
+    );
+  }
+
   const kbMatch = await knowledgeManager.findAnswer(cleanText, uid);
   if (kbMatch.found && !matchedProduct) {
     return finalizeReply(kbMatch.answer, kbMatch.item?.image_url || null, { source: 'knowledge' });

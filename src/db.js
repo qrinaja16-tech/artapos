@@ -786,13 +786,47 @@ function extractHardwareDevicePrefix(devId = '') {
 }
 
 export async function dbVerifyAndBindUserDevice(user, deviceId) {
-  // Semua akun diperbolehkan login; pengecekan 1 Akun Baru + 1 HP Baru dilakukan saat klaim token gratis
+  // Super Admin dikecualikan agar bebas memantau dari perangkat mana saja
   if (!user || user.role === 'superadmin') {
     return { allowed: true };
   }
+  const uid = Number(user.id);
   const cleanDevice = deviceId ? String(deviceId).trim().slice(0, 120) : '';
-  if (cleanDevice && !user.device_id) {
-    await pool.query('UPDATE users SET device_id = ? WHERE id = ?', [cleanDevice, Number(user.id)]).catch(() => { });
+  if (!cleanDevice) {
+    return { allowed: false, reason: '⛔ Identitas perangkat tidak terdeteksi. Silakan muat ulang halaman dan coba lagi.' };
+  }
+  const hwPrefix = extractHardwareDevicePrefix(cleanDevice);
+
+  // 1. CEGAH 2 HP 1 AKUN: Jika akun ini sudah terikat ke perangkat lain, tolak login dari HP baru
+  if (user.device_id) {
+    const boundPrefix = extractHardwareDevicePrefix(user.device_id);
+    const sameDevice = user.device_id === cleanDevice || (hwPrefix && boundPrefix && hwPrefix === boundPrefix);
+    if (!sameDevice) {
+      return {
+        allowed: false,
+        reason: '⛔ Akses ditolak (2 HP 1 Akun): Akun ini sudah terkunci di perangkat (HP/Laptop) lain dan tidak bisa dibuka di perangkat kedua.'
+      };
+    }
+  }
+
+  // 2. CEGAH 1 HP 2 AKUN: Cek apakah perangkat ini sudah terikat ke akun lain
+  const [otherAccounts] = await pool.query(
+    `SELECT id, email FROM users
+     WHERE id != ? AND role != 'superadmin'
+       AND (device_id = ? OR device_id LIKE ? OR free_claim_device_id = ? OR free_claim_device_id LIKE ?)
+     LIMIT 1`,
+    [uid, cleanDevice, `${hwPrefix}_%`, cleanDevice, `${hwPrefix}_%`]
+  );
+  if (otherAccounts && otherAccounts.length > 0) {
+    return {
+      allowed: false,
+      reason: '⛔ Akses ditolak (1 HP 2 Akun): Perangkat ini sudah terhubung dengan akun lain. 1 HP hanya boleh menggunakan 1 Akun.'
+    };
+  }
+
+  // Ikat perangkat pertama kali ke akun ini
+  if (!user.device_id) {
+    await pool.query('UPDATE users SET device_id = ? WHERE id = ?', [cleanDevice, uid]).catch(() => { });
   }
   return { allowed: true };
 }
@@ -1024,54 +1058,84 @@ export async function dbRegisterFreeUser({ email, password = null, storeName = '
 }
 
 /**
- * Klaim 75 Token Gratis di Dashboard (HANYA untuk Akun Baru + HP Baru)
+ * Klaim 75 Token Gratis di Dashboard (ATOMIC: HANYA 1 Akun + 1 HP, Tolak 1 HP 2 Akun & 2 HP 1 Akun)
  */
 export async function dbClaimFreeTokens(userId, deviceId) {
   const uid = Number(userId);
   const cleanDevice = deviceId ? String(deviceId).trim().slice(0, 120) : '';
-  const user = await dbGetUserById(uid);
-  if (!user) throw new Error('Akun tidak ditemukan.');
-  if (user.role === 'superadmin') throw new Error('Akun Super Admin tidak perlu klaim token gratis.');
-
-  // 1. Cek Akun Baru (belum pernah klaim dan belum punya kuota sebelumnya)
-  const isNewAccount = Number(user.free_claimed || 0) === 0 && Number(user.quota_total || 0) === 0;
-  if (!isNewAccount) {
-    throw new Error('⛔ Klaim ditolak: Hanya akun baru yang belum pernah klaim yang bisa mendapatkan 75 Token Gratis.');
+  if (!cleanDevice) {
+    throw new Error('⛔ Klaim ditolak: Identitas perangkat tidak terdeteksi.');
   }
+  const hwPrefix = extractHardwareDevicePrefix(cleanDevice);
 
-  // 2. Cek HP Baru (device_id / hardware prefix belum pernah klaim gratis di akun lain)
-  if (cleanDevice) {
-    const hwPrefix = extractHardwareDevicePrefix(cleanDevice);
-    const [usedByOther] = await pool.query(
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [uRows] = await conn.query(
+      'SELECT id, email, role, device_id, free_claimed, quota_total FROM users WHERE id = ? LIMIT 1 FOR UPDATE',
+      [uid]
+    );
+    const user = uRows[0];
+    if (!user) throw new Error('Akun tidak ditemukan.');
+    if (user.role === 'superadmin') throw new Error('Akun Super Admin tidak perlu klaim token gratis.');
+
+    // 1. Cek Akun Baru (belum pernah klaim dan belum punya kuota sebelumnya)
+    const isNewAccount = Number(user.free_claimed || 0) === 0 && Number(user.quota_total || 0) === 0;
+    if (!isNewAccount) {
+      throw new Error('⛔ Klaim ditolak: Akun ini sudah pernah klaim atau sudah memiliki token aktif.');
+    }
+
+    // 2. Cek 2 HP 1 Akun (harus klaim dari perangkat yang sama saat akun terdaftar/login)
+    if (user.device_id) {
+      const boundPrefix = extractHardwareDevicePrefix(user.device_id);
+      if (user.device_id !== cleanDevice && boundPrefix !== hwPrefix) {
+        throw new Error('⛔ Klaim ditolak (2 HP 1 Akun): Klaim token gratis wajib dari perangkat pertama yang terdaftar.');
+      }
+    }
+
+    // 3. Cek 1 HP 2 Akun (device_id / hardware prefix belum pernah dipakai klaim atau terikat di akun lain)
+    const [usedByOther] = await conn.query(
       `SELECT id, email FROM users
-       WHERE id != ? AND free_claimed = 1 AND (free_claim_device_id = ? OR free_claim_device_id LIKE ?)
+       WHERE id != ? AND role != 'superadmin'
+         AND (
+           free_claim_device_id = ? OR free_claim_device_id LIKE ?
+           OR (free_claimed = 1 AND (device_id = ? OR device_id LIKE ?))
+         )
        LIMIT 1`,
-      [uid, cleanDevice, `${hwPrefix}_%`]
+      [uid, cleanDevice, `${hwPrefix}_%`, cleanDevice, `${hwPrefix}_%`]
     );
     if (usedByOther.length > 0) {
-      throw new Error('⛔ Klaim ditolak: Perangkat (HP) ini sudah pernah digunakan untuk klaim 75 Token Gratis. Silakan beli paket berbayar untuk mengisi token.');
+      throw new Error('⛔ Klaim ditolak (1 HP 2 Akun): Perangkat (HP) ini sudah pernah digunakan untuk klaim 75 Token Gratis di akun lain.');
     }
+
+    const activeUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await conn.query(
+      `UPDATE users
+       SET plan = 'Paket Gratis (75 Token)',
+           quota_total = 75,
+           quota_used = 0,
+           free_claimed = 1,
+           free_claim_device_id = ?,
+           device_id = COALESCE(device_id, ?),
+           active_until = ?
+       WHERE id = ?`,
+      [cleanDevice, cleanDevice, activeUntil, uid]
+    );
+
+    await conn.commit();
+    return {
+      success: true,
+      plan: 'Paket Gratis (75 Token)',
+      quota_total: 75,
+      active_until: activeUntil
+    };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
-
-  const activeUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-  await pool.query(
-    `UPDATE users
-     SET plan = 'Paket Gratis (75 Token)',
-         quota_total = 75,
-         quota_used = 0,
-         free_claimed = 1,
-         free_claim_device_id = ?,
-         active_until = ?
-     WHERE id = ?`,
-    [cleanDevice || null, activeUntil, uid]
-  );
-
-  return {
-    success: true,
-    plan: 'Paket Gratis (75 Token)',
-    quota_total: 75,
-    active_until: activeUntil
-  };
 }
 
 export async function dbRegisterOrUpdatePaidUser({ email, password, storeName = 'Toko AI Assistant', plan = 'Paket Bisnis', quota = 2500, daysActive = 30 }) {
