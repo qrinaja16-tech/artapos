@@ -1004,32 +1004,30 @@ export async function dbRegisterFreeUser({ email, password = null, storeName = '
 
     const hashedPassword = hashPassword(rawPassword);
 
+    const localPartCanonical = cleanEmail
+      .split('@')[0]
+      .split('+')[0]
+      .replace(/\./g, '');
+
     const [existing] = await pool.query(
-      'SELECT id, role, store_name, plan, quota_total, active_until, free_claimed FROM users WHERE LOWER(email) = ? LIMIT 1',
-      [cleanEmail]
+      `SELECT id, role, email
+       FROM users
+       WHERE LOWER(email) = ?
+          OR (LOWER(email) LIKE '%@gmail.com'
+              AND REPLACE(SUBSTRING_INDEX(SUBSTRING_INDEX(LOWER(email), '@', 1), '+', 1), '.', '') = ?)
+       LIMIT 1`,
+      [cleanEmail, localPartCanonical]
     );
 
     if (existing.length > 0) {
       const existingUser = existing[0];
-      if (existingUser.role === 'superadmin') {
-        throw new Error('Email ini adalah akun Super Admin. Silakan langsung masuk di halaman Login.');
-      }
-      const finalStore = storeName || existingUser.store_name || 'Toko AI Assistant';
-      await pool.query(
-        'UPDATE users SET password = ?, store_name = ? WHERE id = ?',
-        [hashedPassword, finalStore, existingUser.id]
+      const dupErr = new Error(
+        existingUser.role === 'superadmin'
+          ? 'Email ini adalah akun Super Admin. Silakan langsung masuk di halaman Login.'
+          : 'Email ini sudah pernah didaftarkan sebelumnya dan tidak dapat didaftarkan ulang. Silakan masuk di halaman Login.'
       );
-      await seedUserDefaultKnowledgeAndConfig(existingUser.id, finalStore);
-      return {
-        id: existingUser.id,
-        email: cleanEmail,
-        rawPassword,
-        storeName: finalStore,
-        plan: existingUser.plan || 'Akun Baru (Belum Klaim)',
-        quota_total: Number(existingUser.quota_total || 0),
-        free_claimed: Boolean(existingUser.free_claimed),
-        active_until: existingUser.active_until
-      };
+      dupErr.code = 'EMAIL_EXISTS';
+      throw dupErr;
     }
 
     const [res] = await pool.query(

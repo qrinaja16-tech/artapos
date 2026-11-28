@@ -88,7 +88,16 @@ async function loadDynamicPlans(showSuccessToast = false) {
 }
 
 function getAiTierDisplayLabel(aiTier = 'basic', contextLimit = 0) {
+  const isEn = typeof currentLandingLang !== 'undefined' && currentLandingLang === 'en';
   const t = String(aiTier || 'basic').toLowerCase();
+  if (isEn) {
+    if (t === 'genius') return `Genius AI Brain (${contextLimit || 40} Chats + Smart Upsell)`;
+    if (t === 'pro') return `Pro Closer AI (${contextLimit || 20} Chats + Handover)`;
+    if (t === 'smart') return `Smart CS AI (${contextLimit || 12} Chats + Memory)`;
+    if (t === 'sales') return `Sales AI Brain (${contextLimit || 6} Chats + Auto-Invoice)`;
+    if (t === 'basic_inventory') return 'Basic + Inventory Check (No AI Brain)';
+    return 'Basic Matcher (No AI Brain)';
+  }
   if (t === 'genius') return `Otak AI Genius (${contextLimit || 40} Chat + Smart Upsell)`;
   if (t === 'pro') return `Otak AI Pro Closer (${contextLimit || 20} Chat + Handover)`;
   if (t === 'smart') return `Otak AI Smart CS (${contextLimit || 12} Chat + Ingat Pelanggan)`;
@@ -132,6 +141,7 @@ function renderLandingPricingGrid(plans) {
   const grid = document.getElementById('landingPricingGrid');
   if (!grid || !Array.isArray(plans) || plans.length === 0) return;
 
+  const isEn = typeof currentLandingLang !== 'undefined' && currentLandingLang === 'en';
   const checkSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
   const infoSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
 
@@ -154,46 +164,54 @@ function renderLandingPricingGrid(plans) {
     const hasWatermark = Boolean(p.has_watermark);
 
     const kText = maxKnowledge >= 9999
-      ? 'Knowledge Base Tanpa Batas'
-      : `Maksimal <strong>${maxKnowledge.toLocaleString('id-ID')}</strong> Knowledge Base`;
+      ? (isEn ? 'Unlimited Knowledge Base' : 'Knowledge Base Tanpa Batas')
+      : (isEn ? `Up to <strong>${maxKnowledge.toLocaleString('en-US')}</strong> Knowledge Base Items` : `Maksimal <strong>${maxKnowledge.toLocaleString('id-ID')}</strong> Knowledge Base`);
     const invItem = maxInventory > 0
-      ? `<li>${checkSvg}Maksimal <strong>${maxInventory.toLocaleString('id-ID')} Produk Inventory</strong></li>`
-      : `<li style="color: #64748b;">${infoSvg}Belum Termasuk Inventory Produk</li>`;
+      ? (isEn ? `<li>${checkSvg}Up to <strong>${maxInventory.toLocaleString('en-US')} Inventory Products</strong></li>` : `<li>${checkSvg}Maksimal <strong>${maxInventory.toLocaleString('id-ID')} Produk Inventory</strong></li>`)
+      : `<li style="color: #64748b;">${infoSvg}${isEn ? 'Product Inventory Not Included' : 'Belum Termasuk Inventory Produk'}</li>`;
     const imgItem = maxImages > 0
-      ? `<li>${checkSvg}Maksimal <strong>${maxImages.toLocaleString('id-ID')} Foto</strong> Knowledge</li>`
-      : `<li style="color: #64748b;">${infoSvg}Belum Mendukung Upload Foto</li>`;
+      ? (isEn ? `<li>${checkSvg}Up to <strong>${maxImages.toLocaleString('en-US')}</strong> Knowledge Photos</li>` : `<li>${checkSvg}Maksimal <strong>${maxImages.toLocaleString('id-ID')} Foto</strong> Knowledge</li>`)
+      : `<li style="color: #64748b;">${infoSvg}${isEn ? 'Photo Upload Not Included' : 'Belum Mendukung Upload Foto'}</li>`;
 
     const hasAiBrain = aiTier !== 'basic' && aiTier !== 'basic_inventory';
     const aiItem = hasAiBrain
       ? `<li>${checkSvg}<strong>${escapeHtml(getAiTierDisplayLabel(aiTier, ctxLimit))}</strong></li>`
       : `<li style="color: #64748b;">${infoSvg}${escapeHtml(getAiTierDisplayLabel(aiTier, ctxLimit))}</li>`;
 
-    const descText = p.description
-      ? escapeHtml(p.description)
-      : (isFree
-        ? 'Uji coba langsung tanpa biaya & tanpa kartu kredit.'
-        : `Kuota ${quotaNum.toLocaleString('id-ID')} balasan selama ${daysNum} hari aktif.`);
+    const descText = isEn
+      ? (isFree
+        ? 'Try directly at no cost & without credit card.'
+        : `${quotaNum.toLocaleString('en-US')} chat replies quota for ${daysNum} active days.`)
+      : (p.description
+        ? escapeHtml(p.description)
+        : (isFree
+          ? 'Uji coba langsung tanpa biaya & tanpa kartu kredit.'
+          : `Kuota ${quotaNum.toLocaleString('id-ID')} balasan selama ${daysNum} hari aktif.`));
 
     const wmItem = hasWatermark
-      ? `<li style="color: #64748b;">${infoSvg}Ada Watermark <code>&gt; sent via artapos.id</code></li>`
-      : `<li>${checkSvg}<strong>Tanpa Watermark</strong> (Branding Toko Sendiri)</li>`;
+      ? `<li style="color: #64748b;">${infoSvg}${isEn ? 'Includes watermark' : 'Ada Watermark'} <code>&gt; sent via artapos.id</code></li>`
+      : `<li>${checkSvg}<strong>${isEn ? 'No Watermark' : 'Tanpa Watermark'}</strong> (${isEn ? 'Your Own Store Brand' : 'Branding Toko Sendiri'})</li>`;
 
     const actionBtn = isFree
-      ? `<button class="btn-select-plan" onclick="openFreeRegisterModal()">Daftar Gratis</button>`
-      : `<button class="btn-select-plan${isPopular ? ' primary' : ''}" onclick="openCheckout('${escapeHtml(key)}')">Pilih ${escapeHtml(p.name)}</button>`;
+      ? `<button class="btn-select-plan" onclick="openFreeRegisterModal()">${isEn ? 'Register Free' : 'Daftar Gratis'}</button>`
+      : `<button class="btn-select-plan${isPopular ? ' primary' : ''}" onclick="openCheckout('${escapeHtml(key)}')">${isEn ? 'Choose' : 'Pilih'} ${escapeHtml(p.name)}</button>`;
+
+    const popularBadge = isPopular ? `<span class="popular-ribbon">${isEn ? '🔥 MOST POPULAR' : '🔥 PALING LARIS'}</span>` : '';
+    const periodLabel = isEn ? `/${daysNum} days` : `/${daysNum} hari`;
+    const tokenLabel = isEn ? `<strong>${quotaNum.toLocaleString('en-US')}</strong> Chat Tokens / ${daysNum} Days` : `<strong>${quotaNum.toLocaleString('id-ID')}</strong> Token Chat / ${daysNum} Hari`;
 
     return `
       <div class="pricing-card${isPopular ? ' featured' : ''}" data-plan="${escapeHtml(key)}">
-        <div class="pricing-badge-wrapper">${isPopular ? '<span class="popular-ribbon">🔥 PALING LARIS</span>' : ''}</div>
+        <div class="pricing-badge-wrapper">${popularBadge}</div>
         <div class="pricing-tier-name">${escapeHtml(p.name)}</div>
         <div class="pricing-tier-desc">${descText}</div>
         <div class="pricing-price-box">
           <span class="price-currency">Rp</span>
           <span class="price-value">${priceNum.toLocaleString('id-ID')}</span>
-          <span class="price-period">/${daysNum} hari</span>
+          <span class="price-period">${periodLabel}</span>
         </div>
         <div class="pricing-quota-highlight">
-          <strong>${quotaNum.toLocaleString('id-ID')}</strong> Token Chat / ${daysNum} Hari
+          ${tokenLabel}
         </div>
         <ul class="pricing-features-list">
           ${aiItem}
@@ -639,12 +657,241 @@ function formatRupiah(num) {
 // ==============================================================
 // 1. VIEW ROUTER (LOCK DASHBOARD ON REFRESH)
 // ==============================================================
+let currentLandingLang = localStorage.getItem('artapos_lang') || 'id';
+
+function toggleLangDropdown(e) {
+  if (e) e.stopPropagation();
+  const wrap = document.getElementById('langSwitcherWrap');
+  const menu = document.getElementById('langDropdownMenu');
+  if (!menu) return;
+  const isHidden = menu.classList.contains('hidden');
+  menu.classList.toggle('hidden', !isHidden);
+  if (wrap) wrap.classList.toggle('open', isHidden);
+}
+
+function setLandingLanguage(lang = 'id', replayDemo = true) {
+  currentLandingLang = lang === 'en' ? 'en' : 'id';
+  localStorage.setItem('artapos_lang', currentLandingLang);
+  document.documentElement.lang = currentLandingLang;
+
+  const codeEl = document.getElementById('currentLangCode');
+  const optEn = document.getElementById('langOptEn');
+  const optId = document.getElementById('langOptId');
+  if (codeEl) codeEl.textContent = currentLandingLang.toUpperCase();
+  if (optEn) optEn.classList.toggle('active', currentLandingLang === 'en');
+  if (optId) optId.classList.toggle('active', currentLandingLang === 'id');
+
+  const dict = {
+    id: {
+      nav_why: 'Kenapa artapos.id',
+      nav_features: 'Fitur Unggulan',
+      nav_how: 'Cara Kerja',
+      nav_pricing: 'Harga Paket',
+      nav_faq: 'FAQ',
+      reg_btn: 'Daftar',
+      login_btn: 'Masuk',
+      dash_btn: 'Dashboard',
+      hero_pill: 'Platform WhatsApp AI No. 1 di Indonesia • Otomatis 24 Jam',
+      hero_title: 'Balas Chat WhatsApp Pelanggan <span class="text-highlight">24 Jam Otomatis</span> dengan AI',
+      hero_subtitle: 'Hubungkan nomor WhatsApp bisnis Anda dalam 1 menit cukup dengan scan QR. Tanpa API resmi berbayar mahal, langsung cek stok, buat invoice, dan closing pelanggan otomatis.',
+      hero_cta_reg: 'Daftar Gratis',
+      hero_cta_dash: 'Buka Dashboard',
+      hero_cta_sec: 'Lihat Pilihan Paket',
+      trust_1: 'Otomatis Cek Stok & Buat Invoice',
+      trust_2: 'Support WA Regular & Bisnis',
+      trust_3: 'Proteksi 1 Akun 1 Perangkat',
+      wa_reset: 'Reset',
+      wf_tag: 'MUDAH & CEPAT',
+      wf_title: '3 Langkah Mudah Memulai Otomasi WhatsApp',
+      wf_sub: 'Siap digunakan dalam hitungan menit tanpa keahlian coding atau integrasi rumit.',
+      wf_s1_t: 'Pilih Paket & Masukkan Email Google',
+      wf_s1_d: 'Tentukan kuota balasan bulanan sesuai kebutuhan toko Anda dan masukkan alamat email Google (@gmail.com) aktif Anda.',
+      wf_s2_t: 'Bayar Tagihan & Terima Akun di Gmail',
+      wf_s2_d: 'Bayar instan via Midtrans (QRIS, VA Bank, E-Wallet). Akun login langsung dikirim otomatis ke kotak masuk Gmail Anda dengan password awal.',
+      wf_s3_t: 'Login, Scan QR & Bot Langsung Aktif',
+      wf_s3_d: 'Masuk ke dashboard, scan QR Perangkat Tertaut dari aplikasi WhatsApp HP toko Anda. Bot AI seketika standby membalas pesan pembeli 24 jam!',
+      pr_tag: 'PILIHAN HARGA LANGGANAN',
+      pr_title: 'Investasi Terjangkau, Penjualan Melejit',
+      pr_sub: 'Pilih paket bulanan berdasarkan kuota balasan chat AI yang dibutuhkan toko Anda. Tanpa komitmen jangka panjang, perpanjang setiap 30 hari.',
+      ft_tag: 'MENGAPA ARTAPOS.ID?',
+      ft_title: 'Fitur Dirancang Khusus untuk Pebisnis Indonesia',
+      ft_sub: 'Solusi cerdas yang menjawab tantangan pelayanan pelanggan WhatsApp sehari-hari.',
+      ft_1_t: 'Tanpa Meta API Resmi',
+      ft_1_d: 'Tidak perlu kartu kredit, dokumen legalitas perusahaan, atau menunggu verifikasi Meta berhari-hari. Cukup sambungkan via scan QR.',
+      ft_2_t: 'Respon Cepat & Natural',
+      ft_2_d: 'Jawaban fleksibel dan sopan berbahasa Indonesia yang dirancang menyerupai interaksi admin CS toko profesional.',
+      ft_3_t: 'Pusat Data Pengetahuan Real-Time',
+      ft_3_d: 'Tambah, edit, dan hapus pertanyaan serta jawaban produk langsung dari dashboard web kapan saja dengan sinkronisasi instan.',
+      ft_4_t: 'Transparan & Terjangkau',
+      ft_4_d: 'Sistem kuota balasan yang jelas dan termonitor setiap saat di dashboard tanpa ada biaya tersembunyi per pesan.',
+      faq_tag: 'PERTANYAAN UMUM',
+      faq_title: 'Pertanyaan yang Sering Diajukan (FAQ)',
+      faq_sub: 'Pelajari selengkapnya mengenai cara kerja platform artapos.id.',
+      faq_q1: 'Apakah saya harus memiliki akun WhatsApp Business API resmi dari Meta?',
+      faq_a1: 'Tidak perlu. artapos.id bekerja menggunakan fitur resmi WhatsApp Perangkat Tertaut (Linked Devices), sama seperti saat Anda membuka WhatsApp Web di laptop.',
+      faq_q2: 'Bisa menggunakan nomor WhatsApp pribadi biasa?',
+      faq_a2: 'Bisa! artapos.id mendukung baik nomor WhatsApp reguler maupun WhatsApp Business di perangkat Android dan iPhone.',
+      faq_q3: 'Bagaimana jika kuota balasan bulanan saya habis sebelum 30 hari?',
+      faq_a3: 'Jika kuota habis, bot akan berhenti membalas otomatis sementara hingga Anda melakukan perpanjangan paket atau upgrade kuota melalui dashboard.',
+      faq_q4: 'Bagaimana akun saya dikirimkan setelah pembayaran berhasil?',
+      faq_a4: 'Sistem kami secara otomatis mengirimkan rincian akun (email Google dan password awal) ke alamat Gmail yang Anda masukkan saat checkout begitu pembayaran terverifikasi.',
+      footer_tagline: 'Solusi otomatisasi AI WhatsApp Customer Service & Penjualan No. 1 di Indonesia.',
+      footer_features: 'Fitur',
+      footer_pricing: 'Harga',
+      footer_login: 'Masuk Dashboard',
+      footer_copy: '© 2026 artapos.id • Hak Cipta Dilindungi Undang-Undang.',
+      reg_badge: '✨ PENDAFTARAN AKUN BARU',
+      reg_title: 'Daftar Akun artapos.id',
+      reg_subtitle: 'Masukkan Gmail aktif dan nama bisnis Anda untuk mulai menggunakan sistem WhatsApp AI.',
+      reg_email_lbl: 'Email Google (@gmail.com, Maks 75 Karakter) <span class="required-star">*</span>',
+      reg_store_lbl: 'Nama Bisnis / Toko (Maks 50 Karakter) <span class="required-star">*</span>',
+      reg_spam_note: '📩 <strong>Sandi Login Dikirim ke Gmail:</strong> Setelah mendaftar, silakan cek <strong>Kotak Masuk</strong> atau folder <strong>Spam</strong> di Gmail Anda untuk melihat password masuk.',
+      reg_submit_btn: 'Daftar & Kirim Sandi ke Gmail',
+      reg_have_acc: 'Sudah punya akun & password?',
+      reg_login_link: 'Masuk di sini'
+    },
+    en: {
+      nav_why: 'Why artapos.id',
+      nav_features: 'Features',
+      nav_how: 'How It Works',
+      nav_pricing: 'Pricing',
+      nav_faq: 'FAQ',
+      reg_btn: 'Register',
+      login_btn: 'Login',
+      dash_btn: 'Dashboard',
+      hero_pill: '#1 WhatsApp AI Automation Platform • 24/7 Auto-Reply',
+      hero_title: 'Auto-Reply Customer WhatsApp Chats <span class="text-highlight">24/7 with Smart AI</span>',
+      hero_subtitle: 'Connect your business WhatsApp in 1 minute by scanning a QR code. No expensive official API fees—check live stock, issue invoices, and close orders automatically.',
+      hero_cta_reg: 'Register Free',
+      hero_cta_dash: 'Open Dashboard',
+      hero_cta_sec: 'View Pricing Plans',
+      trust_1: 'Auto Stock Check & Instant Invoice',
+      trust_2: 'Supports Regular & Business WA',
+      trust_3: '1 Account 1 Device Security',
+      wa_reset: 'Reset',
+      wf_tag: 'FAST & EASY',
+      wf_title: '3 Simple Steps to Start WhatsApp Automation',
+      wf_sub: 'Ready to run in minutes with zero coding skills or complex integrations.',
+      wf_s1_t: 'Choose Plan & Enter Gmail Address',
+      wf_s1_d: 'Select the monthly reply quota that fits your store and enter your active Google email (@gmail.com).',
+      wf_s2_t: 'Complete Payment & Receive Login',
+      wf_s2_d: 'Pay instantly via Midtrans (QRIS, Virtual Account, E-Wallet). Your login credentials are sent automatically to your Gmail inbox/spam.',
+      wf_s3_t: 'Login, Scan QR & Bot Goes Live',
+      wf_s3_d: 'Open the dashboard, scan the Linked Devices QR code from your store WhatsApp, and your AI assistant immediately replies 24/7!',
+      pr_tag: 'SUBSCRIPTION PRICING',
+      pr_title: 'Affordable Investment, Higher Sales',
+      pr_sub: 'Pick a monthly plan based on the AI reply quota your store needs. No long-term lock-in, renew every 30 days.',
+      ft_tag: 'WHY ARTAPOS.ID?',
+      ft_title: 'Built Specifically for Online Businesses',
+      ft_sub: 'Smart automation designed to handle everyday WhatsApp customer chats effortlessly.',
+      ft_1_t: 'No Official Meta API Needed',
+      ft_1_d: 'No credit card, business legal verification, or multi-day Meta approval required. Simply link your device with a QR scan.',
+      ft_2_t: 'Fast & Natural Responses',
+      ft_2_d: 'Polite, human-like replies tailored like a dedicated professional customer service & sales agent.',
+      ft_3_t: 'Real-Time Knowledge & Inventory',
+      ft_3_d: 'Add, edit, or update product answers and live stock directly from the web dashboard anytime with instant sync.',
+      ft_4_t: 'Transparent & Affordable',
+      ft_4_d: 'Clear monthly token quota monitored in real-time on your dashboard with zero hidden per-message markups.',
+      faq_tag: 'COMMON QUESTIONS',
+      faq_title: 'Frequently Asked Questions (FAQ)',
+      faq_sub: 'Learn more about how the artapos.id platform works.',
+      faq_q1: 'Do I need an official WhatsApp Business API account from Meta?',
+      faq_a1: 'No. artapos.id runs through the official WhatsApp Linked Devices feature, just like using WhatsApp Web on a computer.',
+      faq_q2: 'Can I use a regular personal WhatsApp number?',
+      faq_a2: 'Yes! artapos.id supports both regular WhatsApp and WhatsApp Business on Android and iPhone.',
+      faq_q3: 'What happens if my monthly token quota runs out before 30 days?',
+      faq_a3: 'When your quota hits zero, the AI pauses automatic replies temporarily until you renew or upgrade your plan from the dashboard.',
+      faq_q4: 'How do I receive my account after payment or registration?',
+      faq_a4: 'Our system automatically emails your login details and initial password to your Gmail address (check Inbox or Spam folder) right away.',
+      footer_tagline: '#1 Automated WhatsApp AI Customer Service & Sales Solution.',
+      footer_features: 'Features',
+      footer_pricing: 'Pricing',
+      footer_login: 'Dashboard Login',
+      footer_copy: '© 2026 artapos.id • All Rights Reserved.',
+      reg_badge: '✨ NEW ACCOUNT REGISTRATION',
+      reg_title: 'Create artapos.id Account',
+      reg_subtitle: 'Enter your active Gmail and business name to start using the WhatsApp AI system.',
+      reg_email_lbl: 'Google Email (@gmail.com, Max 75 Chars) <span class="required-star">*</span>',
+      reg_store_lbl: 'Business / Store Name (Max 50 Chars) <span class="required-star">*</span>',
+      reg_spam_note: '📩 <strong>Password Sent to Gmail:</strong> After registering, please check your Gmail <strong>Inbox</strong> or <strong>Spam</strong> folder to view your login password.',
+      reg_submit_btn: 'Register & Send Password to Gmail',
+      reg_have_acc: 'Already have an account & password?',
+      reg_login_link: 'Sign in here'
+    }
+  }[currentLandingLang];
+
+  const htmlKeys = new Set(['reg_email_lbl', 'reg_store_lbl', 'reg_spam_note']);
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.getAttribute('data-i18n');
+    if (!k || !dict[k]) return;
+    if (htmlKeys.has(k)) el.innerHTML = dict[k];
+    else el.textContent = dict[k];
+  });
+
+  const regSpan = document.getElementById('btnNavRegisterText');
+  if (regSpan) regSpan.textContent = dict.reg_btn;
+  const heroTitle = document.querySelector('.hero-title');
+  if (heroTitle) heroTitle.innerHTML = dict.hero_title;
+
+  const waInput = document.getElementById('heroLiveChatInput');
+  if (waInput) {
+    waInput.placeholder = currentLandingLang === 'en'
+      ? 'Type a message like on WhatsApp...'
+      : 'Ketik balasan ala WhatsApp...';
+  }
+  const nicheSelect = document.getElementById('heroLiveChatNiche');
+  if (nicheSelect && nicheSelect.options.length >= 3) {
+    nicheSelect.options[0].textContent = '🏪 Retail';
+    nicheSelect.options[1].textContent = currentLandingLang === 'en' ? '🥤 F&B' : '🥤 Kuliner';
+    nicheSelect.options[2].textContent = '👟 Fashion';
+  }
+  const freeStoreInput = document.getElementById('freeStoreName');
+  if (freeStoreInput) {
+    freeStoreInput.placeholder = currentLandingLang === 'en'
+      ? 'Example: Berkah Store / Cozy Coffee (max 50 chars)'
+      : 'Contoh: Toko Berkah / Kopi Senja (maks 50 huruf)';
+  }
+
+  if (Array.isArray(DYNAMIC_PLANS_LIST) && DYNAMIC_PLANS_LIST.length > 0) {
+    renderLandingPricingGrid(DYNAMIC_PLANS_LIST);
+  }
+  syncLandingAuthButtons();
+  if (replayDemo && typeof resetHeroLiveChat === 'function') {
+    resetHeroLiveChat();
+  }
+
+  const wrap = document.getElementById('langSwitcherWrap');
+  const menu = document.getElementById('langDropdownMenu');
+  if (menu) menu.classList.add('hidden');
+  if (wrap) wrap.classList.remove('open');
+}
+
+function toggleLandingMobileMenu(open) {
+  const drawer = document.getElementById('landingMobileDrawer');
+  const backdrop = document.getElementById('landingMobileDrawerBackdrop');
+  if (!drawer) return;
+  const shouldOpen = open !== undefined ? Boolean(open) : drawer.classList.contains('hidden');
+  drawer.classList.toggle('hidden', !shouldOpen);
+  if (backdrop) backdrop.classList.toggle('hidden', !shouldOpen);
+  document.body.style.overflow = shouldOpen ? 'hidden' : '';
+}
+
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('langSwitcherWrap');
+  const menu = document.getElementById('langDropdownMenu');
+  if (wrap && menu && !wrap.contains(e.target)) {
+    menu.classList.add('hidden');
+    wrap.classList.remove('open');
+  }
+});
+
 function syncLandingAuthButtons() {
   const isLogged = Boolean(currentUser || localStorage.getItem('artapos_token'));
   const btnNavAuth = document.getElementById('btnNavAuth');
   const btnNavRegister = document.getElementById('btnNavRegister');
   const btnHeroMainCta = document.getElementById('btnHeroMainCta');
   const btnHeroMainCtaText = document.getElementById('btnHeroMainCtaText');
+  const isEn = currentLandingLang === 'en';
 
   if (btnNavAuth) {
     if (isLogged) {
@@ -652,10 +899,31 @@ function syncLandingAuthButtons() {
       btnNavAuth.classList.add('btn-nav-dashboard-active');
       btnNavAuth.onclick = () => switchView('dashboard');
     } else {
-      btnNavAuth.textContent = 'Masuk';
+      btnNavAuth.textContent = isEn ? 'Login' : 'Masuk';
       btnNavAuth.classList.remove('btn-nav-dashboard-active');
       btnNavAuth.onclick = () => switchView('login');
     }
+  }
+
+  const lmdLoginBtn = document.getElementById('lmdLoginBtn');
+  const lmdRegisterBtn = document.getElementById('lmdRegisterBtn');
+  const lmdRegisterText = document.getElementById('lmdRegisterText');
+  if (lmdLoginBtn) {
+    if (isLogged) {
+      lmdLoginBtn.textContent = 'Dashboard';
+      lmdLoginBtn.classList.add('is-dashboard');
+      lmdLoginBtn.onclick = () => { toggleLandingMobileMenu(false); switchView('dashboard'); };
+    } else {
+      lmdLoginBtn.textContent = isEn ? 'Login' : 'Masuk';
+      lmdLoginBtn.classList.remove('is-dashboard');
+      lmdLoginBtn.onclick = () => { toggleLandingMobileMenu(false); switchView('login'); };
+    }
+  }
+  if (lmdRegisterBtn) {
+    lmdRegisterBtn.classList.toggle('hidden', isLogged);
+  }
+  if (lmdRegisterText) {
+    lmdRegisterText.textContent = isEn ? 'Register' : 'Daftar';
   }
 
   if (btnNavRegister) {
@@ -664,12 +932,14 @@ function syncLandingAuthButtons() {
 
   if (btnHeroMainCta) {
     if (isLogged) {
-      if (btnHeroMainCtaText) btnHeroMainCtaText.textContent = 'Buka Dashboard';
-      else btnHeroMainCta.textContent = 'Buka Dashboard';
+      const lbl = isEn ? 'Open Dashboard' : 'Buka Dashboard';
+      if (btnHeroMainCtaText) btnHeroMainCtaText.textContent = lbl;
+      else btnHeroMainCta.textContent = lbl;
       btnHeroMainCta.onclick = () => switchView('dashboard');
     } else {
-      if (btnHeroMainCtaText) btnHeroMainCtaText.textContent = 'Daftar Gratis';
-      else btnHeroMainCta.textContent = 'Daftar Gratis';
+      const lbl = isEn ? 'Register Free' : 'Daftar Gratis';
+      if (btnHeroMainCtaText) btnHeroMainCtaText.textContent = lbl;
+      else btnHeroMainCta.textContent = lbl;
       btnHeroMainCta.onclick = () => openFreeRegisterModal();
     }
   }
@@ -680,7 +950,15 @@ function goToLandingFromDashboard() {
   switchView('landing');
 }
 
-function switchView(viewName) {
+const VIEW_TO_PATH = {
+  'landing': '/',
+  'login': '/login',
+  'forgot-password': '/lupa-password',
+  'checkout': '/checkout',
+  'dashboard': '/dashboard'
+};
+
+function switchView(viewName, skipHistoryPush = false) {
   currentActiveView = viewName;
 
   const views = {
@@ -706,23 +984,40 @@ function switchView(viewName) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  // Sinkronkan URL Address Bar (/login, /dashboard, /checkout, /lupa-password, /)
+  if (!skipHistoryPush && VIEW_TO_PATH[viewName]) {
+    const targetPath = VIEW_TO_PATH[viewName];
+    const targetUrl = viewName === 'landing' ? (targetPath + (window.location.search || '')) : targetPath;
+    if (window.location.pathname !== targetPath || window.location.hash) {
+      try {
+        history.pushState({ viewName }, '', targetUrl);
+      } catch (_) {}
+    }
+  }
+
   syncLandingAuthButtons();
 
   // Jika masuk ke dashboard, aktifkan live listeners & sinkronisasi data
   if (viewName === 'dashboard') {
-    try { history.replaceState(null, '', '#dashboard'); } catch (_) {}
     switchTab(currentActiveTab || 'whatsapp');
     loadUserData();
     loadData();
     pollWhatsAppStatus();
     startLiveQuotaPolling();
   } else {
-    if (viewName === 'landing' && ['#dashboard', '#login', '#checkout'].includes(window.location.hash.toLowerCase())) {
-      try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
-    }
     stopLiveQuotaPolling();
   }
 }
+
+window.addEventListener('popstate', () => {
+  const p = window.location.pathname.toLowerCase();
+  const hasToken = Boolean(localStorage.getItem('artapos_token'));
+  if (p === '/login') switchView(hasToken ? 'dashboard' : 'login', true);
+  else if (p === '/dashboard') switchView(hasToken ? 'dashboard' : 'login', true);
+  else if (p === '/checkout') switchView('checkout', true);
+  else if (p === '/lupa-password') switchView('forgot-password', true);
+  else switchView('landing', true);
+});
 
 // ==============================================================
 // 2. CHECKOUT & MIDTRANS FLOW (STRICT VERIFICATION & UPGRADE INSTAN)
@@ -2046,6 +2341,400 @@ async function handleUserSubmit(e) {
       : `${rawAns}\n\n> sent via artapos.id`;
     appendMessage(finalReplyText, false);
   }, 250);
+}
+
+function resetDashboardSimulator() {
+  const container = document.getElementById('chatMessages');
+  if (!container) return;
+  container.innerHTML = `
+    <div class="msg-bubble incoming">
+      <p>👋 Halo kak! Simulasi chat sudah di-reset bersih ke awal. Silakan uji coba pertanyaan atau cek stok Inventory:</p>
+      <span class="msg-timestamp">${getCurrentTime()}</span>
+    </div>
+  `;
+  showToast('Simulator chat di-reset ke awal.', 'info');
+}
+
+// ==============================================================
+// HERO INTERACTIVE WHATSAPP LIVE CHAT DEMO (BOLAK-BALIK -> CLOSING)
+// ==============================================================
+let heroDemoRunId = 0;
+let currentHeroNiche = 'retail';
+let heroChatStage = 'browsing';
+
+const HERO_STORE_NAMES = {
+  id: {
+    retail: 'Toko Berkah • AI CS',
+    fnb: 'Kedai Es Teh & Kopi • AI CS',
+    fashion: 'Galeri Fashion • AI CS'
+  },
+  en: {
+    retail: 'Berkah Store • AI CS',
+    fnb: 'Cozy Drinks Cafe • AI CS',
+    fashion: 'Urban Fashion • AI CS'
+  }
+};
+
+const HERO_CHAT_TURNS = {
+  id: {
+    retail: [
+      { from: 'user', text: 'Halo kak, stok minyak goreng sama beras premium ready?', time: '09:12' },
+      { from: 'bot', thinkMs: 1650, text: 'Halo Kak! Selamat datang di Toko Berkah 😊\nStok hari ini masih ready:\n• Beras Premium 5kg — Rp 72.000 (Ready 18 karung)\n• Minyak Goreng 2L — Rp 35.000 (Ready 24 pouch)\n\nMau pesan berapa Kak?', time: '09:12' },
+      { from: 'user', pauseMs: 2100, text: 'Pesan beras 5kg 1 sama minyak 2L 2 kak', time: '09:13' },
+      {
+        from: 'bot',
+        thinkMs: 1850,
+        text: 'Siap Kak! Berikut struk invoice pesanannya:',
+        receipt: {
+          store: 'TOKO BERKAH',
+          inv: '#INV-2611 • 09:13 WIB',
+          items: [
+            ['1x Beras Premium 5kg', 'Rp 72.000'],
+            ['2x Minyak Goreng 2L', 'Rp 70.000']
+          ],
+          total: 'Rp 142.000',
+          status: '⏳ MENUNGGU PEMBAYARAN',
+          paid: false
+        },
+        afterText: 'Silakan transfer ke BCA 1234567890 atau QRIS ya Kak 🙏',
+        time: '09:13'
+      },
+      { from: 'user', pauseMs: 2400, text: 'Sudah saya transfer Rp 142.000 ya kak, atas nama Rina', time: '09:14' },
+      { from: 'bot', thinkMs: 1650, text: 'Terima kasih Kak Rina! ✅ Pembayaran Rp 142.000 sudah kami terima.\nPesanan #INV-2611 segera kami kemas dan kirim hari ini ya Kak. Ditunggu paketnya! 🙌', time: '09:14' }
+    ],
+    fnb: [
+      { from: 'user', text: 'Halo kak, es teh manis sama kopi gula aren ada?', time: '14:20' },
+      { from: 'bot', thinkMs: 1650, text: 'Halo Kak! Menu yang lagi ready hari ini 🥤:\n• Es Teh Manis Jumbo — Rp 5.000 (Ready 24 cup)\n• Kopi Susu Gula Aren — Rp 18.000 (Ready 12 cup)\n\nMau pesan berapa cup Kak?', time: '14:20' },
+      { from: 'user', pauseMs: 2100, text: 'Pesan es teh manis 3 sama kopi gula aren 1 kak', time: '14:21' },
+      {
+        from: 'bot',
+        thinkMs: 1850,
+        text: 'Oke Kak! Ini struk invoice pesanannya:',
+        receipt: {
+          store: 'KEDAI ES TEH & KOPI',
+          inv: '#INV-8824 • 14:21 WIB',
+          items: [
+            ['3x Es Teh Manis Jumbo', 'Rp 15.000'],
+            ['1x Kopi Susu Gula Aren', 'Rp 18.000']
+          ],
+          total: 'Rp 33.000',
+          status: '⏳ MENUNGGU PEMBAYARAN',
+          paid: false
+        },
+        afterText: 'Silakan bayar via QRIS atau COD saat kurir tiba ya 😊',
+        time: '14:21'
+      },
+      { from: 'user', pauseMs: 2400, text: 'Oke sudah bayar QRIS ya kak', time: '14:22' },
+      { from: 'bot', thinkMs: 1650, text: 'Mantap Kak! ✅ Pembayaran Rp 33.000 sudah diterima.\nMinuman langsung kami racik sekarang dan segera meluncur. Terima kasih sudah order! 🙏', time: '14:22' }
+    ],
+    fashion: [
+      { from: 'user', text: 'Halo min, kemeja flanel hitam ukuran L masih ada?', time: '19:05' },
+      { from: 'bot', thinkMs: 1650, text: 'Halo Kak! Ready stok di etalase kami 👕:\n• Kemeja Flanel Hitam (L) — Rp 125.000 (Sisa 8 pcs)\n• Sneakers Aero Runner (42) — Rp 349.000 (Sisa 5 psg)\n\nMau langsung diamankan pesanannya Kak?', time: '19:05' },
+      { from: 'user', pauseMs: 2100, text: 'Mau kemeja flanel hitam L 1 pcs kak, kirim ke Bandung', time: '19:06' },
+      {
+        from: 'bot',
+        thinkMs: 1850,
+        text: 'Siap Kak! Ini struk tagihan pesanannya:',
+        receipt: {
+          store: 'GALERI FASHION',
+          inv: '#INV-5409 • 19:06 WIB',
+          items: [
+            ['1x Flanel Hitam (Size L)', 'Rp 125.000'],
+            ['Ongkir Reguler Bandung', 'Rp 12.000']
+          ],
+          total: 'Rp 137.000',
+          status: '⏳ MENUNGGU PEMBAYARAN',
+          paid: false
+        },
+        afterText: 'Bisa transfer Mandiri / QRIS ya Kak 🙏',
+        time: '19:06'
+      },
+      { from: 'user', pauseMs: 2400, text: 'Sudah transfer ya min, ini bukti pembayarannya', time: '19:07' },
+      { from: 'bot', thinkMs: 1650, text: 'Siap Kak! ✅ Pembayaran Rp 137.000 sudah terkonfirmasi.\nPaket segera kami packing hari ini & nomor resi langsung kami infokan ya. Thank you Kak! ✨', time: '19:07' }
+    ]
+  },
+  en: {
+    retail: [
+      { from: 'user', text: 'Hi! Is 5kg premium rice and cooking oil in stock?', time: '09:12' },
+      { from: 'bot', thinkMs: 1650, text: 'Hello! Welcome to Berkah Store 😊\nAvailable stock today:\n• Premium Rice 5kg — Rp 72.000 (18 bags ready)\n• Cooking Oil 2L — Rp 35.000 (24 pouches ready)\n\nHow many would you like to order?', time: '09:12' },
+      { from: 'user', pauseMs: 2100, text: 'Order 1 bag 5kg rice and 2 cooking oil please', time: '09:13' },
+      {
+        from: 'bot',
+        thinkMs: 1850,
+        text: 'Got it! Here is your invoice receipt:',
+        receipt: {
+          store: 'BERKAH STORE',
+          inv: '#INV-2611 • 09:13',
+          items: [
+            ['1x Premium Rice 5kg', 'Rp 72.000'],
+            ['2x Cooking Oil 2L', 'Rp 70.000']
+          ],
+          total: 'Rp 142.000',
+          status: '⏳ AWAITING PAYMENT',
+          paid: false
+        },
+        afterText: 'Please complete payment via Bank Transfer or QRIS 🙏',
+        time: '09:13'
+      },
+      { from: 'user', pauseMs: 2400, text: 'Transferred Rp 142.000 under Rina just now!', time: '09:14' },
+      { from: 'bot', thinkMs: 1650, text: 'Thank you Rina! ✅ Payment of Rp 142.000 received.\nOrder #INV-2611 is being packed now and will ship out today. Have a great day! 🙌', time: '09:14' }
+    ],
+    fnb: [
+      { from: 'user', text: 'Hi, do you have iced sweet tea and palm sugar latte today?', time: '14:20' },
+      { from: 'bot', thinkMs: 1650, text: 'Hi there! Ready on our menu today 🥤:\n• Iced Sweet Tea — Rp 5.000 (24 cups left)\n• Palm Sugar Latte — Rp 18.000 (12 cups left)\n\nHow many cups can I get for you?', time: '14:20' },
+      { from: 'user', pauseMs: 2100, text: 'Order 3 iced sweet teas and 1 latte please', time: '14:21' },
+      {
+        from: 'bot',
+        thinkMs: 1850,
+        text: 'Sure thing! Here is your order receipt:',
+        receipt: {
+          store: 'COZY DRINKS CAFE',
+          inv: '#INV-8824 • 14:21',
+          items: [
+            ['3x Iced Sweet Tea', 'Rp 15.000'],
+            ['1x Palm Sugar Latte', 'Rp 18.000']
+          ],
+          total: 'Rp 33.000',
+          status: '⏳ AWAITING PAYMENT',
+          paid: false
+        },
+        afterText: 'Please pay via QRIS or Cash on Delivery 😊',
+        time: '14:21'
+      },
+      { from: 'user', pauseMs: 2400, text: 'Just paid with QRIS!', time: '14:22' },
+      { from: 'bot', thinkMs: 1650, text: 'Awesome! ✅ Payment of Rp 33.000 received.\nYour drinks are being freshly prepared right now and will arrive shortly. Enjoy! 🙏', time: '14:22' }
+    ],
+    fashion: [
+      { from: 'user', text: 'Hi, is the Black Flannel Shirt size L still available?', time: '19:05' },
+      { from: 'bot', thinkMs: 1650, text: 'Hello! Still available today 👕:\n• Black Flannel Shirt (L) — Rp 125.000 (8 pcs left)\n• Aero Runner Sneakers (42) — Rp 349.000 (5 pairs left)\n\nWould you like to place an order?', time: '19:05' },
+      { from: 'user', pauseMs: 2100, text: 'Yes, 1 Black Flannel L shipped to Bandung', time: '19:06' },
+      {
+        from: 'bot',
+        thinkMs: 1850,
+        text: 'Awesome! Here is your invoice receipt:',
+        receipt: {
+          store: 'URBAN FASHION',
+          inv: '#INV-5409 • 19:06',
+          items: [
+            ['1x Black Flannel (L)', 'Rp 125.000'],
+            ['Standard Shipping', 'Rp 12.000']
+          ],
+          total: 'Rp 137.000',
+          status: '⏳ AWAITING PAYMENT',
+          paid: false
+        },
+        afterText: 'You can pay via QRIS or Bank Transfer 🙏',
+        time: '19:06'
+      },
+      { from: 'user', pauseMs: 2400, text: 'Payment done! Sent the transfer receipt', time: '19:07' },
+      { from: 'bot', thinkMs: 1650, text: 'Confirmed! ✅ Payment of Rp 137.000 verified.\nYour parcel ships today and we will send your tracking number shortly. Thank you! ✨', time: '19:07' }
+    ]
+  }
+};
+
+function scrollHeroLiveChatBottom() {
+  const body = document.getElementById('heroLiveChatBody');
+  if (body) body.scrollTop = body.scrollHeight;
+}
+
+function setHeroWaTypingStatus(isTyping) {
+  const statusEl = document.getElementById('heroLiveStatusLine');
+  if (!statusEl) return;
+  const isEn = currentLandingLang === 'en';
+  if (isTyping) {
+    statusEl.innerHTML = isEn ? 'typing...' : 'mengetik...';
+  } else {
+    statusEl.innerHTML = '<span class="live-dot"></span> online';
+  }
+}
+
+function buildHeroReceiptHtml(rcp) {
+  if (!rcp || !Array.isArray(rcp.items)) return '';
+  const itemsHtml = rcp.items.map(([name, price]) => `
+    <div class="hlc-rcp-row">
+      <span>${escapeHtml(name)}</span>
+      <span>${escapeHtml(price)}</span>
+    </div>
+  `).join('');
+  return `
+    <div class="hlc-wa-receipt">
+      <div class="hlc-rcp-head">
+        <div class="hlc-rcp-store">${escapeHtml(rcp.store || 'INVOICE')}</div>
+        <div class="hlc-rcp-inv">${escapeHtml(rcp.inv || '')}</div>
+      </div>
+      <div class="hlc-rcp-items">${itemsHtml}</div>
+      <div class="hlc-rcp-total">
+        <span>TOTAL</span>
+        <span>${escapeHtml(rcp.total || '')}</span>
+      </div>
+      <div class="hlc-rcp-status${rcp.paid ? ' paid' : ''}">${escapeHtml(rcp.status || '')}</div>
+    </div>
+  `;
+}
+
+function appendHeroWaBubble(from, payload, customTime = null) {
+  const body = document.getElementById('heroLiveChatBody');
+  if (!body) return;
+  const msgObj = typeof payload === 'string' ? { text: payload } : (payload || {});
+  const timeStr = customTime || msgObj.time || getCurrentTime();
+  const row = document.createElement('div');
+  row.className = `hlc-wa-row ${from === 'user' ? 'user' : 'bot'}`;
+  const ticksHtml = from === 'user' ? '<span class="hlc-wa-ticks">✓✓</span>' : '';
+  const topText = msgObj.text ? `<div class="hlc-wa-text">${escapeHtml(msgObj.text)}</div>` : '';
+  const receiptHtml = msgObj.receipt ? buildHeroReceiptHtml(msgObj.receipt) : '';
+  const afterText = msgObj.afterText ? `<div class="hlc-wa-text">${escapeHtml(msgObj.afterText)}</div>` : '';
+  row.innerHTML = `
+    <div class="hlc-wa-bubble">
+      ${topText}
+      ${receiptHtml}
+      ${afterText}
+      <div class="hlc-wa-meta-row">
+        <span class="hlc-wa-time">${escapeHtml(timeStr)}</span>
+        ${ticksHtml}
+      </div>
+    </div>
+  `;
+  body.appendChild(row);
+  scrollHeroLiveChatBottom();
+}
+
+async function appendHeroWaBotTurn(payload, runId, customTime = null) {
+  const body = document.getElementById('heroLiveChatBody');
+  if (!body) return;
+  if (runId !== heroDemoRunId) return;
+
+  const msgObj = typeof payload === 'string' ? { text: payload } : (payload || {});
+  const thinkDelay = Number(msgObj.thinkMs || 1500);
+
+  setHeroWaTypingStatus(true);
+  const typingRow = document.createElement('div');
+  typingRow.className = 'hlc-wa-row bot';
+  typingRow.innerHTML = `
+    <div class="hlc-wa-bubble">
+      <div class="hlc-typing-dots"><span></span><span></span><span></span></div>
+    </div>
+  `;
+  body.appendChild(typingRow);
+  scrollHeroLiveChatBottom();
+
+  await new Promise(r => setTimeout(r, thinkDelay));
+  if (runId !== heroDemoRunId) {
+    setHeroWaTypingStatus(false);
+    return;
+  }
+
+  typingRow.remove();
+  setHeroWaTypingStatus(false);
+  appendHeroWaBubble('bot', msgObj, customTime);
+}
+
+async function resetHeroLiveChat() {
+  heroDemoRunId += 1;
+  const myRun = heroDemoRunId;
+  heroChatStage = 'closed';
+
+  const langKey = currentLandingLang === 'en' ? 'en' : 'id';
+  const titleEl = document.getElementById('heroLiveStoreTitle');
+  if (titleEl) {
+    titleEl.textContent = (HERO_STORE_NAMES[langKey] && HERO_STORE_NAMES[langKey][currentHeroNiche]) || 'Toko Berkah • AI CS';
+  }
+  setHeroWaTypingStatus(false);
+
+  const body = document.getElementById('heroLiveChatBody');
+  if (!body) return;
+  body.innerHTML = `<div class="hlc-wa-date">${langKey === 'en' ? 'TODAY' : 'HARI INI'}</div>`;
+
+  const turns = (HERO_CHAT_TURNS[langKey] && HERO_CHAT_TURNS[langKey][currentHeroNiche]) || HERO_CHAT_TURNS.id.retail;
+  for (let i = 0; i < turns.length; i++) {
+    if (myRun !== heroDemoRunId) return;
+    const t = turns[i];
+    if (t.from === 'user') {
+      const waitMs = Number(t.pauseMs || (i === 0 ? 550 : 2000));
+      await new Promise(r => setTimeout(r, waitMs));
+      if (myRun !== heroDemoRunId) return;
+      appendHeroWaBubble('user', t, t.time);
+    } else {
+      await new Promise(r => setTimeout(r, 650));
+      if (myRun !== heroDemoRunId) return;
+      await appendHeroWaBotTurn(t, myRun, t.time);
+    }
+  }
+}
+
+function changeHeroChatNiche(val) {
+  currentHeroNiche = val || 'retail';
+  resetHeroLiveChat();
+}
+
+async function handleHeroLiveChatSubmit(e) {
+  e.preventDefault();
+  const input = document.getElementById('heroLiveChatInput');
+  const txt = (input?.value || '').trim();
+  if (!txt) return;
+  if (input) input.value = '';
+
+  heroDemoRunId += 1;
+  const myRun = heroDemoRunId;
+  const isEn = currentLandingLang === 'en';
+  appendHeroWaBubble('user', txt);
+
+  await new Promise(r => setTimeout(r, 550));
+  if (myRun !== heroDemoRunId) return;
+
+  const lower = txt.toLowerCase();
+  let replyPayload;
+  if (/bayar|transfer|sudah|lunas|bukti|paid|done|transferred|qris/i.test(lower)) {
+    heroChatStage = 'closed';
+    replyPayload = {
+      thinkMs: 1400,
+      text: isEn
+        ? 'Thank you! ✅ Payment confirmed.\nYour order is now being prepared and will be shipped shortly! 🙏'
+        : 'Terima kasih Kak! ✅ Pembayaran sudah kami konfirmasi.\nPesanan kakak segera kami proses & siapkan untuk pengiriman ya! 🙏'
+    };
+  } else if (/pesan|order|beli|checkout|ambil|mau|buy/i.test(lower)) {
+    heroChatStage = 'quoted';
+    const invCode = `#INV-${Math.floor(1000 + Math.random() * 8999)}`;
+    replyPayload = {
+      thinkMs: 1650,
+      text: isEn ? 'Got it! Here is your invoice receipt:' : 'Siap Kak! Berikut struk invoice pesanannya:',
+      receipt: {
+        store: (HERO_STORE_NAMES[isEn ? 'en' : 'id'][currentHeroNiche] || 'ARTAPOS STORE').split('•')[0].trim(),
+        inv: `${invCode} • ${getCurrentTime()}`,
+        items: [[txt.slice(0, 26), 'Rp 35.000']],
+        total: 'Rp 35.000',
+        status: isEn ? '⏳ AWAITING PAYMENT' : '⏳ MENUNGGU PEMBAYARAN',
+        paid: false
+      },
+      afterText: isEn
+        ? 'Reply "paid" once transferred to confirm your order! 🙏'
+        : 'Balas "sudah transfer" setelah bayar agar pesanan langsung kami proses ya! 🙏'
+    };
+  } else if (/es\s*teh|esteh|kopi|tea|coffee/i.test(lower)) {
+    heroChatStage = 'browsing';
+    replyPayload = {
+      thinkMs: 1450,
+      text: isEn
+        ? 'Iced Sweet Tea is ready (24 cups, Rp 5.000/cup) & Palm Sugar Latte is ready (12 cups, Rp 18.000/cup) 🥤\nHow many would you like to order?'
+        : 'Untuk Es Teh Manis stoknya Ready (24 cup, Rp 5.000) & Kopi Susu Gula Aren Ready (12 cup, Rp 18.000) Kak 🥤\nMau pesan berapa cup Kak?'
+    };
+  } else if (/sneaker|sepatu|running|kemeja|flanel|beras|minyak|shirt|rice|oil/i.test(lower)) {
+    heroChatStage = 'browsing';
+    replyPayload = {
+      thinkMs: 1450,
+      text: isEn
+        ? 'Yes, still in stock! Reply "order 1" and I will send your invoice receipt right away 😊'
+        : 'Ready Kak! Stok masih tersedia hari ini. Ketik "pesan 1" nanti langsung saya kirimkan struk invoicenya 😊'
+    };
+  } else {
+    replyPayload = {
+      thinkMs: 1350,
+      text: isEn
+        ? `Received "${txt}"! Ask about stock or type "order 1" to see how the AI prepares a receipt & guides the customer to closing 👍`
+        : `Pesan "${txt}" diterima! Coba tanya stok produk atau ketik "pesan es teh 2" untuk lihat cara AI membuat struk invoice sampai closing 👍`
+    };
+  }
+
+  await appendHeroWaBotTurn(replyPayload, myRun);
 }
 
 function askQuick(text) {
@@ -3774,64 +4463,11 @@ function rememberDetectedGmail(email) {
   localStorage.setItem('artapos_detected_gmails', JSON.stringify(list.slice(0, 5)));
 }
 
-function renderDetectedGoogleAccountsInModal() {
-  const container = document.getElementById('detectedGoogleAccountsList');
-  const emailInput = document.getElementById('freeEmail');
-  if (!container) return;
-
-  const accounts = getDetectedDeviceGoogleAccounts();
-  if (accounts.length === 0) {
-    container.innerHTML = '';
-    return;
-  }
-
-  // Otomatis isi input email dengan akun Google terakhir di perangkat jika masih kosong
-  if (emailInput && !emailInput.value) {
-    emailInput.value = accounts[0];
-  }
-
-  container.innerHTML = accounts.map(em => {
-    const initial = em[0].toUpperCase();
-    const namePart = em.split('@')[0];
-    return `
-      <div class="google-account-chip-card" onclick="quickSelectDetectedGmail('${em}')" title="Klik untuk langsung daftar dengan ${em}">
-        <div class="g-chip-avatar">${initial}</div>
-        <div class="g-chip-info">
-          <div class="g-chip-name">${namePart}</div>
-          <div class="g-chip-email">${em}</div>
-        </div>
-        <span class="g-chip-action">Pakai Akun</span>
-      </div>
-    `;
-  }).join('');
-}
-
-async function quickSelectDetectedGmail(email) {
-  const emailInput = document.getElementById('freeEmail');
-  const storeInput = document.getElementById('freeStoreName');
-  if (emailInput) emailInput.value = email;
-  const storeName = (storeInput?.value || 'Toko AI Assistant').trim();
-  await executeFreeRegistration(email, storeName);
-}
-
 async function openFreeRegisterModal() {
   trackCtaEvent('cta_register');
   const modal = document.getElementById('modalFreeRegister');
   if (modal) {
     modal.classList.remove('hidden');
-    renderDetectedGoogleAccountsInModal();
-
-    // Coba deteksi kredensial otomatis dari browser / HP jika tersedia
-    if (window.navigator && navigator.credentials && navigator.credentials.get) {
-      try {
-        const cred = await navigator.credentials.get({ password: true, mediation: 'Silent' });
-        if (cred && cred.id && cred.id.endsWith('@gmail.com')) {
-          rememberDetectedGmail(cred.id);
-          renderDetectedGoogleAccountsInModal();
-        }
-      } catch (e) { }
-    }
-
     const emailInput = document.getElementById('freeEmail');
     if (emailInput && !emailInput.value) emailInput.focus();
   }
@@ -3845,26 +4481,31 @@ function closeFreeRegisterModal() {
 async function executeFreeRegistration(email, storeName) {
   const cleanEmail = (email || '').trim().toLowerCase();
   const cleanStore = (storeName || 'Toko AI Assistant').trim();
+  const isEn = typeof currentLandingLang !== 'undefined' && currentLandingLang === 'en';
 
   if (isMaliciousClientInput(cleanEmail) || isMaliciousClientInput(cleanStore)) {
     showAlert('🛡️ Proteksi Keamanan: Input mengandung skrip terlarang (.php / XSS / SQL Injection) dan telah diblokir!', 'error');
     return;
   }
 
-  if (cleanEmail.length > 100 || cleanStore.length > 100) {
-    showAlert('Panjang input maksimal 100 karakter.', 'warning');
+  if (cleanEmail.length > 75) {
+    showAlert(isEn ? 'Email maximum 75 characters.' : 'Email maksimal 75 karakter.', 'warning');
+    return;
+  }
+  if (cleanStore.length > 50) {
+    showAlert(isEn ? 'Business/store name maximum 50 characters.' : 'Nama bisnis/toko maksimal 50 karakter.', 'warning');
     return;
   }
 
   if (!cleanEmail || !cleanEmail.endsWith('@gmail.com') || cleanEmail.length < 11) {
-    showAlert('Wajib menggunakan alamat email Google (@gmail.com) yang valid.', 'warning');
+    showAlert(isEn ? 'Please enter a valid Google email (@gmail.com).' : 'Wajib menggunakan alamat email Google (@gmail.com) yang valid.', 'warning');
     return;
   }
 
   const btn = document.getElementById('btnSubmitFreeReg');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span>Mengirim Password ke Email Google...</span>';
+    btn.innerHTML = `<span>${isEn ? 'Sending Password to Gmail...' : 'Mengirim Password ke Gmail...'}</span>`;
   }
 
   const res = await apiCall('/api/auth/register-free', 'POST', {
@@ -3874,11 +4515,10 @@ async function executeFreeRegistration(email, storeName) {
 
   if (btn) {
     btn.disabled = false;
-    btn.innerHTML = '<span>Daftar Gratis & Kirim Sandi ke Email</span>';
+    btn.innerHTML = `<span data-i18n="reg_submit_btn">${isEn ? 'Register & Send Password to Gmail' : 'Daftar & Kirim Sandi ke Gmail'}</span>`;
   }
 
   if (res && res.success) {
-    rememberDetectedGmail(cleanEmail);
     localStorage.setItem('artapos_last_email', cleanEmail);
     closeFreeRegisterModal();
 
@@ -3894,26 +4534,31 @@ async function executeFreeRegistration(email, storeName) {
 
     await Swal.fire({
       icon: 'success',
-      title: '🎉 Berhasil Didaftarkan!',
+      title: isEn ? '🎉 Account Registered!' : '🎉 Berhasil Didaftarkan!',
       html: `
         <div style="text-align:left; font-size:0.93rem; line-height:1.6; color:#334155;">
-          <p style="margin-bottom:10px;">Akun baru dengan <b>10 Template Bot</b> untuk <b>${cleanEmail}</b> telah aktif!</p>
+          <p style="margin-bottom:10px;">${isEn ? `Account for <b>${escapeHtml(cleanStore)}</b> (<b>${escapeHtml(cleanEmail)}</b>) has been created!` : `Akun baru untuk bisnis <b>${escapeHtml(cleanStore)}</b> (<b>${escapeHtml(cleanEmail)}</b>) berhasil dibuat!`}</p>
           <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px 14px; margin-bottom:10px;">
-            📩 <b>Cek Email Masuk / Folder Spam:</b><br>
-            Kami telah mengirimkan <b>Password Login</b> Anda melalui email resmi <code>artapos26@gmail.com</code>.
+            📩 <b>${isEn ? 'Check Gmail Inbox / Spam Folder:' : 'Cek Kotak Masuk / Folder Spam Gmail:'}</b><br>
+            ${isEn ? 'We have sent your <b>Login Password</b> via <code>artapos26@gmail.com</code>.' : 'Kami telah mengirimkan <b>Password Login</b> Anda melalui email resmi <code>artapos26@gmail.com</code>.'}
           </div>
-          <p style="margin:0; font-size:0.85rem; color:#64748b;">Silakan masukkan password dari email tersebut pada halaman Login ini untuk memindai Kode QR WhatsApp Anda.</p>
+          <p style="margin:0; font-size:0.85rem; color:#64748b;">${isEn ? 'Enter the password from that email on this Login screen to continue.' : 'Silakan masukkan password dari email tersebut pada halaman Login ini untuk masuk ke dashboard.'}</p>
         </div>
       `,
-      confirmButtonText: 'Siap, Masuk Sekarang',
+      confirmButtonText: isEn ? 'OK, Login Now' : 'Siap, Masuk Sekarang',
       confirmButtonColor: '#16a34a',
       customClass: {
         popup: 'swal-custom-popup',
         confirmButton: 'swal-custom-confirm'
       }
     });
+  } else if (res && res.code === 'EMAIL_EXISTS') {
+    const dupMsg = isEn
+      ? 'This Gmail address is already registered and cannot be registered again. Please sign in on the Login page.'
+      : (res.error || 'Email ini sudah pernah didaftarkan sebelumnya dan tidak dapat didaftarkan ulang. Silakan masuk di halaman Login.');
+    showAlert(dupMsg, 'warning', isEn ? 'Email Already Registered' : 'Email Sudah Terdaftar');
   } else {
-    showAlert('Gagal Mendaftar: ' + (res?.error || 'Terjadi kesalahan saat mendaftarkan akun.'), 'error');
+    showAlert((isEn ? 'Registration Failed: ' : 'Gagal Mendaftar: ') + (res?.error || 'Terjadi kesalahan saat mendaftarkan akun.'), 'error');
   }
 }
 
@@ -3926,46 +4571,9 @@ async function handleFreeRegisterSubmit(e) {
   await executeFreeRegistration(email, storeName);
 }
 
-async function handleGoogleInstantRegister() {
-  // 1. Coba tarik akun dari Credential Manager Browser/HP secara otomatis
-  if (window.navigator && navigator.credentials && navigator.credentials.get) {
-    try {
-      const cred = await navigator.credentials.get({ password: true, mediation: 'optional' });
-      if (cred && cred.id && cred.id.endsWith('@gmail.com')) {
-        rememberDetectedGmail(cred.id);
-        await quickSelectDetectedGmail(cred.id);
-        return;
-      }
-    } catch (e) { }
-  }
-
-  // 2. Jika sudah ada email di kotak input atau akun terdeteksi di perangkat, tampilkan Google Account Chooser Interaktif
-  const emailInput = document.getElementById('freeEmail');
-  const currentVal = (emailInput?.value || '').trim().toLowerCase();
-  if (currentVal && currentVal.endsWith('@gmail.com')) {
-    await quickSelectDetectedGmail(currentVal);
-    return;
-  }
-
-  const detected = getDetectedDeviceGoogleAccounts();
-  if (detected.length > 0) {
-    await quickSelectDetectedGmail(detected[0]);
-    return;
-  }
-
-  // 3. Jika perangkat benar-benar baru pertama kali dan belum ada cache akun, fokus ke input dengan autofill HP aktif
-  if (emailInput) {
-    emailInput.focus();
-    emailInput.click();
-    showToast('Silakan sentuh email Google yang muncul di saran keyboard HP/Browser Anda.', 'info');
-  }
-}
-
 window.openFreeRegisterModal = openFreeRegisterModal;
 window.closeFreeRegisterModal = closeFreeRegisterModal;
 window.handleFreeRegisterSubmit = handleFreeRegisterSubmit;
-window.handleGoogleInstantRegister = handleGoogleInstantRegister;
-window.quickSelectDetectedGmail = quickSelectDetectedGmail;
 
 // ==============================================================
 // TAMPILAN LAYAR PENOLAKAN (403, 404) & MODE OFFLINE
@@ -4123,6 +4731,8 @@ function trackCtaEvent(eventType) {
 async function initApp() {
   console.log('🚀 [INIT] Memuat artapos.id Security Engine...');
   loadDynamicPlans(false);
+  setLandingLanguage(currentLandingLang, false);
+  resetHeroLiveChat();
 
   if (!navigator.onLine) {
     setNetworkOfflineState(true);
@@ -4139,6 +4749,7 @@ async function initApp() {
 
   const token = localStorage.getItem('artapos_token');
   const hash = window.location.hash.replace('#', '').toLowerCase();
+  const pathRoute = window.location.pathname.toLowerCase();
 
   // Jika hash mengarah ke #403, #404, #offline, atau rute asing yang tidak dikenal -> Tampilkan Layar Error
   if (hash === '403') {
@@ -4155,17 +4766,26 @@ async function initApp() {
     return;
   }
 
-  // Saat klik link utama (tanpa #dashboard), biarkan di Landing Page dulu & ubah tombol "Masuk" jadi "🚀 Dashboard"
+  // Dukungan rute URL bersih: /, /login, /dashboard, /checkout, /lupa-password
   syncLandingAuthButtons();
-  if (token && hash === 'dashboard') {
-    switchView('dashboard');
+  if ((pathRoute === '/dashboard' || hash === 'dashboard') && token) {
+    switchView('dashboard', pathRoute === '/dashboard');
     await loadUserData();
-  } else if (hash === 'login' && !token) {
+  } else if (pathRoute === '/dashboard' && !token) {
     switchView('login');
-  } else if (hash === 'checkout') {
-    switchView('checkout');
+  } else if (pathRoute === '/login' || hash === 'login') {
+    if (token) {
+      switchView('dashboard');
+      await loadUserData();
+    } else {
+      switchView('login', pathRoute === '/login');
+    }
+  } else if (pathRoute === '/lupa-password') {
+    switchView('forgot-password', true);
+  } else if (pathRoute === '/checkout' || hash === 'checkout') {
+    switchView('checkout', pathRoute === '/checkout');
   } else {
-    switchView('landing');
+    switchView('landing', pathRoute === '/');
     if (token) {
       loadUserData().then(() => syncLandingAuthButtons()).catch(() => {});
     }

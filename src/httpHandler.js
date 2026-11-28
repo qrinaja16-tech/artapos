@@ -1242,9 +1242,9 @@ export function createHttpHandler(waHooks = {}) {
           return;
         }
 
-        if (email.length > 100) {
+        if (email.length > 75) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Email maksimal 100 karakter.' }));
+          res.end(JSON.stringify({ error: 'Email maksimal 75 karakter.' }));
           return;
         }
 
@@ -1254,9 +1254,9 @@ export function createHttpHandler(waHooks = {}) {
           return;
         }
 
-        if (storeName.length > 100) {
+        if (storeName.length > 50) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Nama toko maksimal 100 karakter.' }));
+          res.end(JSON.stringify({ error: 'Nama bisnis/toko maksimal 50 karakter.' }));
           return;
         }
 
@@ -1289,8 +1289,9 @@ export function createHttpHandler(waHooks = {}) {
           message: `Akun ${regResult.email} berhasil didaftarkan! Silakan cek email untuk password login, lalu masuk ke dashboard untuk klaim 75 Token Gratis.`
         }));
       } catch (err) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: err.message }));
+        const statusCode = err.code === 'EMAIL_EXISTS' ? 409 : 400;
+        res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message, code: err.code || undefined }));
       }
       return;
     }
@@ -2495,7 +2496,8 @@ export function createHttpHandler(waHooks = {}) {
       return;
     }
 
-    let staticPath = cleanUrl === '/' ? '/index.html' : cleanUrl;
+    const SPA_ROUTES = ['/', '/login', '/dashboard', '/checkout', '/lupa-password'];
+    let staticPath = SPA_ROUTES.includes(cleanUrl) ? '/index.html' : cleanUrl;
     const resolvedPublicDir = path.resolve(PUBLIC_DIR);
     const filePath = path.resolve(resolvedPublicDir, '.' + staticPath);
     const ext = path.extname(filePath).toLowerCase();

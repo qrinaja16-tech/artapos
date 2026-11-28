@@ -26,7 +26,7 @@
     content="Balas chat pelanggan otomatis tanpa sewa server mahal. Gratis 75 Token untuk pendaftar pertama!">
   <meta name="twitter:image" content="https://www.artapos.id/og-preview.jpg?v=2">
   <link rel="icon" type="image/jpeg" href="logo.jpg?v=2">
-  <link rel="stylesheet" href="style.css?v=57.0">
+  <link rel="stylesheet" href="style.css?v=62.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -56,18 +56,79 @@
         </a>
 
         <nav class="landing-nav-links">
-          <a href="#fitur">Fitur Unggulan</a>
-          <a href="#cara-kerja">Cara Kerja</a>
-          <a href="#harga">Harga Paket</a>
-          <a href="#faq">FAQ</a>
+          <a href="#hero" data-i18n="nav_why">Kenapa artapos.id</a>
+          <a href="#fitur" data-i18n="nav_features">Fitur Unggulan</a>
+          <a href="#cara-kerja" data-i18n="nav_how">Cara Kerja</a>
+          <a href="#harga" data-i18n="nav_pricing">Harga Paket</a>
+          <a href="#faq" data-i18n="nav_faq">FAQ</a>
         </nav>
 
         <div class="landing-nav-actions">
+          <div class="lang-switcher-wrap" id="langSwitcherWrap">
+            <button type="button" class="btn-lang-toggle" id="btnLangToggle" onclick="toggleLangDropdown(event)" aria-label="Pilih Bahasa">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" width="16" height="16">
+                <path d="M5 8l6 6"></path>
+                <path d="M4 14l6-6 2-3"></path>
+                <path d="M2 5h12"></path>
+                <path d="M7 2h1"></path>
+                <path d="M22 22l-5-10-5 10"></path>
+                <path d="M14 18h6"></path>
+              </svg>
+              <span id="currentLangCode">ID</span>
+              <svg class="lang-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="13" height="13">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="lang-dropdown-menu hidden" id="langDropdownMenu">
+              <button type="button" class="lang-option-item" id="langOptEn" onclick="setLandingLanguage('en')">English</button>
+              <button type="button" class="lang-option-item active" id="langOptId" onclick="setLandingLanguage('id')">Indonesian</button>
+            </div>
+          </div>
+
           <button class="btn-nav-login" id="btnNavAuth" onclick="switchView('login')">Masuk</button>
-          <button class="btn-nav-primary" id="btnNavRegister" onclick="openFreeRegisterModal()">Daftar Gratis</button>
+          <button class="btn-nav-primary" id="btnNavRegister" onclick="openFreeRegisterModal()">
+            <span id="btnNavRegisterText">Daftar</span>
+            <span class="nav-arrow-icon">→</span>
+          </button>
+
+          <button type="button" class="btn-landing-hamburger" id="btnLandingHamburger" onclick="toggleLandingMobileMenu(true)" aria-label="Buka Menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
         </div>
       </div>
     </header>
+
+    <!-- Top-Sheet Clean Mobile Drawer Menu (Tidak menutupi seluruh layar) -->
+    <div id="landingMobileDrawerBackdrop" class="lmd-backdrop hidden" onclick="toggleLandingMobileMenu(false)"></div>
+    <div id="landingMobileDrawer" class="landing-mobile-drawer hidden">
+      <div class="lmd-header">
+        <a href="#hero" class="brand-link" onclick="toggleLandingMobileMenu(false); switchView('landing')">
+          <div class="brand-badge-icon has-custom-logo">
+            <img src="logo.jpg?v=2" alt="artapos.id" class="brand-logo-img">
+          </div>
+          <span class="brand-title">artapos<span class="brand-tld">.id</span></span>
+        </a>
+        <button type="button" class="lmd-close-btn" onclick="toggleLandingMobileMenu(false)" aria-label="Tutup Menu">✕</button>
+      </div>
+      <div class="lmd-links">
+        <a href="#hero" onclick="toggleLandingMobileMenu(false)" data-i18n="nav_why">Kenapa artapos.id</a>
+        <a href="#fitur" onclick="toggleLandingMobileMenu(false)" data-i18n="nav_features">Fitur Unggulan</a>
+        <a href="#cara-kerja" onclick="toggleLandingMobileMenu(false)" data-i18n="nav_how">Cara Kerja</a>
+        <a href="#harga" onclick="toggleLandingMobileMenu(false)" data-i18n="nav_pricing">Harga Paket</a>
+        <a href="#faq" onclick="toggleLandingMobileMenu(false)" data-i18n="nav_faq">FAQ</a>
+      </div>
+      <div class="lmd-actions">
+        <button type="button" class="lmd-btn-login" id="lmdLoginBtn" onclick="toggleLandingMobileMenu(false); switchView('login')">Masuk</button>
+        <button type="button" class="lmd-btn-register" id="lmdRegisterBtn" onclick="toggleLandingMobileMenu(false); openFreeRegisterModal()">
+          <span id="lmdRegisterText">Daftar</span>
+          <span>→</span>
+        </button>
+      </div>
+    </div>
 
     <!-- Hero Section -->
     <section id="hero" class="hero-section">
@@ -75,15 +136,13 @@
         <div class="hero-content">
           <div class="hero-pill-tag">
             <span class="pill-dot"></span>
-            <span>Platform WhatsApp AI No. 1 di Indonesia • 🎁 Free 75 Token Awal</span>
+            <span data-i18n="hero_pill">Platform WhatsApp AI No. 1 di Indonesia • Otomatis 24 Jam</span>
           </div>
           <h1 class="hero-title">
             Balas Chat WhatsApp Pelanggan <span class="text-highlight">24 Jam Otomatis</span> dengan AI
           </h1>
-          <p class="hero-subtitle">
-            Tingkatkan penjualan toko tanpa lelah balas chat manual berulang kali. Cukup scan QR <strong>WhatsApp
-              Perangkat Tertaut</strong> (Linked Devices), tanpa pusing verifikasi Meta Business API. <strong>Daftar
-              gratis sekarang langsung dapat 75 Token AI!</strong>
+          <p class="hero-subtitle" data-i18n="hero_subtitle">
+            Tingkatkan penjualan toko tanpa lelah balas chat manual berulang kali. Cukup scan QR WhatsApp Perangkat Tertaut (Linked Devices), tanpa pusing verifikasi Meta Business API.
           </p>
 
           <div class="hero-cta-group">
@@ -91,7 +150,7 @@
               <span id="btnHeroMainCtaText">Daftar Gratis</span>
             </button>
             <a href="#harga" class="btn-cta-secondary">
-              <span>Lihat Pilihan Paket</span>
+              <span data-i18n="hero_cta_sec">Lihat Pilihan Paket</span>
             </a>
           </div>
 
@@ -100,67 +159,55 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
-              <span>🎁 Gratis 75 Token Awal</span>
+              <span data-i18n="trust_1">Otomatis Cek Stok &amp; Buat Invoice</span>
             </div>
             <div class="trust-item">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
-              <span>Support WA Regular & Bisnis</span>
+              <span data-i18n="trust_2">Support WA Regular &amp; Bisnis</span>
             </div>
             <div class="trust-item">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
-              <span>Proteksi 1 Akun 1 Perangkat</span>
+              <span data-i18n="trust_3">Proteksi 1 Akun 1 Perangkat</span>
             </div>
           </div>
         </div>
 
-        <!-- Interactive Hero WhatsApp Preview Mockup -->
+        <!-- Interactive Hero WhatsApp Live Chat Demo (Gaya WhatsApp + Closing + Reset) -->
         <div class="hero-preview-wrapper">
-          <div class="hero-phone-card">
-            <div class="preview-phone-header">
-              <div class="preview-avatar">T</div>
-              <div class="preview-header-info">
-                <div class="preview-store-name">Toko Online Berkah</div>
-                <div class="preview-status"><span class="live-dot"></span> online • bot aktif</div>
+          <div class="hero-livechat-card wa-style">
+            <div class="hlc-wa-header">
+              <div class="hlc-wa-left">
+                <div class="hlc-wa-avatar"><img src="logo.jpg?v=2" alt="artapos"></div>
+                <div class="hlc-wa-meta">
+                  <div class="hlc-wa-name" id="heroLiveStoreTitle">Toko Berkah • AI CS</div>
+                  <div class="hlc-wa-status" id="heroLiveStatusLine"><span class="live-dot"></span> online</div>
+                </div>
               </div>
-              <span class="preview-badge-ai">artapos AI</span>
-            </div>
-
-            <div class="preview-phone-body">
-              <div class="chat-date-chip">HARI INI</div>
-
-              <div class="preview-bubble incoming">
-                <p>Halo kak, apakah produk sepatu sneakers hitam size 42 ready? Dan apakah bisa COD ke Bandung?</p>
-                <span class="preview-bubble-time">14:20</span>
-              </div>
-
-              <div class="preview-bubble outgoing">
-                <p>Halo kak! Selamat datang di Toko Berkah. 😊<br><br>Sepatu sneakers hitam size 42 <strong>ready
-                    stock</strong> ya kak! Kami juga melayani <strong>COD (Bayar di Tempat)</strong> ke seluruh Bandung
-                  via J&T Express.<br><br>Mau langsung dibantu amankan stoknya kak?<br><br>&gt; sent via artapos.id</p>
-                <span class="preview-bubble-time">14:20 <span class="double-check">✓✓</span></span>
-              </div>
-
-              <div class="preview-ai-status">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-                <span>Dibalas otomatis oleh artapos AI dalam 0.4 detik (Kuota -1)</span>
+              <div class="hlc-wa-controls">
+                <select id="heroLiveChatNiche" class="hlc-niche-select" onchange="changeHeroChatNiche(this.value)" aria-label="Pilih Contoh Bisnis">
+                  <option value="retail">🏪 Retail</option>
+                  <option value="fnb">🥤 Kuliner</option>
+                  <option value="fashion">👟 Fashion</option>
+                </select>
+                <button type="button" class="hlc-reset-btn" onclick="resetHeroLiveChat()" data-i18n="wa_reset">Reset</button>
               </div>
             </div>
 
-            <div class="preview-phone-footer">
-              <div class="preview-fake-input">Ketik pesan pertanyaan...</div>
-              <div class="preview-send-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <div class="hlc-wa-body" id="heroLiveChatBody"></div>
+
+            <form class="hlc-wa-footer" id="heroLiveChatForm" onsubmit="handleHeroLiveChatSubmit(event)">
+              <input type="text" id="heroLiveChatInput" placeholder="Ketik balasan ala WhatsApp..." autocomplete="off" maxlength="100">
+              <button type="submit" class="hlc-send-btn" id="heroLiveChatSendBtn" aria-label="Kirim">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
                   <line x1="22" y1="2" x2="11" y2="13"></line>
                   <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                 </svg>
-              </div>
-            </div>
+              </button>
+            </form>
           </div>
         </div>
       </div>
@@ -170,10 +217,9 @@
     <section id="cara-kerja" class="section-workflow">
       <div class="section-container">
         <div class="section-header-center">
-          <span class="section-tag">MUDAH & CEPAT</span>
-          <h2 class="section-title">3 Langkah Mudah Memulai Otomasi WhatsApp</h2>
-          <p class="section-subtitle">Siap digunakan dalam hitungan menit tanpa keahlian coding atau integrasi rumit.
-          </p>
+          <span class="section-tag" data-i18n="wf_tag">MUDAH & CEPAT</span>
+          <h2 class="section-title" data-i18n="wf_title">3 Langkah Mudah Memulai Otomasi WhatsApp</h2>
+          <p class="section-subtitle" data-i18n="wf_sub">Siap digunakan dalam hitungan menit tanpa keahlian coding atau integrasi rumit.</p>
         </div>
 
         <div class="steps-grid">
@@ -187,8 +233,8 @@
                 <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>
             </div>
-            <h3>Pilih Paket & Masukkan Email Google</h3>
-            <p>Tentukan kuota balasan bulanan sesuai kebutuhan toko Anda dan masukkan alamat email Google (@gmail.com)
+            <h3 data-i18n="wf_s1_t">Pilih Paket & Masukkan Email Google</h3>
+            <p data-i18n="wf_s1_d">Tentukan kuota balasan bulanan sesuai kebutuhan toko Anda dan masukkan alamat email Google (@gmail.com)
               aktif Anda.</p>
           </div>
 
@@ -200,8 +246,8 @@
                 <line x1="1" y1="10" x2="23" y2="10"></line>
               </svg>
             </div>
-            <h3>Bayar Tagihan & Terima Akun di Gmail</h3>
-            <p>Bayar instan via Midtrans (QRIS, VA Bank, E-Wallet). Akun login langsung dikirim otomatis ke kotak masuk
+            <h3 data-i18n="wf_s2_t">Bayar Tagihan & Terima Akun di Gmail</h3>
+            <p data-i18n="wf_s2_d">Bayar instan via Midtrans (QRIS, VA Bank, E-Wallet). Akun login langsung dikirim otomatis ke kotak masuk
               Gmail Anda dengan password awal.</p>
           </div>
 
@@ -213,8 +259,8 @@
                 <line x1="12" y1="18" x2="12.01" y2="18"></line>
               </svg>
             </div>
-            <h3>Login, Scan QR & Bot Langsung Aktif</h3>
-            <p>Masuk ke dashboard, scan QR Perangkat Tertaut dari aplikasi WhatsApp HP toko Anda. Bot AI seketika
+            <h3 data-i18n="wf_s3_t">Login, Scan QR & Bot Langsung Aktif</h3>
+            <p data-i18n="wf_s3_d">Masuk ke dashboard, scan QR Perangkat Tertaut dari aplikasi WhatsApp HP toko Anda. Bot AI seketika
               standby membalas pesan pembeli 24 jam!</p>
           </div>
         </div>
@@ -225,10 +271,9 @@
     <section id="harga" class="section-pricing">
       <div class="section-container">
         <div class="section-header-center">
-          <span class="section-tag">PILIHAN HARGA LANGGANAN</span>
-          <h2 class="section-title">Investasi Terjangkau, Penjualan Melejit</h2>
-          <p class="section-subtitle">Pilih paket bulanan berdasarkan kuota balasan chat AI yang dibutuhkan toko Anda.
-            Tanpa komitmen jangka panjang, perpanjang setiap 30 hari.</p>
+          <span class="section-tag" data-i18n="pr_tag">PILIHAN HARGA LANGGANAN</span>
+          <h2 class="section-title" data-i18n="pr_title">Investasi Terjangkau, Penjualan Melejit</h2>
+          <p class="section-subtitle" data-i18n="pr_sub">Pilih paket bulanan berdasarkan kuota balasan chat AI yang dibutuhkan toko Anda. Tanpa komitmen jangka panjang, perpanjang setiap 30 hari.</p>
         </div>
 
         <div class="pricing-cards-grid" id="landingPricingGrid">
@@ -429,10 +474,9 @@
     <section id="fitur" class="section-features">
       <div class="section-container">
         <div class="section-header-center">
-          <span class="section-tag">MENGAPA ARTAPOS.ID?</span>
-          <h2 class="section-title">Fitur Dirancang Khusus untuk Pebisnis Indonesia</h2>
-          <p class="section-subtitle">Solusi cerdas yang menjawab tantangan pelayanan pelanggan WhatsApp sehari-hari.
-          </p>
+          <span class="section-tag" data-i18n="ft_tag">MENGAPA ARTAPOS.ID?</span>
+          <h2 class="section-title" data-i18n="ft_title">Fitur Dirancang Khusus untuk Pebisnis Indonesia</h2>
+          <p class="section-subtitle" data-i18n="ft_sub">Solusi cerdas yang menjawab tantangan pelayanan pelanggan WhatsApp sehari-hari.</p>
         </div>
 
         <div class="features-grid">
@@ -442,8 +486,8 @@
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
               </svg>
             </div>
-            <h4>Tanpa Meta API Resmi</h4>
-            <p>Tidak perlu kartu kredit, dokumen legalitas perusahaan, atau menunggu verifikasi Meta berhari-hari. Cukup
+            <h4 data-i18n="ft_1_t">Tanpa Meta API Resmi</h4>
+            <p data-i18n="ft_1_d">Tidak perlu kartu kredit, dokumen legalitas perusahaan, atau menunggu verifikasi Meta berhari-hari. Cukup
               sambungkan via scan QR.</p>
           </div>
 
@@ -453,8 +497,8 @@
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
               </svg>
             </div>
-            <h4>Respon Cepat & Natural</h4>
-            <p>Jawaban fleksibel dan sopan berbahasa Indonesia yang dirancang menyerupai interaksi admin CS toko
+            <h4 data-i18n="ft_2_t">Respon Cepat & Natural</h4>
+            <p data-i18n="ft_2_d">Jawaban fleksibel dan sopan berbahasa Indonesia yang dirancang menyerupai interaksi admin CS toko
               profesional.</p>
           </div>
 
@@ -467,8 +511,8 @@
                 </path>
               </svg>
             </div>
-            <h4>Pusat Data Pengetahuan Real-Time</h4>
-            <p>Tambah, edit, dan hapus pertanyaan serta jawaban produk langsung dari dashboard web kapan saja dengan
+            <h4 data-i18n="ft_3_t">Pusat Data Pengetahuan Real-Time</h4>
+            <p data-i18n="ft_3_d">Tambah, edit, dan hapus pertanyaan serta jawaban produk langsung dari dashboard web kapan saja dengan
               sinkronisasi instan.</p>
           </div>
 
@@ -479,8 +523,8 @@
                 <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
               </svg>
             </div>
-            <h4>Transparan & Terjangkau</h4>
-            <p>Sistem kuota balasan yang jelas dan termonitor setiap saat di dashboard tanpa ada biaya tersembunyi per
+            <h4 data-i18n="ft_4_t">Transparan & Terjangkau</h4>
+            <p data-i18n="ft_4_d">Sistem kuota balasan yang jelas dan termonitor setiap saat di dashboard tanpa ada biaya tersembunyi per
               pesan.</p>
           </div>
         </div>
@@ -491,30 +535,30 @@
     <section id="faq" class="section-faq">
       <div class="section-container">
         <div class="section-header-center">
-          <span class="section-tag">PERTANYAAN UMUM</span>
-          <h2 class="section-title">Pertanyaan yang Sering Diajukan (FAQ)</h2>
-          <p class="section-subtitle">Pelajari selengkapnya mengenai cara kerja platform artapos.id.</p>
+          <span class="section-tag" data-i18n="faq_tag">PERTANYAAN UMUM</span>
+          <h2 class="section-title" data-i18n="faq_title">Pertanyaan yang Sering Diajukan (FAQ)</h2>
+          <p class="section-subtitle" data-i18n="faq_sub">Pelajari selengkapnya mengenai cara kerja platform artapos.id.</p>
         </div>
 
         <div class="faq-list">
           <div class="faq-item">
-            <div class="faq-question">Apakah saya harus memiliki akun WhatsApp Business API resmi dari Meta?</div>
-            <div class="faq-answer">Tidak perlu. artapos.id bekerja menggunakan fitur resmi WhatsApp Perangkat Tertaut
+            <div class="faq-question" data-i18n="faq_q1">Apakah saya harus memiliki akun WhatsApp Business API resmi dari Meta?</div>
+            <div class="faq-answer" data-i18n="faq_a1">Tidak perlu. artapos.id bekerja menggunakan fitur resmi WhatsApp Perangkat Tertaut
               (Linked Devices), sama seperti saat Anda membuka WhatsApp Web di laptop.</div>
           </div>
           <div class="faq-item">
-            <div class="faq-question">Bisa menggunakan nomor WhatsApp pribadi biasa?</div>
-            <div class="faq-answer">Bisa! artapos.id mendukung baik nomor WhatsApp reguler maupun WhatsApp Business di
+            <div class="faq-question" data-i18n="faq_q2">Bisa menggunakan nomor WhatsApp pribadi biasa?</div>
+            <div class="faq-answer" data-i18n="faq_a2">Bisa! artapos.id mendukung baik nomor WhatsApp reguler maupun WhatsApp Business di
               perangkat Android dan iPhone.</div>
           </div>
           <div class="faq-item">
-            <div class="faq-question">Bagaimana jika kuota balasan bulanan saya habis sebelum 30 hari?</div>
-            <div class="faq-answer">Jika kuota habis, bot akan berhenti membalas otomatis sementara hingga Anda
+            <div class="faq-question" data-i18n="faq_q3">Bagaimana jika kuota balasan bulanan saya habis sebelum 30 hari?</div>
+            <div class="faq-answer" data-i18n="faq_a3">Jika kuota habis, bot akan berhenti membalas otomatis sementara hingga Anda
               melakukan perpanjangan paket atau upgrade kuota melalui dashboard.</div>
           </div>
           <div class="faq-item">
-            <div class="faq-question">Bagaimana akun saya dikirimkan setelah pembayaran berhasil?</div>
-            <div class="faq-answer">Sistem kami secara otomatis mengirimkan rincian akun (email Google dan password
+            <div class="faq-question" data-i18n="faq_q4">Bagaimana akun saya dikirimkan setelah pembayaran berhasil?</div>
+            <div class="faq-answer" data-i18n="faq_a4">Sistem kami secara otomatis mengirimkan rincian akun (email Google dan password
               awal) ke alamat Gmail yang Anda masukkan saat checkout begitu pembayaran terverifikasi.</div>
           </div>
         </div>
@@ -531,18 +575,18 @@
             </div>
             <span class="brand-title">artapos<span class="brand-tld">.id</span></span>
           </div>
-          <p class="footer-tagline">Solusi otomatisasi AI WhatsApp Customer Service & Penjualan No. 1 di Indonesia.</p>
+          <p class="footer-tagline" data-i18n="footer_tagline">Solusi otomatisasi AI WhatsApp Customer Service & Penjualan No. 1 di Indonesia.</p>
         </div>
 
         <div class="footer-right">
           <div class="footer-links-group">
-            <a href="#fitur">Fitur</a>
-            <a href="#cara-kerja">Cara Kerja</a>
-            <a href="#harga">Harga</a>
-            <a href="#faq">FAQ</a>
-            <a href="javascript:void(0)" onclick="switchView('login')">Masuk Dashboard</a>
+            <a href="#fitur" data-i18n="footer_features">Fitur</a>
+            <a href="#cara-kerja" data-i18n="nav_how">Cara Kerja</a>
+            <a href="#harga" data-i18n="footer_pricing">Harga</a>
+            <a href="#faq" data-i18n="nav_faq">FAQ</a>
+            <a href="javascript:void(0)" onclick="switchView('login')" data-i18n="footer_login">Masuk Dashboard</a>
           </div>
-          <div class="footer-copy">© 2026 artapos.id • Hak Cipta Dilindungi Undang-Undang.</div>
+          <div class="footer-copy" data-i18n="footer_copy">© 2026 artapos.id • Hak Cipta Dilindungi Undang-Undang.</div>
         </div>
       </div>
     </footer>
@@ -1664,6 +1708,7 @@
                     <div class="phone-store-name" id="simStoreName">Toko AI Online</div>
                     <div class="phone-status-text">online • siap membalas</div>
                   </div>
+                  <button type="button" class="btn-sim-reset" onclick="resetDashboardSimulator()" title="Ulangi chat dari awal">🔄 Reset</button>
                 </div>
 
                 <div class="phone-messages" id="chatMessages">
@@ -2848,102 +2893,57 @@
   </div>
 
   <!-- ============================================================== -->
-  <!-- MODAL DAFTAR GRATIS INTERAKTIF (AUTO-PICK GOOGLE & 300 TOKEN)  -->
+  <!-- MODAL DAFTAR AKUN ARTAPOS.ID (GMAIL MAKS 75 & TOKO MAKS 50)    -->
   <!-- ============================================================== -->
   <div id="modalFreeRegister" class="admin-modal-backdrop hidden">
     <div class="free-reg-modal-card">
       <div class="free-reg-modal-head">
         <div class="free-reg-head-top">
-          <span class="free-reg-badge">✨ DAFTAR GRATIS • FREE 75 TOKEN AI</span>
+          <span class="free-reg-badge" data-i18n="reg_badge">✨ PENDAFTARAN AKUN BARU</span>
           <button type="button" class="btn-close-free-modal" onclick="closeFreeRegisterModal()" title="Tutup">✕</button>
         </div>
-        <h2>Daftar Akun artapos.id</h2>
-        <p>Aktifkan asisten WhatsApp AI dengan <strong>75 Token Gratis</strong> &amp; 10 template soal-jawaban siap
-          pakai.
-        </p>
+        <h2 data-i18n="reg_title">Daftar Akun artapos.id</h2>
+        <p data-i18n="reg_subtitle">Masukkan Gmail aktif dan nama bisnis Anda untuk mulai menggunakan sistem WhatsApp AI.</p>
       </div>
 
       <div class="free-reg-modal-body">
-        <!-- Interactive Detected Google Accounts on Device/Browser -->
-        <div class="google-detected-section">
-          <div class="detected-header-row">
-            <span class="detected-label">
-              <svg viewBox="0 0 24 24" width="16" height="16">
-                <path fill="#4285F4"
-                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z" />
-                <path fill="#34A853"
-                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.34 24 12 24z" />
-                <path fill="#FBBC05"
-                  d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.99 0 12s.45 3.85 1.24 5.42l4.04-3.15z" />
-                <path fill="#EA4335"
-                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z" />
-              </svg>
-              Daftar Instan 1-Klik Akun Google di Perangkat
-            </span>
-            <span class="detected-status-chip">Auto-Detect</span>
-          </div>
-
-          <!-- Dynamic list of detected Google accounts on this phone/browser -->
-          <div id="detectedGoogleAccountsList" class="detected-accounts-list"></div>
-
-          <button type="button" class="btn-google-instant" onclick="handleGoogleInstantRegister()">
-            <svg viewBox="0 0 24 24" width="20" height="20">
-              <path fill="#4285F4"
-                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z" />
-              <path fill="#34A853"
-                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.24v3.15C3.26 21.36 7.34 24 12 24z" />
-              <path fill="#FBBC05"
-                d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.24C.45 8.15 0 9.99 0 12s.45 3.85 1.24 5.42l4.04-3.15z" />
-              <path fill="#EA4335"
-                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.24 6.58l4.04 3.15c.95-2.83 3.6-4.98 6.72-4.98z" />
-            </svg>
-            <span>Pilih Akun Google dari HP / Browser</span>
-          </button>
-        </div>
-
-        <div class="modal-divider-text">
-          <span>atau konfirmasi detail akun</span>
-        </div>
-
         <form id="freeRegisterForm" onsubmit="handleFreeRegisterSubmit(event)" autocomplete="on">
           <div class="field-group">
-            <label for="freeEmail">Email Google (@gmail.com) <span class="required-star">*</span></label>
+            <label for="freeEmail" data-i18n="reg_email_lbl">Email Google (@gmail.com, Maks 75 Karakter) <span class="required-star">*</span></label>
             <div class="input-with-icon">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                 <polyline points="22,6 12,13 2,6"></polyline>
               </svg>
               <input type="email" id="freeEmail" name="email" autocomplete="username email" inputmode="email"
-                maxlength="100" placeholder="Sentuh untuk pilih Gmail otomatis..." required>
+                maxlength="75" placeholder="contoh: namatoko@gmail.com" required>
             </div>
           </div>
 
           <div class="field-group" style="margin-top: 14px;">
-            <label for="freeStoreName">Nama Toko / Bisnis (Maks 100 Karakter)</label>
+            <label for="freeStoreName" data-i18n="reg_store_lbl">Nama Bisnis / Toko (Maks 50 Karakter) <span class="required-star">*</span></label>
             <div class="input-with-icon">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                 <polyline points="9 22 9 12 15 12 15 22"></polyline>
               </svg>
-              <input type="text" id="freeStoreName" name="organization" autocomplete="organization" maxlength="100"
-                placeholder="Contoh: Toko Berkah Jaya" value="Toko AI Assistant">
+              <input type="text" id="freeStoreName" name="organization" autocomplete="organization" maxlength="50"
+                placeholder="Contoh: Toko Berkah Jaya" required>
             </div>
           </div>
 
           <div class="free-spam-alert-box" style="margin-top: 16px;">
-            <p>🔐 <strong>Sandi Dikirim Otomatis ke Gmail:</strong> Setelah klik daftar, sistem akan mengirimkan
-              <strong>Password Login</strong> ke email Google Anda (cek <em>Kotak Masuk</em> atau folder <em>Spam</em>).
-            </p>
+            <p data-i18n="reg_spam_note">📩 <strong>Sandi Login Dikirim ke Gmail:</strong> Setelah mendaftar, silakan cek <strong>Kotak Masuk</strong> atau folder <strong>Spam</strong> di Gmail Anda untuk melihat password masuk.</p>
           </div>
 
           <button type="submit" class="btn-submit-free-reg" id="btnSubmitFreeReg" style="margin-top: 18px;">
-            <span>Daftar Gratis & Kirim Sandi ke Email</span>
+            <span data-i18n="reg_submit_btn">Daftar &amp; Kirim Sandi ke Gmail</span>
           </button>
         </form>
 
         <div class="free-reg-foot">
-          Sudah dapat password di email? <a href="javascript:void(0)"
-            onclick="closeFreeRegisterModal(); switchView('login');">Masuk di sini</a>
+          <span data-i18n="reg_have_acc">Sudah punya akun &amp; password?</span> <a href="javascript:void(0)"
+            onclick="closeFreeRegisterModal(); switchView('login');" data-i18n="reg_login_link">Masuk di sini</a>
         </div>
       </div>
     </div>
@@ -3091,7 +3091,7 @@
   </div>
 
   <!-- Main JavaScript Controller -->
-  <script src="app.js?v=57.0"></script>
+  <script src="app.js?v=62.0"></script>
 </body>
 
 </html>

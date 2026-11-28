@@ -1,3 +1,9 @@
 {
-  "version": 2
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/(login|dashboard|checkout|lupa-password)",
+      "destination": "/index.html"
+    }
+  ]
 }
