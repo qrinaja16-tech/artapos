@@ -71,6 +71,8 @@
 
 html {
   scroll-behavior: smooth;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 body {
@@ -79,12 +81,16 @@ body {
   color: var(--text-main);
   line-height: 1.5;
   font-size: 14px;
+  max-width: 100%;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
 }
 
 /* View Screen Switcher */
 .view-screen {
   width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
   min-height: 100vh;
 }
 
@@ -8452,6 +8458,7 @@ div.swal2-container,
 
 .hlc-wa-footer input {
   flex: 1;
+  min-width: 0;
   border: 1px solid #ffffff;
   border-radius: 22px;
   outline: none;
@@ -8775,5 +8782,241 @@ div.swal2-container,
   }
   .admin-plan-field.full-span {
     grid-column: span 1;
+  }
+}
+
+/* ============================================================== */
+/* LANDING PAGE MOBILE RESPONSIVE & ZERO-OVERFLOW POLISH          */
+/* ============================================================== */
+.hero-text-content,
+.hero-preview-wrapper,
+.hero-livechat-card,
+.pricing-card,
+.step-card,
+.feature-item-card,
+.faq-item {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.footer-links-group {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .landing-header,
+  .hero-section,
+  .section-workflow,
+  .section-pricing,
+  .section-features,
+  .section-faq,
+  .landing-footer {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .hero-section {
+    padding: 28px 16px 48px !important;
+  }
+
+  .hero-container {
+    gap: 28px !important;
+    width: 100%;
+  }
+
+  .hero-pill-tag {
+    max-width: 100%;
+    justify-content: center;
+    text-align: center;
+    font-size: 0.74rem;
+    line-height: 1.35;
+    padding: 6px 12px;
+    margin-bottom: 16px;
+  }
+
+  .hero-pill-tag .pill-dot {
+    flex-shrink: 0;
+  }
+
+  .hero-title {
+    font-size: 1.76rem !important;
+    line-height: 1.22 !important;
+    letter-spacing: -0.6px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .hero-subtitle {
+    font-size: 0.92rem !important;
+    line-height: 1.6 !important;
+    margin-bottom: 22px !important;
+    max-width: 100%;
+  }
+
+  .hero-cta-group {
+    gap: 10px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .btn-cta-main,
+  .btn-cta-free-trial,
+  .btn-cta-secondary {
+    min-height: 46px;
+    border-radius: 14px !important;
+    font-size: 0.94rem !important;
+  }
+
+  .hero-trust-badges {
+    gap: 8px 14px !important;
+    justify-content: center;
+  }
+
+  .trust-item {
+    font-size: 0.8rem;
+  }
+
+  .hero-livechat-card {
+    max-width: 100%;
+    height: 470px;
+    border-radius: 18px;
+  }
+
+  .hlc-wa-header {
+    padding: 10px 11px;
+    gap: 6px;
+  }
+
+  .hlc-wa-left {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .hlc-wa-avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .hlc-wa-name {
+    font-size: 0.82rem;
+  }
+
+  .hlc-niche-select {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+  }
+
+  .hlc-reset-btn {
+    padding: 4px 9px;
+    font-size: 0.72rem;
+  }
+
+  .hlc-wa-bubble {
+    max-width: 88%;
+    font-size: 0.81rem;
+  }
+
+  .section-workflow,
+  .section-pricing,
+  .section-features,
+  .section-faq {
+    padding: 48px 16px !important;
+  }
+
+  .section-header-center {
+    margin-bottom: 30px !important;
+  }
+
+  .section-title {
+    font-size: 1.5rem !important;
+    line-height: 1.28 !important;
+  }
+
+  .section-subtitle {
+    font-size: 0.9rem !important;
+  }
+
+  .pricing-card,
+  .step-card,
+  .feature-item-card,
+  .faq-item {
+    padding: 22px 18px !important;
+    border-radius: 18px !important;
+  }
+
+  .pricing-features-list li {
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .landing-footer {
+    padding: 36px 16px 28px !important;
+    text-align: center;
+  }
+
+  .footer-container {
+    flex-direction: column;
+    align-items: center !important;
+    gap: 22px !important;
+  }
+
+  .footer-left .brand-link {
+    justify-content: center;
+  }
+
+  .footer-tagline {
+    margin: 10px auto 0;
+    text-align: center;
+  }
+
+  .footer-right {
+    align-items: center !important;
+    width: 100%;
+    gap: 14px;
+  }
+
+  .footer-links-group {
+    justify-content: center;
+    gap: 12px 18px !important;
+  }
+
+  .footer-copy {
+    text-align: center;
+  }
+}
+
+@media (max-width: 420px) {
+  .landing-nav-container {
+    padding: 10px 12px !important;
+    gap: 4px !important;
+  }
+
+  .brand-link {
+    gap: 7px !important;
+    min-width: 0;
+  }
+
+  .brand-title {
+    font-size: 1rem !important;
+  }
+
+  .landing-nav-actions {
+    gap: 4px !important;
+  }
+
+  .btn-lang-toggle {
+    padding: 6px 5px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .landing-header .btn-nav-login,
+  .landing-header .btn-nav-primary {
+    padding: 6px 10px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .btn-nav-dashboard-active {
+    padding: 7px 11px !important;
+    font-size: 0.78rem !important;
   }
 }
