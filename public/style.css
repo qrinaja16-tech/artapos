@@ -67,12 +67,14 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: rgba(74, 222, 128, 0.28);
 }
 
 html {
   scroll-behavior: smooth;
   max-width: 100%;
   overflow-x: clip;
+  accent-color: #22c55e;
 }
 
 body {
@@ -83,7 +85,22 @@ body {
   font-size: 14px;
   max-width: 100%;
   overflow-x: clip;
+  accent-color: #22c55e;
   -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #bbf7d0;
+  color: #064e3b;
+}
+
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #4ade80;
+  outline-offset: 2px;
 }
 
 /* View Screen Switcher */
@@ -8013,7 +8030,7 @@ div.swal2-container,
 }
 
 .btn-landing-hamburger {
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   background: transparent;
@@ -8021,11 +8038,14 @@ div.swal2-container,
   padding: 6px;
   color: #0f172a;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 10px;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.btn-landing-hamburger:hover {
-  background: #f1f5f9;
+.btn-landing-hamburger:hover,
+.btn-landing-hamburger:active {
+  background: #dcfce7;
+  color: #15803d;
 }
 
 .lmd-backdrop {
@@ -8788,6 +8808,7 @@ div.swal2-container,
 /* ============================================================== */
 /* LANDING PAGE MOBILE RESPONSIVE & ZERO-OVERFLOW POLISH          */
 /* ============================================================== */
+.hero-content,
 .hero-text-content,
 .hero-preview-wrapper,
 .hero-livechat-card,
@@ -8797,6 +8818,21 @@ div.swal2-container,
 .faq-item {
   min-width: 0;
   max-width: 100%;
+}
+
+.hlc-wa-footer input:focus {
+  border-color: #4ade80;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.24);
+}
+
+.landing-header a:active,
+.btn-lang-toggle:active,
+.lmd-links a:active,
+.lmd-btn-register:active,
+.btn-cta-secondary:active,
+.nav-btn:active {
+  background-color: #dcfce7 !important;
+  color: #15803d !important;
 }
 
 .footer-links-group {

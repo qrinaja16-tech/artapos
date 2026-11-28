@@ -26,7 +26,7 @@
     content="Balas chat pelanggan otomatis tanpa sewa server mahal. Gratis 75 Token untuk pendaftar pertama!">
   <meta name="twitter:image" content="https://www.artapos.id/og-preview.jpg?v=2">
   <link rel="icon" type="image/jpeg" href="logo.jpg?v=2">
-  <link rel="stylesheet" href="style.css?v=63.0">
+  <link rel="stylesheet" href="style.css?v=64.0">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -59,7 +59,6 @@
           <a href="#hero" data-i18n="nav_why">Kenapa artapos.id</a>
           <a href="#fitur" data-i18n="nav_features">Fitur Unggulan</a>
           <a href="#cara-kerja" data-i18n="nav_how">Cara Kerja</a>
-          <a href="#harga" data-i18n="nav_pricing">Harga Paket</a>
           <a href="#faq" data-i18n="nav_faq">FAQ</a>
         </nav>
 
@@ -86,16 +85,12 @@
           </div>
 
           <button class="btn-nav-login" id="btnNavAuth" onclick="switchView('login')">Masuk</button>
-          <button class="btn-nav-primary" id="btnNavRegister" onclick="openFreeRegisterModal()">
-            <span id="btnNavRegisterText">Daftar</span>
-            <span class="nav-arrow-icon">→</span>
-          </button>
 
           <button type="button" class="btn-landing-hamburger" id="btnLandingHamburger" onclick="toggleLandingMobileMenu(true)" aria-label="Buka Menu">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22">
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
+            <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+              <circle cx="12" cy="5" r="2"></circle>
+              <circle cx="12" cy="12" r="2"></circle>
+              <circle cx="12" cy="19" r="2"></circle>
             </svg>
           </button>
         </div>
@@ -118,7 +113,6 @@
         <a href="#hero" onclick="toggleLandingMobileMenu(false)" data-i18n="nav_why">Kenapa artapos.id</a>
         <a href="#fitur" onclick="toggleLandingMobileMenu(false)" data-i18n="nav_features">Fitur Unggulan</a>
         <a href="#cara-kerja" onclick="toggleLandingMobileMenu(false)" data-i18n="nav_how">Cara Kerja</a>
-        <a href="#harga" onclick="toggleLandingMobileMenu(false)" data-i18n="nav_pricing">Harga Paket</a>
         <a href="#faq" onclick="toggleLandingMobileMenu(false)" data-i18n="nav_faq">FAQ</a>
       </div>
       <div class="lmd-actions">
@@ -149,8 +143,8 @@
             <button class="btn-cta-main" id="btnHeroMainCta" onclick="openFreeRegisterModal()">
               <span id="btnHeroMainCtaText">Daftar Gratis</span>
             </button>
-            <a href="#harga" class="btn-cta-secondary">
-              <span data-i18n="hero_cta_sec">Lihat Pilihan Paket</span>
+            <a href="#cara-kerja" class="btn-cta-secondary">
+              <span data-i18n="hero_cta_sec">Lihat Cara Kerja</span>
             </a>
           </div>
 
@@ -233,9 +227,8 @@
                 <line x1="3" y1="10" x2="21" y2="10"></line>
               </svg>
             </div>
-            <h3 data-i18n="wf_s1_t">Pilih Paket & Masukkan Email Google</h3>
-            <p data-i18n="wf_s1_d">Tentukan kuota balasan bulanan sesuai kebutuhan toko Anda dan masukkan alamat email Google (@gmail.com)
-              aktif Anda.</p>
+            <h3 data-i18n="wf_s1_t">Daftar Akun dengan Gmail Aktif</h3>
+            <p data-i18n="wf_s1_d">Masukkan alamat Gmail (@gmail.com) dan nama bisnis Anda, lalu cek kotak masuk atau folder spam untuk melihat password login.</p>
           </div>
 
           <div class="step-card">
@@ -246,9 +239,8 @@
                 <line x1="1" y1="10" x2="23" y2="10"></line>
               </svg>
             </div>
-            <h3 data-i18n="wf_s2_t">Bayar Tagihan & Terima Akun di Gmail</h3>
-            <p data-i18n="wf_s2_d">Bayar instan via Midtrans (QRIS, VA Bank, E-Wallet). Akun login langsung dikirim otomatis ke kotak masuk
-              Gmail Anda dengan password awal.</p>
+            <h3 data-i18n="wf_s2_t">Masuk Dashboard &amp; Pilih Paket</h3>
+            <p data-i18n="wf_s2_d">Login ke dashboard akun Anda untuk melihat daftar paket lengkap, klaim token awal, atau aktifkan paket sesuai kebutuhan toko.</p>
           </div>
 
           <div class="step-card">
@@ -267,8 +259,8 @@
       </div>
     </section>
 
-    <!-- Pricing Section -->
-    <section id="harga" class="section-pricing">
+    <!-- Pricing Section (Disembunyikan di halaman luar; harga hanya tampil di dalam akun) -->
+    <section id="harga" class="section-pricing hidden">
       <div class="section-container">
         <div class="section-header-center">
           <span class="section-tag" data-i18n="pr_tag">PILIHAN HARGA LANGGANAN</span>
@@ -582,7 +574,6 @@
           <div class="footer-links-group">
             <a href="#fitur" data-i18n="footer_features">Fitur</a>
             <a href="#cara-kerja" data-i18n="nav_how">Cara Kerja</a>
-            <a href="#harga" data-i18n="footer_pricing">Harga</a>
             <a href="#faq" data-i18n="nav_faq">FAQ</a>
             <a href="javascript:void(0)" onclick="switchView('login')" data-i18n="footer_login">Masuk Dashboard</a>
           </div>
@@ -1108,6 +1099,17 @@
               </svg>
               <span>Token & Pengaturan Akun</span>
             </div>
+          </button>
+
+          <button class="nav-btn" id="navUpgradePlanBtn" onclick="toggleMobileSidebar(false); openCheckout('plus35')">
+            <div class="nav-icon-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                <line x1="2" y1="10" x2="22" y2="10"></line>
+              </svg>
+              <span>Paket &amp; Harga</span>
+            </div>
+            <span class="badge-nav badge-nav-emerald">Upgrade</span>
           </button>
 
           <!-- Super Admin Navigation Group (Dipisah-pisah di Sidebar Kiri) -->
@@ -3091,7 +3093,7 @@
   </div>
 
   <!-- Main JavaScript Controller -->
-  <script src="app.js?v=62.0"></script>
+  <script src="app.js?v=64.0"></script>
 </body>
 
 </html>

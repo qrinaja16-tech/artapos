@@ -696,7 +696,7 @@ function setLandingLanguage(lang = 'id', replayDemo = true) {
       hero_subtitle: 'Hubungkan nomor WhatsApp bisnis Anda dalam 1 menit cukup dengan scan QR. Tanpa API resmi berbayar mahal, langsung cek stok, buat invoice, dan closing pelanggan otomatis.',
       hero_cta_reg: 'Daftar Gratis',
       hero_cta_dash: 'Buka Dashboard',
-      hero_cta_sec: 'Lihat Pilihan Paket',
+      hero_cta_sec: 'Lihat Cara Kerja',
       trust_1: 'Otomatis Cek Stok & Buat Invoice',
       trust_2: 'Support WA Regular & Bisnis',
       trust_3: 'Proteksi 1 Akun 1 Perangkat',
@@ -704,10 +704,10 @@ function setLandingLanguage(lang = 'id', replayDemo = true) {
       wf_tag: 'MUDAH & CEPAT',
       wf_title: '3 Langkah Mudah Memulai Otomasi WhatsApp',
       wf_sub: 'Siap digunakan dalam hitungan menit tanpa keahlian coding atau integrasi rumit.',
-      wf_s1_t: 'Pilih Paket & Masukkan Email Google',
-      wf_s1_d: 'Tentukan kuota balasan bulanan sesuai kebutuhan toko Anda dan masukkan alamat email Google (@gmail.com) aktif Anda.',
-      wf_s2_t: 'Bayar Tagihan & Terima Akun di Gmail',
-      wf_s2_d: 'Bayar instan via Midtrans (QRIS, VA Bank, E-Wallet). Akun login langsung dikirim otomatis ke kotak masuk Gmail Anda dengan password awal.',
+      wf_s1_t: 'Daftar Akun dengan Gmail Aktif',
+      wf_s1_d: 'Masukkan alamat Gmail (@gmail.com) dan nama bisnis Anda, lalu cek kotak masuk atau folder spam untuk melihat password login.',
+      wf_s2_t: 'Masuk Dashboard & Pilih Paket',
+      wf_s2_d: 'Login ke dashboard akun Anda untuk melihat daftar paket lengkap, klaim token awal, atau aktifkan paket sesuai kebutuhan toko.',
       wf_s3_t: 'Login, Scan QR & Bot Langsung Aktif',
       wf_s3_d: 'Masuk ke dashboard, scan QR Perangkat Tertaut dari aplikasi WhatsApp HP toko Anda. Bot AI seketika standby membalas pesan pembeli 24 jam!',
       pr_tag: 'PILIHAN HARGA LANGGANAN',
@@ -764,7 +764,7 @@ function setLandingLanguage(lang = 'id', replayDemo = true) {
       hero_subtitle: 'Connect your business WhatsApp in 1 minute by scanning a QR code. No expensive official API fees—check live stock, issue invoices, and close orders automatically.',
       hero_cta_reg: 'Register Free',
       hero_cta_dash: 'Open Dashboard',
-      hero_cta_sec: 'View Pricing Plans',
+      hero_cta_sec: 'How It Works',
       trust_1: 'Auto Stock Check & Instant Invoice',
       trust_2: 'Supports Regular & Business WA',
       trust_3: '1 Account 1 Device Security',
@@ -772,10 +772,10 @@ function setLandingLanguage(lang = 'id', replayDemo = true) {
       wf_tag: 'FAST & EASY',
       wf_title: '3 Simple Steps to Start WhatsApp Automation',
       wf_sub: 'Ready to run in minutes with zero coding skills or complex integrations.',
-      wf_s1_t: 'Choose Plan & Enter Gmail Address',
-      wf_s1_d: 'Select the monthly reply quota that fits your store and enter your active Google email (@gmail.com).',
-      wf_s2_t: 'Complete Payment & Receive Login',
-      wf_s2_d: 'Pay instantly via Midtrans (QRIS, Virtual Account, E-Wallet). Your login credentials are sent automatically to your Gmail inbox/spam.',
+      wf_s1_t: 'Register with Your Active Gmail',
+      wf_s1_d: 'Enter your Gmail (@gmail.com) and business name, then check your Inbox or Spam folder to get your login password.',
+      wf_s2_t: 'Sign In & Choose a Plan Inside Account',
+      wf_s2_d: 'Sign in to your dashboard to view available plans and pricing, claim starter tokens, or upgrade as your store grows.',
       wf_s3_t: 'Login, Scan QR & Bot Goes Live',
       wf_s3_d: 'Open the dashboard, scan the Linked Devices QR code from your store WhatsApp, and your AI assistant immediately replies 24/7!',
       pr_tag: 'SUBSCRIPTION PRICING',
@@ -1090,6 +1090,17 @@ function handleStep2Next() {
 }
 
 function openCheckout(planId = 'plus35') {
+  if (!isLoggedInSession()) {
+    const isEn = typeof currentLandingLang !== 'undefined' && currentLandingLang === 'en';
+    showToast(
+      isEn
+        ? 'Please login or register first to view plans & pricing inside your account.'
+        : 'Silakan masuk atau daftar akun terlebih dahulu untuk melihat daftar harga paket.',
+      'info'
+    );
+    switchView('login');
+    return;
+  }
   trackCtaEvent('cta_register');
   selectCheckoutPlan(planId);
   switchView('checkout');
@@ -4783,7 +4794,11 @@ async function initApp() {
   } else if (pathRoute === '/lupa-password') {
     switchView('forgot-password', true);
   } else if (pathRoute === '/checkout' || hash === 'checkout') {
-    switchView('checkout', pathRoute === '/checkout');
+    if (token) {
+      switchView('checkout', pathRoute === '/checkout');
+    } else {
+      switchView('login');
+    }
   } else {
     switchView('landing', pathRoute === '/');
     if (token) {
